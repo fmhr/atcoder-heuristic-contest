@@ -1,0 +1,35 @@
+# Tooling and build directories
+tools/
+build/
+sample/
+
+# Output files and directories
+out/*
+out.txt
+
+# Binary and execution files (assuming these are executables)
+main
+a.out
+
+# Temporary and system files
+.DS_Store
+*.prof
+*.test
+
+# Specific files
+vis.html
+vis.png
+seed.txt
+cpuprof
+
+# File extensions to ignore
+*.svg
+*.in
+*.out
+*.gif
+
+# private files
+.vscode/
+fj/
+standing/
+wata/
