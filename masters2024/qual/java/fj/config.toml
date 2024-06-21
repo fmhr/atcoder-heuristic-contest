@@ -1,0 +1,21 @@
+Language = 'Go'
+Cmd = 'java -Xss1024M -DONLINE_JUDGE=true Main'
+Args = []
+Reactive = false
+TesterPath = 'tools/target/release/tester'
+VisPath = 'tools/target/release/score'
+GenPath = 'tools/target/release/gen'
+InfilePath = 'tools/in/'
+OutfilePath = 'out/'
+Jobs = 4
+Cloud = false
+CompilerURL = ''
+Source = 'main.go'
+CompileCmd = 'go build -o a.out main.go'
+Binary = 'a.out'
+tmpBinary = ''
+Bucket = ''
+WorkerURL = ''
+ConcurrentRequests = 1000
+TimeLimitMS = 10000
+
