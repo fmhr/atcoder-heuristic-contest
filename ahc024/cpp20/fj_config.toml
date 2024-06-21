@@ -1,0 +1,13 @@
+Cmd = './a.out'
+Args = []
+Reactive = false
+TesterPath = 'tools/target/release/tester'
+VisPath = 'tools/target/release/vis'
+GenPath = 'tools/target/release/gen'
+InfilePath = 'tools/in/'
+OutfilePath = 'out/'
+Jobs = 1
+Cloud = false
+CloudURL = 'https://gccserver-5k3wmypbha-an.a.run.app'
+ConcurrentRequests = 1000
+TimeLimitMS = 20000

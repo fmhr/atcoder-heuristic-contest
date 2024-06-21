@@ -1,0 +1,42 @@
+# Ignore system and temporary files
+.DS_Store
+*.log
+*.swp
+*.bak
+*.tmp
+
+# Go specific ignores
+bin/
+pkg/
+*.exe
+*.test
+*.prof
+
+# Go module cache
+go.sum
+go.mod
+
+# Rust specific ignores
+target/
+**/*.rs.bk
+Cargo.lock
+Cargo.toml
+
+# AtCoder tools
+tools/in/
+tools/release/
+
+# Ignore VCS directories
+.git/
+.hg/
+.svn/
+
+# Ignore editor and IDE specific files/directories
+.vscode/
+.idea/
+*.iml
+*.o
+*.so
+*.dylib
+*.pdb
+*.dSYM/
