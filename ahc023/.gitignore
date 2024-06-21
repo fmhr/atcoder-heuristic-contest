@@ -1,0 +1,16 @@
+tools/*
+build/*
+out/*
+out.txt
+*.svg
+*.in
+*.out
+vis.html
+.DS_Store
+.vscode/
+vis.png
+seed.txt
+sample
+main
+*.prof
+*.gif
