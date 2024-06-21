@@ -1,0 +1,15 @@
+tools/*
+src/a
+bin/*
+out/*
+out.txt
+*.svg
+*.in
+*.out
+tmp.txt
+vis.html
+.DS_Store
+.vscode/
+vis.png
+seed.txt
+sample/

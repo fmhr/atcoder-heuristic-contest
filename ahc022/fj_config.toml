@@ -1,0 +1,12 @@
+Cmd = './bin/main'
+Args = []
+Reactive = false
+TesterPath = 'tools/target/release/tester'
+VisPath = 'tools/target/release/vis'
+GenPath = 'tools/target/release/gen'
+InfilePath = 'tools/in/'
+OutfilePath = 'out/'
+Jobs = 7
+Cloud = false
+CloudURL = 'http://localhost:8888'
+TimeLimitMS = 10000

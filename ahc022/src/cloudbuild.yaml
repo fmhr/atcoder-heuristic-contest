@@ -1,0 +1,11 @@
+steps:
+- name: 'golang:1.20'
+  args: ['go', 'mod', 'tidy']
+  env: ['PROJECT_ROOT=.', 'GO111MODULE=on']
+- name: 'golang:1.20'
+  args: ['go', 'build', '-o', 'main-bin', 'main.go']
+  env: ['PROJECT_ROOT=.', 'GO111MODULE=on']
+artifacts:
+  objects:
+    location: 'gs://ahc022-bin/'
+    paths: ['main-bin']
