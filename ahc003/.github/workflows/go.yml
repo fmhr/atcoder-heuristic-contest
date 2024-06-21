@@ -1,0 +1,62 @@
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.15
+
+    - name: Build solver
+      run: go build -v ./...
+
+    - name: Test solver
+      run: go test -v ./...
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+
+    - name: setup cargo
+      uses: actions/cache@v2
+      with:
+        path: |
+         ~/.cargo/registry
+         ~/.cargo/git
+         target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - uses: actions/cache@v2
+      id: cache-tools
+      with:
+        path: tools/
+        key: ${{ runner.os }}-tools-
+
+    - name: Prepare tools/
+      if: steps.cache-tools.outputs.cache-hit != 'true'
+      run: |
+        wget https://img.atcoder.jp/ahc003/c1ae4a8996958aa31f5f9d3aa3f51033.zip
+        unzip c1ae4a8996958aa31f5f9d3aa3f51033.zip
+
+    - name: Build the visualizer
+      run: |
+        cargo build --manifest-path=tools/Cargo.toml --release
+
+    - name: generate test case
+      run: |
+        cargo run --manifest-path=tools/Cargo.toml --release --bin gen tools/seeds.txt
+
+    - name: test 100 case
+      run: go run script/main.go
