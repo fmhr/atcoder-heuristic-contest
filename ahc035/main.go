@@ -6,9 +6,12 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+	"time"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+
+var startTime time.Time
 
 func main() {
 	log.SetFlags(log.Lshortfile)
@@ -24,9 +27,12 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
+	startTime = time.Now()
 	xorshift = *NewXorShift(1)
 	seeds := input()
 	solver(seeds)
+	elapsed := time.Since(startTime)
+	log.Println("time=", elapsed)
 }
 
 const (
@@ -123,14 +129,18 @@ func solver(s [60]Seed) {
 }
 
 const (
-	SIMULATIONS = 40 // モンテカルロシミュレーションの回数
-	CANDIDATES  = 40 // 候補となるgridの数
-	MAXSTEP     = 5
+	SIMULATIONS = 50 // モンテカルロシミュレーションの回数
+	CANDIDATES  = 50 // 候補となるgridの数
+	MAXSTEP     = 4
 )
 
 func monteCarloSolver(initialState State) (bestGrid [N][N]int) {
 	bestScore := 0
-	for i := 0; i < CANDIDATES; i++ {
+	tmpCANDIDATES := CANDIDATES
+	if initialState.turn == 9 {
+		tmpCANDIDATES = 10000
+	}
+	for i := 0; i < tmpCANDIDATES; i++ {
 		nowState := initialState
 		testGrid := randomGenerateGrid() // 最初のターンのグリッドは決め打ち
 		score := 0
@@ -140,7 +150,12 @@ func monteCarloSolver(initialState State) (bestGrid [N][N]int) {
 		if bestScore < score {
 			bestScore = score
 			bestGrid = testGrid
-			log.Println(nowState.turn, bestScore)
+		}
+		if initialState.turn == 9 {
+			elapsed := time.Since(startTime)
+			if elapsed > 1900*time.Millisecond {
+				break
+			}
 		}
 	}
 	return bestGrid
