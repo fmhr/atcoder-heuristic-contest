@@ -123,7 +123,7 @@ func solver(s [60]Seed) {
 }
 
 const (
-	SIMULATIONS = 20 // モンテカルロシミュレーションの回数
+	SIMULATIONS = 40 // モンテカルロシミュレーションの回数
 	CANDIDATES  = 20 // 候補となるgridの数
 	MAXSTEP     = 5
 )
