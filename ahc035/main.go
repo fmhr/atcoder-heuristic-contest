@@ -72,7 +72,8 @@ type State struct {
 
 func (s State) Score() (score int) {
 	for i := 0; i < M; i++ {
-		score += maxV(s.seeds[i])
+		s := sumV(s.seeds[i])
+		score = maxInt(score, s)
 	}
 	return
 }
@@ -118,6 +119,17 @@ func (s *State) generate(grid [N][N]int) {
 }
 
 func solver(s [60]Seed) {
+	var maxV [M]int
+	for i := 0; i < M; i++ {
+		for j := 0; j < 60; j++ {
+			maxV[i] = maxInt(maxV[i], s[j][i])
+		}
+	}
+	X1 := 0
+	for i := 0; i < M; i++ {
+		X1 += maxV[i]
+	}
+
 	var now State
 	now.seeds = s
 	for t := 0; t < T; t++ {
@@ -199,14 +211,18 @@ func gridOutput(grid [N][N]int) {
 	}
 }
 
-func maxV(s Seed) (rtn int) {
-	rtn = s[0]
-	for i := 1; i < M; i++ {
-		if rtn < s[i] {
-			rtn = s[i]
-		}
+func sumV(s Seed) (sum int) {
+	for i := 0; i < M; i++ {
+		sum += s[i]
 	}
-	return
+	return sum
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 var xorshift XorShift
