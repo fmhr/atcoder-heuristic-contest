@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"runtime/pprof"
 )
@@ -25,6 +24,7 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
+	xorshift = *NewXorShift(1)
 	seeds := input()
 	solver(seeds)
 }
@@ -80,7 +80,7 @@ func (s *State) generate(grid [N][N]int) {
 			var new Seed
 			s1, s2 := grid[i][j], grid[i][j+1]
 			for k := 0; k < M; k++ {
-				if rand.Intn(2) == 0 {
+				if xorshift.Intn(2) == 0 {
 					new[k] = s.seeds[s1][k]
 				} else {
 					new[k] = s.seeds[s2][k]
@@ -96,7 +96,7 @@ func (s *State) generate(grid [N][N]int) {
 			var new Seed
 			s1, s2 := grid[i][j], grid[i+1][j]
 			for k := 0; k < M; k++ {
-				if rand.Intn(2) == 0 {
+				if xorshift.Intn(2) == 0 {
 					new[k] = s.seeds[s1][k]
 				} else {
 					new[k] = s.seeds[s2][k]
@@ -163,7 +163,7 @@ func randomGenerateGrid() (grid [N][N]int) {
 		numbers[i] = i
 	}
 	for i := len(numbers) - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
+		j := xorshift.Intn(i + 1)
 		numbers[i], numbers[j] = numbers[j], numbers[i]
 	}
 
@@ -192,4 +192,25 @@ func maxV(s Seed) (rtn int) {
 		}
 	}
 	return
+}
+
+var xorshift XorShift
+
+type XorShift struct {
+	state uint64
+}
+
+func NewXorShift(seed int64) *XorShift {
+	return &XorShift{state: uint64(seed)}
+}
+
+func (x *XorShift) Next() uint64 {
+	x.state ^= x.state << 13
+	x.state ^= x.state >> 7
+	x.state ^= x.state << 17
+	return x.state
+}
+
+func (x *XorShift) Intn(n int) int {
+	return int(x.Next() % uint64(n))
 }
