@@ -12,6 +12,11 @@ import (
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 
 var startTime time.Time
+var ATCODER string
+
+func init() {
+	ATCODER = os.Getenv("ATCODER")
+}
 
 func main() {
 	log.SetFlags(log.Lshortfile)
@@ -244,4 +249,16 @@ func (x *XorShift) Next() uint64 {
 
 func (x *XorShift) Intn(n int) int {
 	return int(x.Next() % uint64(n))
+}
+
+// elapsed is
+// AtCoderとローカルの実行時間をまるめる
+// LOCALでの経過時間を変更する
+func elapsed() time.Duration {
+	elapsed := time.Since(startTime)
+	if ATCODER == "1" {
+		return elapsed
+	}
+	// LOCALでは２倍ぐらい遅いと判断する
+	return elapsed * 2
 }
