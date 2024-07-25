@@ -3,6 +3,9 @@
 .idea
 .vscode
 
+# Go
+*.prof
+
 # Rust
 */target/
 
@@ -12,3 +15,5 @@
 main
 a
 
+# AtCoder tools
+**/tools/
