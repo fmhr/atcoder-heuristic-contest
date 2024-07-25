@@ -36,8 +36,9 @@ func main() {
 	xorshift = *NewXorShift(1)
 	seeds := input()
 	solver(seeds)
-	elapsed := time.Since(startTime)
+	elapsed := elapsed()
 	log.Println("time=", elapsed)
+	log.Println("realTime=", time.Since(startTime))
 }
 
 const (
@@ -169,7 +170,7 @@ func monteCarloSolver(initialState State) (bestGrid [N][N]int) {
 			bestGrid = testGrid
 		}
 		if initialState.turn == 9 {
-			elapsed := time.Since(startTime)
+			elapsed := elapsed()
 			if elapsed > 1900*time.Millisecond {
 				break
 			}
