@@ -5,3 +5,10 @@
 
 # Rust
 */target/
+
+# 実行ファイル
+*.exe
+*.out
+main
+a
+
