@@ -39,8 +39,8 @@ func main() {
 				output.WriteString(fmt.Sprintln("m", root[j]))
 			} else {
 				index := slices.Index(A, root[j])
-				size := len(B)
-				//size := 1
+				//size := len(B)
+				size := 1
 				output.WriteString(fmt.Sprintln("s", size, index, 0))
 				output.WriteString(fmt.Sprintln("m", root[j]))
 				singleOpe(1, index, 0, A, B)
