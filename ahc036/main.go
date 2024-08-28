@@ -166,25 +166,25 @@ func allPairsShortest(in Input) ([V][V]int, [V][V]int) {
 	return dist, pred
 }
 
-func constructShortestPath(s, t int, pred [V][V]int, dist [V][V]int) []int {
-	reversePath := make([]int, 0, dist[s][t]+2)
-	current := t
+//func constructShortestPath(s, t int, pred [V][V]int, dist [V][V]int) []int {
+//reversePath := make([]int, 0, dist[s][t]+2)
+//current := t
 
-	// 逆順に経路を辿る
-	for current != s {
-		if t == -1 {
-			panic("No Path found")
-		}
-		reversePath = append(reversePath, current)
-		current = pred[s][current]
-	}
-	reversePath = append(reversePath, s)
-	// 辿る順に並び替える
-	for i, j := 0, len(reversePath)-1; i < j; i, j = i+1, j-1 {
-		reversePath[i], reversePath[j] = reversePath[j], reversePath[i]
-	}
-	return reversePath
-}
+//// 逆順に経路を辿る
+//for current != s {
+//if t == -1 {
+//panic("No Path found")
+//}
+//reversePath = append(reversePath, current)
+//current = pred[s][current]
+//}
+//reversePath = append(reversePath, s)
+//// 辿る順に並び替える
+//for i, j := 0, len(reversePath)-1; i < j; i, j = i+1, j-1 {
+//reversePath[i], reversePath[j] = reversePath[j], reversePath[i]
+//}
+//return reversePath
+//}
 
 // u->vの最短経路列挙
 // []intはuとvを含む
