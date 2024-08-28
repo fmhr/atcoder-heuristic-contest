@@ -28,13 +28,21 @@ func main() {
 		B[i] = -1
 	}
 	output.WriteString(fmt.Sprintln(strings.Trim(fmt.Sprint(A), "[]")))
+
+	root := constructShortestPath(357, 0, pred, dist) // １つのルート
+	test := findALLShortestPaths(dist, 357, 0)
+	log.Println(root)
+	log.Println(test)
+	return
 	for i := 0; i < V-1+1; i++ { // in.planは０を先頭に追加してサイズが601
 		u, v := in.plan[i], in.plan[i+1]
 		//log.Println(in.plan[i], "->", in.plan[i+1], "cost=", dist[u][v])
-		//root := constructShortestPath(u, v, pred, dist) // １つのルート
-		roots := findALLShortestPaths(dist, u, v) // u, v間の全てのルート
+		root := constructShortestPath(u, v, pred, dist) // １つのルート
+		roots := findALLShortestPaths(dist, u, v)       // u, v間の全てのルート
 		// 配列Bに
 		cntStep := 0
+		log.Println(i, u, v, roots)
+		log.Println(root)
 		bestRoot := roots[0]
 		for j := 0; j < len(roots); j++ {
 			cnt := 0
@@ -50,7 +58,7 @@ func main() {
 				bestRoot = roots[j]
 			}
 		}
-		root := bestRoot
+		root = bestRoot
 		//log.Println(root)
 		for j := 1; j < len(root); j++ {
 			if slices.Contains(B, root[j]) {
@@ -140,14 +148,13 @@ func allPairsShortest(in Input) ([V][V]int, [V][V]int) {
 			}
 		}
 	}
-	for i := 0; i < MaxRoadSize; i++ {
+	for i := 0; i < in.M; i++ {
 		u := in.roads[i][0]
 		v := in.roads[i][1]
 		dist[u][v] = 1
 		pred[u][v] = u
 		dist[v][u] = 1
 		pred[v][u] = v
-
 	}
 	for k := 0; k < V; k++ {
 		for u := 0; u < V; u++ {
@@ -184,6 +191,7 @@ func constructShortestPath(s, t int, pred [V][V]int, dist [V][V]int) []int {
 }
 
 // u->vの最短経路列挙
+// []intはuとvを含む
 func findALLShortestPaths(dist [V][V]int, u, v int) (fullpath [][]int) {
 	var queue [][]int
 	queue = append(queue, []int{u})
@@ -200,7 +208,7 @@ func findALLShortestPaths(dist [V][V]int, u, v int) (fullpath [][]int) {
 			if dist[current][k] > 1 {
 				continue
 			}
-			//　すでに毛色に含まれている場合
+			//　すでに経路に含まれている場合、パスする
 			if slices.Contains(current_path, k) {
 				continue
 			}
