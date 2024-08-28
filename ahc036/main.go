@@ -27,31 +27,37 @@ func main() {
 		B[i] = -1
 	}
 	output.WriteString(fmt.Sprintln(strings.Trim(fmt.Sprint(A), "[]")))
-	cntMove := 0
-	cntSingleOpe := 0
 	for i := 0; i < V-1+1; i++ { // in.planは０を先頭に追加してサイズが601
 		u, v := in.plan[i], in.plan[i+1]
-		log.Println(in.plan[i], "->", in.plan[i+1], "cost=", dist[u][v])
+		//log.Println(in.plan[i], "->", in.plan[i+1], "cost=", dist[u][v])
 		root := constructShortestPath(u, v, pred, dist)
-		log.Println(root)
+		//log.Println(root)
 		for j := 1; j < len(root); j++ {
 			if slices.Contains(B, root[j]) {
 				output.WriteString(fmt.Sprintln("m", root[j]))
 			} else {
 				index := slices.Index(A, root[j])
-				//size := len(B)
-				size := 1
+				size := len(B)
+				size = min(size, len(A)-index)
 				output.WriteString(fmt.Sprintln("s", size, index, 0))
 				output.WriteString(fmt.Sprintln("m", root[j]))
 				singleOpe(1, index, 0, A, B)
-				cntSingleOpe++
 			}
-			cntMove++
 		}
 	}
 	fmt.Print(output.String())
-	log.Println(cntMove, cntSingleOpe)
-	log.Println("2")
+	var sumLong int
+	for i := 0; i < V; i++ {
+		u, v := in.plan[i], in.plan[i+1]
+		//log.Printf("%+v\n", dist[u][v])
+		ps := findALLShortestPaths(dist, u, v)
+		//for j := range ps {
+		//log.Println(j, ps[j])
+		//}
+		log.Println(u, v, "距離", dist[u][v], "経路", len(ps))
+		sumLong += dist[u][v]
+	}
+	log.Println("総距離", sumLong)
 }
 
 // A配列のPaからl個をB配列のPbに代入する
@@ -96,9 +102,12 @@ func readInput() (in Input) {
 	return in
 }
 
+type Path []int
+
 // Floyd-Warshall Algorithm
 // in.roadsから各都市間の最短経路をもとめる
 func allPairsShortest(in Input) ([V][V]int, [V][V]int) {
+	log.Println("1")
 	inf := math.MaxInt / 4
 	var dist [V][V]int
 	var pred [V][V]int
@@ -106,8 +115,10 @@ func allPairsShortest(in Input) ([V][V]int, [V][V]int) {
 		for j := 0; j < V; j++ {
 			dist[i][j] = inf
 			pred[i][j] = -1
+			if i == j {
+				dist[i][j] = 0
+			}
 		}
-		dist[i][i] = 0
 	}
 	for i := 0; i < MaxRoadSize; i++ {
 		u := in.roads[i][0]
@@ -150,4 +161,36 @@ func constructShortestPath(s, t int, pred [V][V]int, dist [V][V]int) []int {
 		reversePath[i], reversePath[j] = reversePath[j], reversePath[i]
 	}
 	return reversePath
+}
+
+// u->vの最短経路列挙
+func findALLShortestPaths(dist [V][V]int, u, v int) (fullpath [][]int) {
+	var queue [][]int
+	queue = append(queue, []int{u})
+	for len(queue) > 0 {
+		current_path := queue[0]
+		queue = queue[1:]
+		current := current_path[len(current_path)-1]
+		// 終了条件
+		if current == v {
+			fullpath = append(fullpath, current_path)
+			continue
+		}
+		for k := 0; k < V; k++ {
+			if dist[current][k] > 1 {
+				continue
+			}
+			//　すでに毛色に含まれている場合
+			if slices.Contains(current_path, k) {
+				continue
+			}
+			if dist[current][k]+dist[k][v] == dist[current][v] {
+				newPath := make([]int, len(current_path))
+				copy(newPath, current_path)
+				newPath = append(newPath, k)
+				queue = append(queue, newPath)
+			}
+		}
+	}
+	return fullpath
 }
