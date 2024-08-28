@@ -18,6 +18,7 @@ func main() {
 	var output strings.Builder
 	in := readInput()
 	dist, pred := allPairsShortest(in)
+	_ = pred
 	A := make([]int, in.La)
 	B := make([]int, in.Lb)
 	for i := 0; i < V; i++ {
@@ -30,7 +31,26 @@ func main() {
 	for i := 0; i < V-1+1; i++ { // in.planは０を先頭に追加してサイズが601
 		u, v := in.plan[i], in.plan[i+1]
 		//log.Println(in.plan[i], "->", in.plan[i+1], "cost=", dist[u][v])
-		root := constructShortestPath(u, v, pred, dist)
+		//root := constructShortestPath(u, v, pred, dist) // １つのルート
+		roots := findALLShortestPaths(dist, u, v) // u, v間の全てのルート
+		// 配列Bに
+		cntStep := 0
+		bestRoot := roots[0]
+		for j := 0; j < len(roots); j++ {
+			cnt := 0
+			for k := 0; k < len(roots[j]); k++ {
+				if slices.Contains(B, roots[j][k]) {
+					cnt++
+				} else {
+					break
+				}
+			}
+			if cnt > cntStep {
+				cntStep = cnt
+				bestRoot = roots[j]
+			}
+		}
+		root := bestRoot
 		//log.Println(root)
 		for j := 1; j < len(root); j++ {
 			if slices.Contains(B, root[j]) {
