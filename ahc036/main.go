@@ -74,11 +74,11 @@ func main() {
 	for i := 0; i < V; i++ {
 		u, v := in.plan[i], in.plan[i+1]
 		//log.Printf("%+v\n", dist[u][v])
-		ps := findALLShortestPaths(dist, u, v)
+		//ps := findALLShortestPaths(dist, u, v)
 		//for j := range ps {
 		//log.Println(j, ps[j])
 		//}
-		log.Println(u, v, "距離", dist[u][v], "経路", len(ps))
+		//log.Println(u, v, "距離", dist[u][v], "経路", len(ps))
 		sumLong += dist[u][v]
 	}
 	log.Println("総距離", sumLong, "信号操作", signalOperations)
