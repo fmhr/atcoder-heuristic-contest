@@ -57,7 +57,6 @@ type Path []int
 // Floyd-Warshall Algorithm
 // in.roadsから各都市間の最短経路をもとめる
 func allPairsShortest(in Input) ([V][V]int, [V][V]int) {
-	log.Println("1")
 	inf := math.MaxInt / 4
 	var dist [V][V]int
 	var pred [V][V]int
@@ -118,7 +117,7 @@ func initialA(in Input, pred, dist [V][V]int) (A []int) {
 	A = make([]int, 0, in.La)
 	visitedCnt := 0
 	var visited [V]int
-	for i := 0; i < len(in.plan)-1 && len(A) > V-visitedCnt; i++ {
+	for i := 0; i < len(in.plan)-1 && in.La-len(A) > V-visitedCnt; i++ {
 		u, v := in.plan[i], in.plan[i+1]
 		root := constructShortestPath(u, v, pred, dist)
 		for j := 1; j < len(root); j++ {
@@ -127,12 +126,11 @@ func initialA(in Input, pred, dist [V][V]int) (A []int) {
 				visitedCnt++
 			}
 			A = append(A, root[j])
-			if len(A) == V-visitedCnt {
+			if in.La-len(A) == V-visitedCnt {
 				break
 			}
 		}
 	}
-	log.Println("len(A)", len(A), V-visitedCnt)
 	for i := 0; i < V; i++ {
 		if visited[i] == 0 {
 			A = append(A, i)
@@ -182,6 +180,7 @@ func main() {
 	}
 	var output strings.Builder
 	in := readInput()
+	log.Println(in)
 	dist, pred := allPairsShortest(in)
 	_ = pred
 	A := initialA(in, pred, dist)
@@ -189,6 +188,7 @@ func main() {
 	for i := range B {
 		B[i] = -1
 	}
+	log.Println(len(A))
 	output.WriteString(fmt.Sprintln(strings.Trim(fmt.Sprint(A), "[]")))
 	signalOperations := 0
 	for i := 0; i < V-1+1; i++ { // in.planは０を先頭に追加してサイズが601
@@ -245,6 +245,7 @@ func main() {
 	}
 	log.Println("総距離", sumLong, "信号操作", signalOperations)
 	log.Println(A)
+	log.Println(len(A))
 }
 
 // utils
