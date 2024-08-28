@@ -7,7 +7,9 @@ import (
 	"math"
 	"os"
 	"slices" // "golang.org/x/exp/slices"
+	"sort"
 	"strings"
+	"time"
 )
 
 // A配列のPaからl個をB配列のPbに代入する
@@ -173,14 +175,42 @@ func findALLShortestPaths(dist [V][V]int, u, v int) (fullpath [][]int) {
 	return fullpath
 }
 
+// 配列操作の操作幅
+func getLength(in Input) (length []int) {
+	for i := 1; i < in.Lb; i++ {
+		length = append(length, i)
+	}
+	return length
+}
+
+// sliceIndexs return index value = v
+func sliceIndexs(a []int, v int) (indexs []int) {
+	for i := 0; i < len(a); i++ {
+		if a[i] == v {
+			indexs = append(indexs, i)
+		}
+	}
+	return indexs
+}
+
+func movement(root []int, A, B []int) (length, Pa, Pb int) {
+	indexs := sliceIndexs(A, root[0])
+	log.Println(indexs)
+	return
+}
+
+var startTime time.Time
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	if os.Getenv("ATCODER") == "1" {
 		log.SetOutput(io.Discard)
 	}
+	startTime = time.Now()
 	var output strings.Builder
 	in := readInput()
-	log.Println(in)
+	log.Printf("La=%v Lb=%v\n", in.La, in.Lb)
+	//log.Println(in)
 	dist, pred := allPairsShortest(in)
 	_ = pred
 	A := initialA(in, pred, dist)
@@ -188,13 +218,14 @@ func main() {
 	for i := range B {
 		B[i] = -1
 	}
-	log.Println(len(A))
+	//log.Println(len(A))
 	output.WriteString(fmt.Sprintln(strings.Trim(fmt.Sprint(A), "[]")))
 	signalOperations := 0
 	for i := 0; i < V-1+1; i++ { // in.planは０を先頭に追加してサイズが601
 		u, v := in.plan[i], in.plan[i+1]
 		//log.Println(in.plan[i], "->", in.plan[i+1], "cost=", dist[u][v])
 		//root := constructShortestPath(u, v, pred, dist) // １つのルート
+		// root決め 配列Bの都市と重複するものを優先する
 		roots := findALLShortestPaths(dist, u, v) // u, v間の全てのルート
 		// 配列Bに
 		cntStep := 0
@@ -221,12 +252,53 @@ func main() {
 			if slices.Contains(B, root[j]) {
 				output.WriteString(fmt.Sprintln("m", root[j]))
 			} else {
-				index := slices.Index(A, root[j])
-				length := len(B)
-				length = minInt(length, len(A)-index)
-				output.WriteString(fmt.Sprintln("s", length, index, 0))
+				// 配列操作 s l Pa Pb
+				indexs := sliceIndexs(A, root[j]) // 配列Aのなかの候補(これを含まなければいけない) Paの候補
+				lengths := getLength(in)          // 操作する幅の候補 lの候補
+				actions := make([][4]int, 0)
+				//log.Println(indexs)
+				//log.Println(lengths)
+				//log.Println("next->", root[j])
+				rootNext := root[j:]
+				for lindex := range lengths {
+					l := lengths[lindex]
+					for ii := range indexs {
+						i := indexs[ii]
+						for Pb := 0; Pb < in.Lb; Pb++ {
+							// Pa は配列Aのスタート
+							for Pa := i - l + 1; Pa <= i; Pa++ {
+								if Pa < 0 || Pa+l > len(A) || Pb < 0 || Pb+l > len(B) {
+									continue
+								}
+								var act [4]int
+								act[0], act[1], act[2], act[3] = l, Pa, Pb, 0
+								pb := make([]int, len(B))
+								copy(pb, B)
+								copy(pb[Pb:Pb+l], A[Pa:Pa+l])
+								for j := 0; j < len(rootNext); j++ {
+									if slices.Contains(pb, rootNext[j]) {
+										act[3]++
+									} else {
+										break // なくてもいいかも
+									}
+								}
+								//log.Println(rootNext, pb, act)
+								actions = append(actions, act)
+							}
+						}
+					}
+				}
+				sort.Slice(actions, func(i, j int) bool { return actions[i][3] > actions[j][3] })
+				//log.Println(actions)
+				//index := slices.Index(A, root[j])
+				//length := len(B)
+				//length = minInt(length, len(A)-index)
+				length := actions[0][0]
+				Pa := actions[0][1]
+				Pb := actions[0][2]
+				output.WriteString(fmt.Sprintln("s", length, Pa, Pb))
 				output.WriteString(fmt.Sprintln("m", root[j]))
-				signaleOpe(length, index, 0, A, B)
+				signaleOpe(length, Pa, Pb, A, B)
 				signalOperations++
 			}
 		}
@@ -244,8 +316,12 @@ func main() {
 		sumLong += dist[u][v]
 	}
 	log.Println("総距離", sumLong, "信号操作", signalOperations)
-	log.Println(A)
-	log.Println(len(A))
+	//log.Println(A)
+	//log.Println(len(A))
+	log.Printf("Length=%v\n", sumLong)
+	log.Printf("C=%v\n", signalOperations)
+	elpseTime := time.Since(startTime)
+	log.Printf("time=%v\n", elpseTime)
 }
 
 // utils
