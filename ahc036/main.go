@@ -10,80 +10,6 @@ import (
 	"strings"
 )
 
-func main() {
-	log.SetFlags(log.Lshortfile)
-	if os.Getenv("ATCODER") == "1" {
-		log.SetOutput(io.Discard)
-	}
-	var output strings.Builder
-	in := readInput()
-	dist, pred := allPairsShortest(in)
-	_ = pred
-	A := make([]int, in.La)
-	B := make([]int, in.Lb)
-	for i := 0; i < V; i++ {
-		A[i] = i
-	}
-	for i := range B {
-		B[i] = -1
-	}
-	output.WriteString(fmt.Sprintln(strings.Trim(fmt.Sprint(A), "[]")))
-	signalOperations := 0
-	for i := 0; i < V-1+1; i++ { // in.planは０を先頭に追加してサイズが601
-		u, v := in.plan[i], in.plan[i+1]
-		//log.Println(in.plan[i], "->", in.plan[i+1], "cost=", dist[u][v])
-		//root := constructShortestPath(u, v, pred, dist) // １つのルート
-		roots := findALLShortestPaths(dist, u, v) // u, v間の全てのルート
-		// 配列Bに
-		cntStep := 0
-		bestRoot := roots[0]
-		log.Println("配列B:", B)
-		log.Println("includeCnt=", cntStep)
-		for j := 0; j < len(roots); j++ {
-			cnt := 0
-			for k := 0; k < len(roots[j]); k++ {
-				if slices.Contains(B, roots[j][k]) {
-					cnt++
-				} else {
-					break
-				}
-			}
-			if cnt > cntStep {
-				cntStep = cnt
-				bestRoot = roots[j]
-			}
-		}
-		root := bestRoot
-		//log.Println(root)
-		for j := 1; j < len(root); j++ {
-			if slices.Contains(B, root[j]) {
-				output.WriteString(fmt.Sprintln("m", root[j]))
-			} else {
-				index := slices.Index(A, root[j])
-				length := len(B)
-				length = minInt(length, len(A)-index)
-				output.WriteString(fmt.Sprintln("s", length, index, 0))
-				output.WriteString(fmt.Sprintln("m", root[j]))
-				signaleOpe(length, index, 0, A, B)
-				signalOperations++
-			}
-		}
-	}
-	fmt.Print(output.String())
-	var sumLong int
-	for i := 0; i < V; i++ {
-		u, v := in.plan[i], in.plan[i+1]
-		//log.Printf("%+v\n", dist[u][v])
-		//ps := findALLShortestPaths(dist, u, v)
-		//for j := range ps {
-		//log.Println(j, ps[j])
-		//}
-		//log.Println(u, v, "距離", dist[u][v], "経路", len(ps))
-		sumLong += dist[u][v]
-	}
-	log.Println("総距離", sumLong, "信号操作", signalOperations)
-}
-
 // A配列のPaからl個をB配列のPbに代入する
 func signaleOpe(length, Pa, Pb int, A, B []int) {
 	if len(A)-Pa-length < 0 {
@@ -166,25 +92,55 @@ func allPairsShortest(in Input) ([V][V]int, [V][V]int) {
 	return dist, pred
 }
 
-//func constructShortestPath(s, t int, pred [V][V]int, dist [V][V]int) []int {
-//reversePath := make([]int, 0, dist[s][t]+2)
-//current := t
+func constructShortestPath(s, t int, pred [V][V]int, dist [V][V]int) []int {
+	reversePath := make([]int, 0, dist[s][t]+2)
+	current := t
 
-//// 逆順に経路を辿る
-//for current != s {
-//if t == -1 {
-//panic("No Path found")
-//}
-//reversePath = append(reversePath, current)
-//current = pred[s][current]
-//}
-//reversePath = append(reversePath, s)
-//// 辿る順に並び替える
-//for i, j := 0, len(reversePath)-1; i < j; i, j = i+1, j-1 {
-//reversePath[i], reversePath[j] = reversePath[j], reversePath[i]
-//}
-//return reversePath
-//}
+	// 逆順に経路を辿る
+	for current != s {
+		if t == -1 {
+			panic("No Path found")
+		}
+		reversePath = append(reversePath, current)
+		current = pred[s][current]
+	}
+	reversePath = append(reversePath, s)
+	// 辿る順に並び替える
+	for i, j := 0, len(reversePath)-1; i < j; i, j = i+1, j-1 {
+		reversePath[i], reversePath[j] = reversePath[j], reversePath[i]
+	}
+	return reversePath
+}
+
+// ルートにそって、配列Aをつくる
+// ただし全ての都市を配列Aにいれなくてはいけない
+func initialA(in Input, pred, dist [V][V]int) (A []int) {
+	A = make([]int, 0, in.La)
+	visitedCnt := 0
+	var visited [V]int
+	for i := 0; i < len(in.plan)-1 && len(A) > V-visitedCnt; i++ {
+		u, v := in.plan[i], in.plan[i+1]
+		root := constructShortestPath(u, v, pred, dist)
+		for j := 1; j < len(root); j++ {
+			if visited[root[j]] == 0 {
+				visited[root[j]]++
+				visitedCnt++
+			}
+			A = append(A, root[j])
+			if len(A) == V-visitedCnt {
+				break
+			}
+		}
+	}
+	log.Println("len(A)", len(A), V-visitedCnt)
+	for i := 0; i < V; i++ {
+		if visited[i] == 0 {
+			A = append(A, i)
+			visited[i] = 0
+		}
+	}
+	return A
+}
 
 // u->vの最短経路列挙
 // []intはuとvを含む
@@ -219,6 +175,79 @@ func findALLShortestPaths(dist [V][V]int, u, v int) (fullpath [][]int) {
 	return fullpath
 }
 
+func main() {
+	log.SetFlags(log.Lshortfile)
+	if os.Getenv("ATCODER") == "1" {
+		log.SetOutput(io.Discard)
+	}
+	var output strings.Builder
+	in := readInput()
+	dist, pred := allPairsShortest(in)
+	_ = pred
+	A := initialA(in, pred, dist)
+	B := make([]int, in.Lb)
+	for i := range B {
+		B[i] = -1
+	}
+	output.WriteString(fmt.Sprintln(strings.Trim(fmt.Sprint(A), "[]")))
+	signalOperations := 0
+	for i := 0; i < V-1+1; i++ { // in.planは０を先頭に追加してサイズが601
+		u, v := in.plan[i], in.plan[i+1]
+		//log.Println(in.plan[i], "->", in.plan[i+1], "cost=", dist[u][v])
+		//root := constructShortestPath(u, v, pred, dist) // １つのルート
+		roots := findALLShortestPaths(dist, u, v) // u, v間の全てのルート
+		// 配列Bに
+		cntStep := 0
+		bestRoot := roots[0]
+		//log.Println("配列B:", B)
+		//log.Println("includeCnt=", cntStep)
+		for j := 0; j < len(roots); j++ {
+			cnt := 0
+			for k := 0; k < len(roots[j]); k++ {
+				if slices.Contains(B, roots[j][k]) {
+					cnt++
+				} else {
+					break
+				}
+			}
+			if cnt > cntStep {
+				cntStep = cnt
+				bestRoot = roots[j]
+			}
+		}
+		root := bestRoot
+		//log.Println(root)
+		for j := 1; j < len(root); j++ {
+			if slices.Contains(B, root[j]) {
+				output.WriteString(fmt.Sprintln("m", root[j]))
+			} else {
+				index := slices.Index(A, root[j])
+				length := len(B)
+				length = minInt(length, len(A)-index)
+				output.WriteString(fmt.Sprintln("s", length, index, 0))
+				output.WriteString(fmt.Sprintln("m", root[j]))
+				signaleOpe(length, index, 0, A, B)
+				signalOperations++
+			}
+		}
+	}
+	fmt.Print(output.String())
+	var sumLong int
+	for i := 0; i < V; i++ {
+		u, v := in.plan[i], in.plan[i+1]
+		//log.Printf("%+v\n", dist[u][v])
+		//ps := findALLShortestPaths(dist, u, v)
+		//for j := range ps {
+		//log.Println(j, ps[j])
+		//}
+		//log.Println(u, v, "距離", dist[u][v], "経路", len(ps))
+		sumLong += dist[u][v]
+	}
+	log.Println("総距離", sumLong, "信号操作", signalOperations)
+	log.Println(A)
+}
+
+// utils
 func minInt(a, b int) int {
 	if a < b {
 		return a
