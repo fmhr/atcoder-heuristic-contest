@@ -28,22 +28,17 @@ func main() {
 		B[i] = -1
 	}
 	output.WriteString(fmt.Sprintln(strings.Trim(fmt.Sprint(A), "[]")))
-
-	root := constructShortestPath(357, 0, pred, dist) // １つのルート
-	test := findALLShortestPaths(dist, 357, 0)
-	log.Println(root)
-	log.Println(test)
-	return
+	signalOperations := 0
 	for i := 0; i < V-1+1; i++ { // in.planは０を先頭に追加してサイズが601
 		u, v := in.plan[i], in.plan[i+1]
 		//log.Println(in.plan[i], "->", in.plan[i+1], "cost=", dist[u][v])
-		root := constructShortestPath(u, v, pred, dist) // １つのルート
-		roots := findALLShortestPaths(dist, u, v)       // u, v間の全てのルート
+		//root := constructShortestPath(u, v, pred, dist) // １つのルート
+		roots := findALLShortestPaths(dist, u, v) // u, v間の全てのルート
 		// 配列Bに
 		cntStep := 0
-		log.Println(i, u, v, roots)
-		log.Println(root)
 		bestRoot := roots[0]
+		log.Println("配列B:", B)
+		log.Println("includeCnt=", cntStep)
 		for j := 0; j < len(roots); j++ {
 			cnt := 0
 			for k := 0; k < len(roots[j]); k++ {
@@ -58,18 +53,19 @@ func main() {
 				bestRoot = roots[j]
 			}
 		}
-		root = bestRoot
+		root := bestRoot
 		//log.Println(root)
 		for j := 1; j < len(root); j++ {
 			if slices.Contains(B, root[j]) {
 				output.WriteString(fmt.Sprintln("m", root[j]))
 			} else {
 				index := slices.Index(A, root[j])
-				size := len(B)
-				size = min(size, len(A)-index)
-				output.WriteString(fmt.Sprintln("s", size, index, 0))
+				length := len(B)
+				length = minInt(length, len(A)-index)
+				output.WriteString(fmt.Sprintln("s", length, index, 0))
 				output.WriteString(fmt.Sprintln("m", root[j]))
-				singleOpe(1, index, 0, A, B)
+				signaleOpe(length, index, 0, A, B)
+				signalOperations++
 			}
 		}
 	}
@@ -85,11 +81,11 @@ func main() {
 		log.Println(u, v, "距離", dist[u][v], "経路", len(ps))
 		sumLong += dist[u][v]
 	}
-	log.Println("総距離", sumLong)
+	log.Println("総距離", sumLong, "信号操作", signalOperations)
 }
 
 // A配列のPaからl個をB配列のPbに代入する
-func singleOpe(length, Pa, Pb int, A, B []int) {
+func signaleOpe(length, Pa, Pb int, A, B []int) {
 	if len(A)-Pa-length < 0 {
 		log.Fatal(len(A), Pa, length)
 	}
@@ -221,4 +217,11 @@ func findALLShortestPaths(dist [V][V]int, u, v int) (fullpath [][]int) {
 		}
 	}
 	return fullpath
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
