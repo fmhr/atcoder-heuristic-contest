@@ -269,10 +269,10 @@ func main() {
 		// root が小さい時、次の移動を先読みして配列操作の精度を上げる
 		// 時間の割にスコアが伸びないのでコメントアウト
 		rootSize := len(root)
-		if i+2 < V && rootSize < 4 {
-			nextRoot := constructShortestPath(u, v, pred, dist)
-			root = append(root, nextRoot[1:minInt(4, len(nextRoot))]...)
-		}
+		//if i+2 < V && rootSize < 4 {
+		//nextRoot := constructShortestPath(u, v, pred, dist)
+		//root = append(root, nextRoot[1:minInt(4, len(nextRoot))]...)
+		//}
 		//log.Println(root)
 		for j := 1; j < rootSize; j++ {
 			if slices.Contains(B, root[j]) {
