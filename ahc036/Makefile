@@ -26,6 +26,7 @@ seed:
 
 profile: build
 	$(RUN_CMD) -cpuprofile cpu.prof < tools/in/0000.txt > tmp.out
+# flag.Pars() をわすれない
 
 cpuprofile:
 	go tool pprof -http=:6060 cpu.prof 	

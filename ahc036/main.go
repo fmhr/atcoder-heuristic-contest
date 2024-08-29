@@ -1,11 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"math"
 	"os"
+	"runtime/pprof"
 	"slices" // "golang.org/x/exp/slices"
 	"sort"
 	"strings"
@@ -59,32 +61,36 @@ type Path []int
 // Floyd-Warshall Algorithm
 // in.roadsから各都市間の最短経路をもとめる
 func allPairsShortest(in Input) ([V][V]int, [V][V]int) {
-	inf := math.MaxInt / 4
 	var dist [V][V]int
 	var pred [V][V]int
 	for i := 0; i < V; i++ {
 		for j := 0; j < V; j++ {
-			dist[i][j] = inf
+			dist[i][j] = math.MaxInt32
 			pred[i][j] = -1
 			if i == j {
 				dist[i][j] = 0
 			}
 		}
 	}
-	for i := 0; i < in.M; i++ {
-		u := in.roads[i][0]
-		v := in.roads[i][1]
+	for _, road := range in.roads[:in.M] {
+		u := road[0]
+		v := road[1]
 		dist[u][v] = 1
-		pred[u][v] = u
 		dist[v][u] = 1
+		pred[u][v] = u
 		pred[v][u] = v
 	}
 	for k := 0; k < V; k++ {
 		for u := 0; u < V; u++ {
+			if dist[k][u] >= math.MaxInt32 {
+				continue
+			}
 			for v := 0; v < V; v++ {
-				newLength := dist[u][k] + dist[k][v]
-				if newLength < dist[u][v] {
-					dist[u][v] = newLength
+				if dist[k][v] >= math.MaxInt32 {
+					continue
+				}
+				if newDist := dist[u][k] + dist[k][v]; newDist < dist[u][v] {
+					dist[u][v] = newDist
 					pred[u][v] = pred[k][v]
 				}
 			}
@@ -193,12 +199,12 @@ func sliceIndexs(a []int, v int) (indexs []int) {
 	return indexs
 }
 
-func movement(root []int, A, B []int) (length, Pa, Pb int) {
-	indexs := sliceIndexs(A, root[0])
-	log.Println(indexs)
-	return
-}
-
+// func movement(root []int, A, B []int) (length, Pa, Pb int) {
+// indexs := sliceIndexs(A, root[0])
+// log.Println(indexs)
+// return
+// }
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var startTime time.Time
 
 func main() {
@@ -206,6 +212,19 @@ func main() {
 	if os.Getenv("ATCODER") == "1" {
 		log.SetOutput(io.Discard)
 	}
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
 	startTime = time.Now()
 	var output strings.Builder
 	in := readInput()
@@ -247,17 +266,23 @@ func main() {
 			}
 		}
 		root := bestRoot
+		// root が小さい時、次の移動を先読みして配列操作の精度を上げる
+		// 時間の割にスコアが伸びないのでコメントアウト
+		rootSize := len(root)
+		if i+2 < V && rootSize < 4 {
+			nextRoot := constructShortestPath(u, v, pred, dist)
+			root = append(root, nextRoot[1:minInt(4, len(nextRoot))]...)
+		}
 		//log.Println(root)
-		for j := 1; j < len(root); j++ {
+		for j := 1; j < rootSize; j++ {
 			if slices.Contains(B, root[j]) {
 				output.WriteString(fmt.Sprintln("m", root[j]))
 			} else {
 				// 配列操作 s l Pa Pb
+				//log.Println("配列操作", root[j:])
 				indexs := sliceIndexs(A, root[j]) // 配列Aのなかの候補(これを含まなければいけない) Paの候補
 				lengths := getLength(in)          // 操作する幅の候補 lの候補
 				actions := make([][4]int, 0)
-				//log.Println(indexs)
-				//log.Println(lengths)
 				//log.Println("next->", root[j])
 				rootNext := root[j:]
 				for lindex := range lengths {
@@ -275,11 +300,9 @@ func main() {
 								pb := make([]int, len(B))
 								copy(pb, B)
 								copy(pb[Pb:Pb+l], A[Pa:Pa+l])
-								for j := 0; j < len(rootNext); j++ {
+								for j := 0; j < minInt(len(rootNext), in.Lb); j++ {
 									if slices.Contains(pb, rootNext[j]) {
 										act[3]++
-									} else {
-										break // なくてもいいかも
 									}
 								}
 								//log.Println(rootNext, pb, act)
@@ -288,8 +311,8 @@ func main() {
 						}
 					}
 				}
+
 				sort.Slice(actions, func(i, j int) bool { return actions[i][3] > actions[j][3] })
-				//log.Println(actions)
 				//index := slices.Index(A, root[j])
 				//length := len(B)
 				//length = minInt(length, len(A)-index)
@@ -321,7 +344,7 @@ func main() {
 	log.Printf("Length=%v\n", sumLong)
 	log.Printf("C=%v\n", signalOperations)
 	elpseTime := time.Since(startTime)
-	log.Printf("time=%v\n", elpseTime)
+	log.Printf("time=%v\n", elpseTime.Milliseconds())
 }
 
 // utils
