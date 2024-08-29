@@ -123,34 +123,39 @@ func constructShortestPath(s, t int, pred [V][V]int, dist [V][V]int) []int {
 // ただし全ての都市を配列Aにいれなくてはいけない
 func initialA(in Input, pred, dist [V][V]int) (A []int) {
 	A = make([]int, 0, in.La)
-	visitedCnt := 0
-	var visited [V]int
-	for i := 0; i < len(in.plan)-1 && in.La-len(A) > V-visitedCnt; i++ {
+	visitedCityNum := 0      // これは配列Aにいれた都市の数　重複は数えない
+	var visitedCunter [V]int // 各都市に何回訪れたか
+	// in.Laが大きい時、すべての順序をいれても、埋まらないことがある
+	// 全ての都市を配列Aに入れる必要はない
+	for i := 0; i < len(in.plan)-1; i++ {
 		u, v := in.plan[i], in.plan[i+1]
 		root := constructShortestPath(u, v, pred, dist)
+		// root はスタートを含むので、j=1から
 		for j := 1; j < len(root); j++ {
-			if visited[root[j]] == 0 {
-				visited[root[j]]++
-				visitedCnt++
+			// 一度も使ってない都市
+			if visitedCunter[root[j]] == 0 {
+				visitedCityNum++
 			}
-			A = append(A, root[j])
-			if in.La-len(A) == V-visitedCnt {
+			// １つ最大?つまで
+			if visitedCunter[root[j]] < 5 {
+				A = append(A, root[j])
+			}
+			visitedCunter[root[j]]++
+			// 配列Aの空き数(La-len(A))が未使用の都市の数と一致したら
+			if in.La-len(A) <= V-visitedCityNum {
 				break
 			}
 		}
+		if in.La-len(A) <= V-visitedCityNum {
+			break
+		}
 	}
-	// のこりのノードを順に
-	//	for i := 0; i < V; i++ {
-	//if visited[i] == 0 {
-	//A = append(A, i)
-	//visited[i] = 0
-	//}
-	//}
-	log.Println(A)
+	//log.Println(A)
+	log.Println(in.La-len(A), V-visitedCityNum)
 	//まだ追加していない都市を隣接する都市の横に追加する
 	unVisited := make([]int, 0)
 	for i := 0; i < V; i++ {
-		if visited[i] == 0 {
+		if visitedCunter[i] == 0 {
 			unVisited = append(unVisited, i)
 		}
 	}
@@ -169,7 +174,8 @@ func initialA(in Input, pred, dist [V][V]int) (A []int) {
 			}
 		}
 	}
-	log.Println(A)
+	log.Println(len(A))
+	//log.Println(A)
 	return A
 }
 
@@ -336,7 +342,6 @@ func main() {
 						}
 					}
 				}
-
 				sort.Slice(actions, func(i, j int) bool { return actions[i][3] > actions[j][3] })
 				//index := slices.Index(A, root[j])
 				//length := len(B)
