@@ -139,12 +139,37 @@ func initialA(in Input, pred, dist [V][V]int) (A []int) {
 			}
 		}
 	}
+	// のこりのノードを順に
+	//	for i := 0; i < V; i++ {
+	//if visited[i] == 0 {
+	//A = append(A, i)
+	//visited[i] = 0
+	//}
+	//}
+	log.Println(A)
+	//まだ追加していない都市を隣接する都市の横に追加する
+	unVisited := make([]int, 0)
 	for i := 0; i < V; i++ {
 		if visited[i] == 0 {
-			A = append(A, i)
-			visited[i] = 0
+			unVisited = append(unVisited, i)
 		}
 	}
+	for len(unVisited) > 0 {
+	again:
+		for i, u := range unVisited {
+			for v := 0; v < V; v++ {
+				if dist[u][v] == 1 {
+					index := slices.Index(A, v)
+					if index >= 0 {
+						A = slices.Insert(A, index, u)
+						unVisited = slices.Delete(unVisited, i, i+1)
+						goto again
+					}
+				}
+			}
+		}
+	}
+	log.Println(A)
 	return A
 }
 
