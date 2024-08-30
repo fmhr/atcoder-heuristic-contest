@@ -13,7 +13,11 @@
 *.exe
 *.out
 main
-a
+
+
 
 # AtCoder tools
 **/tools/
+
+# mac
+.DS_Store

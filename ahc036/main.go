@@ -53,6 +53,12 @@ func readInput() (in Input) {
 	for i := 0; i < _T; i++ {
 		fmt.Scan(&in.plan[i+1])
 	}
+
+	cntPlan := map[int]int{}
+	for i := range 601 {
+		cntPlan[in.plan[i]]++
+	}
+	log.Printf("cntPlan=%d\n", len(cntPlan))
 	return in
 }
 
@@ -151,7 +157,7 @@ func initialA(in Input, pred, dist [V][V]int) (A []int) {
 		}
 	}
 	//log.Println(A)
-	log.Println(in.La-len(A), V-visitedCityNum)
+	//log.Println(in.La-len(A), V-visitedCityNum)
 	//まだ追加していない都市を隣接する都市の横に追加する
 	unVisited := make([]int, 0)
 	for i := 0; i < V; i++ {
@@ -174,7 +180,7 @@ func initialA(in Input, pred, dist [V][V]int) (A []int) {
 			}
 		}
 	}
-	log.Println(len(A))
+	//log.Println(len(A))
 	//log.Println(A)
 	return A
 }
@@ -259,7 +265,7 @@ func main() {
 	startTime = time.Now()
 	var output strings.Builder
 	in := readInput()
-	log.Printf("La=%v Lb=%v\n", in.La, in.Lb)
+	log.Printf("LenA=%v LenB=%v\n", in.La, in.Lb)
 	//log.Println(in)
 	dist, pred := allPairsShortest(in)
 	_ = pred
