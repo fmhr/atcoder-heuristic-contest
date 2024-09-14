@@ -1,3 +1,6 @@
 tools/
 out/
 vis.html
+
+.DS_Store
+bin/

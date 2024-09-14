@@ -1,4 +1,4 @@
-BINARY = a.out
+BINARY = bin/a.out
 SRC = main.go
 
 # Reactive
