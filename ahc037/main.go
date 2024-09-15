@@ -49,9 +49,10 @@ func solve(in Input) {
 	sort.Slice(in.sodas[:], func(i, j int) bool {
 		return in.sodas[i].x < in.sodas[j].x
 	})
-	fmt.Println(N)
-	for i := 0; i < N; i++ {
-		fmt.Println(0, 0, in.sodas[i].x, in.sodas[i].y)
+	for i := 0; i < in._N; i++ {
+		p := searchMini(in.sodas[:i], in.sodas[i])
+		in.sodas[i].parent = p
+		log.Println(in.sodas[i], p)
 	}
 }
 
