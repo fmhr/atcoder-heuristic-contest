@@ -38,6 +38,11 @@ func searchMini(u []soda, n int) (p int) {
 	return
 }
 
+type ans struct {
+	out  [][4]int
+	cost int
+}
+
 func readInput() (in Input) {
 	_N := 0
 	fmt.Scan(&_N)
@@ -66,6 +71,7 @@ func solve(in Input) {
 		}
 		S[i].parent = searchMini(S, i)
 	}
+	var a ans
 	var createSoda func(i int)
 	createSoda = func(i int) {
 		if S[i].created {
@@ -73,15 +79,21 @@ func solve(in Input) {
 		}
 		p := S[S[i].parent]
 		if p.created {
-			fmt.Println(p.x, p.y, S[i].x, S[i].y)
+			//fmt.Println(p.x, p.y, S[i].x, S[i].y)
 			S[i].created = true
+			a.out = append(a.out, [4]int{p.x, p.y, S[i].x, S[i].y})
+			a.cost += S[i].x - p.x + S[i].y - p.y
 		} else {
 			createSoda(S[i].parent)
 		}
 	}
-	fmt.Println("1000")
 	for i := 1; i < N+1; i++ {
 		createSoda(i)
+	}
+
+	fmt.Println(len(a.out))
+	for i := 0; i < len(a.out); i++ {
+		fmt.Println(a.out[i][0], a.out[i][1], a.out[i][2], a.out[i][3])
 	}
 }
 
