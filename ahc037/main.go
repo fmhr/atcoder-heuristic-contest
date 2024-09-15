@@ -11,23 +11,27 @@ const (
 )
 
 type Input struct {
-	_N    int
 	sodas [1000]soda
 }
 
 type soda struct {
-	x, y   int
-	parent *soda
+	x, y    int
+	parent  int
+	created bool
 }
 
-func searchMini(u []soda, s soda) (p *soda) {
-	miniCost := s.x + s.y + 1
+func searchMini(u []soda, n int) (p int) {
+	s := u[n]
+	miniCost := (s.x + s.y) * 2
 	for i := 0; i < len(u); i++ {
+		if i == n {
+			continue
+		}
 		if s.x >= u[i].x && s.y >= u[i].y {
-			cost := u[i].x + u[i].y
+			cost := s.x - u[i].x + s.y - u[i].y
 			if cost < miniCost {
 				miniCost = cost
-				p = &u[i]
+				p = i
 			}
 		}
 	}
@@ -35,8 +39,9 @@ func searchMini(u []soda, s soda) (p *soda) {
 }
 
 func readInput() (in Input) {
-	fmt.Scan(&in._N)
-	for i := 0; i < in._N; i++ {
+	_N := 0
+	fmt.Scan(&_N)
+	for i := 0; i < N; i++ {
 		fmt.Scan(&in.sodas[i].x, &in.sodas[i].y)
 	}
 	return in
@@ -49,10 +54,34 @@ func solve(in Input) {
 	sort.Slice(in.sodas[:], func(i, j int) bool {
 		return in.sodas[i].x < in.sodas[j].x
 	})
-	for i := 0; i < in._N; i++ {
-		p := searchMini(in.sodas[:i], in.sodas[i])
-		in.sodas[i].parent = p
-		log.Println(in.sodas[i], p)
+	S := make([]soda, 0, N+1)
+	S = append(S, soda{x: 0, y: 0, created: true})
+	for i := 0; i < N; i++ {
+		S = append(S, in.sodas[i])
+	}
+
+	for i := 1; i < len(S); i++ {
+		if S[i].created {
+			continue
+		}
+		S[i].parent = searchMini(S, i)
+	}
+	var createSoda func(i int)
+	createSoda = func(i int) {
+		if S[i].created {
+			return
+		}
+		p := S[S[i].parent]
+		if p.created {
+			fmt.Println(p.x, p.y, S[i].x, S[i].y)
+			S[i].created = true
+		} else {
+			createSoda(S[i].parent)
+		}
+	}
+	fmt.Println("1000")
+	for i := 1; i < N+1; i++ {
+		createSoda(i)
 	}
 }
 
