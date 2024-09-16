@@ -109,8 +109,10 @@ again:
 			// p-aがp-bよりも短い場合
 			if distance(p, a) < distance(p, b) {
 				// aからp-bに垂線を引いた点を求める
-				y := int(math.Floor(findIntersection(p, b, a.x)))
-				x := a.x
+				//y := int(math.Floor(findIntersection(p, b, a.x)))
+				//x := a.x
+				y := minInt(a.y, b.y)
+				x := minInt(a.x, b.x)
 				//log.Println(p, x >= p.x, y >= p.y)
 				//log.Println(a, a.x >= x, a.y >= y)
 				//log.Println(b, b.x >= x, b.y >= y)
@@ -125,14 +127,15 @@ again:
 				S = append(S, soda{x: x, y: y})
 				used[[2]int{x, y}] = true
 			} else if distance(p, a) > distance(p, b) {
-				x := int(math.Floor(findIntersectionY(p, a, b.y)))
-				y := b.y
+				//x := int(math.Floor(findIntersectionY(p, a, b.y)))
+				//y := b.y
+				x := minInt(a.x, b.x)
+				y := minInt(a.y, b.y)
 				//log.Println(p, x >= p.x, y >= p.y)
 				//log.Println(a, a.x >= x, a.y >= y)
 				//log.Println(b, b.x >= x, b.y >= y)
 				//log.Println(x, y)
 				if x == p.x && y == p.y {
-					//log.Println("Pass")
 					continue
 				}
 				if _, ok := used[[2]int{x, y}]; ok {
