@@ -99,43 +99,22 @@ again:
 			p.x, p.y = S[i].x, S[i].y
 			a.x, a.y = S[S[i].children[0]].x, S[S[i].children[0]].y
 			b.x, b.y = S[S[i].children[1]].x, S[S[i].children[1]].y
-			// yの大きい法をaとする
-			if a.y < b.y {
-				a, b = b, a
-			}
 			// p-aがp-bよりも短い場合
-			if distance(p, a) < distance(p, b) {
-				y := minInt(a.y, b.y)
-				x := minInt(a.x, b.x)
-				//log.Println(p, x >= p.x, y >= p.y)
-				//log.Println(a, a.x >= x, a.y >= y)
-				//log.Println(b, b.x >= x, b.y >= y)
-				//log.Println(x, y)
-				if x == p.x && y == p.y {
-					//log.Println("Pass")
-					continue
-				}
-				if _, ok := used[[2]int{x, y}]; ok {
-					continue
-				}
-				S = append(S, soda{x: x, y: y})
-				used[[2]int{x, y}] = true
-			} else if distance(p, a) > distance(p, b) {
-				x := minInt(a.x, b.x)
-				y := minInt(a.y, b.y)
-				//log.Println(p, x >= p.x, y >= p.y)
-				//log.Println(a, a.x >= x, a.y >= y)
-				//log.Println(b, b.x >= x, b.y >= y)
-				//log.Println(x, y)
-				if x == p.x && y == p.y {
-					continue
-				}
-				if _, ok := used[[2]int{x, y}]; ok {
-					continue
-				}
-				S = append(S, soda{x: x, y: y})
-				used[[2]int{x, y}] = true
+			y := minInt(a.y, b.y)
+			x := minInt(a.x, b.x)
+			//log.Println(p, x >= p.x, y >= p.y)
+			//log.Println(a, a.x >= x, a.y >= y)
+			//log.Println(b, b.x >= x, b.y >= y)
+			//log.Println(x, y)
+			if x == p.x && y == p.y {
+				//log.Println("Pass")
+				continue
 			}
+			if _, ok := used[[2]int{x, y}]; ok {
+				continue
+			}
+			S = append(S, soda{x: x, y: y})
+			used[[2]int{x, y}] = true
 		}
 	}
 	if lenSize != len(S) {
