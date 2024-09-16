@@ -78,11 +78,6 @@ func solve(in Input) {
 		used[[2]int{in.sodas[i].x, in.sodas[i].y}] = true
 	}
 
-	// 中間地点になる100追加する
-	//for i := 0; i < 200; i++ {
-	//x, y := rand.Intn(1000000000), rand.Intn(1000000000)
-	//S = append(S, soda{x: x, y: y})
-	//}
 	lenSize := len(S)
 again:
 
@@ -108,9 +103,6 @@ again:
 			}
 			// p-aがp-bよりも短い場合
 			if distance(p, a) < distance(p, b) {
-				// aからp-bに垂線を引いた点を求める
-				//y := int(math.Floor(findIntersection(p, b, a.x)))
-				//x := a.x
 				y := minInt(a.y, b.y)
 				x := minInt(a.x, b.x)
 				//log.Println(p, x >= p.x, y >= p.y)
@@ -127,8 +119,6 @@ again:
 				S = append(S, soda{x: x, y: y})
 				used[[2]int{x, y}] = true
 			} else if distance(p, a) > distance(p, b) {
-				//x := int(math.Floor(findIntersectionY(p, a, b.y)))
-				//y := b.y
 				x := minInt(a.x, b.x)
 				y := minInt(a.y, b.y)
 				//log.Println(p, x >= p.x, y >= p.y)
@@ -216,53 +206,4 @@ type Point struct {
 // 2点間の距離
 func distance(p1, p2 Point) float64 {
 	return math.Sqrt(float64((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y)))
-}
-
-// 線分pb上に点aからx軸に垂線を引いた時の交点
-func findIntersection(p, b Point, ax int) float64 {
-	// 線分PBが垂直な場合（x座標が同じ場合）の処理
-	if p.x == b.x {
-		if p.x == ax {
-			// 線分PBとx=axが重なる場合、任意の点（ここではPを選択）を返す
-			return float64(p.y)
-		}
-		// 交点が存在しない場合
-		return math.NaN()
-	}
-
-	// 線分PBの傾きと切片を計算
-	m := float64(b.y-p.y) / float64(b.x-p.x)
-	c := float64(p.y) - float64(m)*float64(p.x)
-
-	// 交点のy座標を計算
-	y := m*float64(ax) + c
-	return y
-}
-
-func findIntersectionY(p, b Point, ay int) float64 {
-	// 線分PBが水平な場合（y座標が同じ場合）の処理
-	if p.y == b.y {
-		if p.y == ay {
-			// 線分PBとy=ayが重なる場合、任意の点（ここではPを選択）を返す
-			return float64(p.x)
-		}
-		// 交点が存在しない場合
-		return math.NaN()
-	}
-
-	// 線分PBの傾きと切片を計算
-	m := float64(b.x-p.x) / float64(b.y-p.y)
-	c := float64(p.x) - m*float64(p.y)
-
-	// 交点のx座標を計算
-	x := m*float64(ay) + c
-
-	// 交点が線分PB上にあるかチェック
-	minY := math.Min(float64(p.y), float64(b.y))
-	maxY := math.Max(float64(p.y), float64(b.y))
-	if float64(ay) < minY || float64(ay) > maxY {
-		return math.NaN()
-	}
-
-	return x
 }
