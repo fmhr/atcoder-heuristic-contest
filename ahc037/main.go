@@ -67,7 +67,9 @@ func readInput() (in Input) {
 
 func solve(in Input) {
 	sort.Slice(in.sodas[:], func(i, j int) bool {
-		return in.sodas[i].x < in.sodas[j].x
+		a, b := in.sodas[i], in.sodas[j]
+		//return a.x+a.y < b.x+b.y
+		return a.x < b.x
 	})
 
 	used := map[[2]int]bool{}
