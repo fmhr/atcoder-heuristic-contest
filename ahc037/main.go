@@ -92,14 +92,11 @@ again:
 	// chiledrenが２以上のものをさがす
 	for i := 0; i < len(S); i++ {
 		if len(S[i].children) >= 2 {
-			//log.Println(i, S[i].x, S[i].y, S[i].children)
 			// 2つの子供の中間地点を作る
-			//　短い法を探す
 			var p, a, b Point
 			p.x, p.y = S[i].x, S[i].y
 			a.x, a.y = S[S[i].children[0]].x, S[S[i].children[0]].y
 			b.x, b.y = S[S[i].children[1]].x, S[S[i].children[1]].y
-			// p-aがp-bよりも短い場合
 			y := minInt(a.y, b.y)
 			x := minInt(a.x, b.x)
 			//log.Println(p, x >= p.x, y >= p.y)
@@ -107,7 +104,6 @@ again:
 			//log.Println(b, b.x >= x, b.y >= y)
 			//log.Println(x, y)
 			if x == p.x && y == p.y {
-				//log.Println("Pass")
 				continue
 			}
 			if _, ok := used[[2]int{x, y}]; ok {
