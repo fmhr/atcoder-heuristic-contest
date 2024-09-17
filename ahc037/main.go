@@ -36,23 +36,21 @@ func readInput() (in Input) {
 }
 
 func solve(in Input) {
-	S := make([]soda, len(in.sodas))
-	copy(S, in.sodas[:])
-	Sexit := map[soda]struct{}{}
-	for i := 0; i < len(in.sodas); i++ {
-		Sexit[in.sodas[i]] = struct{}{}
+	S := newSetSoda()
+	for _, s := range in.sodas {
+		S.append(s)
 	}
 	ans := make([][4]int, 0, 2000)
 	for {
 		max := int(0)
 		maxPos := soda{}
 		i_, j_ := -1, -1
-		for i := range S {
-			for j := i + 1; j < len(S); j++ {
+		for i := range S.s {
+			for j := i + 1; j < len(S.s); j++ {
 				if i == j {
 					continue
 				}
-				x, y := minInt(S[i].x, S[j].x), minInt(S[i].y, S[j].y)
+				x, y := minInt(S.s[i].x, S.s[j].x), minInt(S.s[i].y, S.s[j].y)
 				if max < x+y {
 					max = x + y
 					maxPos.x, maxPos.y = x, y
@@ -61,28 +59,17 @@ func solve(in Input) {
 			}
 		}
 		if max > 0 {
-			ans = append(ans, [4]int{maxPos.x, maxPos.y, S[i_].x, S[i_].y})
-			ans = append(ans, [4]int{maxPos.x, maxPos.y, S[j_].x, S[j_].y})
-			delete(Sexit, S[i_])
-			delete(Sexit, S[j_])
-
-			//if i_ < j_ {
-			//i_, j_ = j_, i_
-			//}
-			S[j_], S[len(S)-2] = S[len(S)-2], S[j_]
-			S[i_], S[len(S)-1] = S[len(S)-1], S[i_]
-			S = S[:len(S)-2]
-
-			_, ok := Sexit[maxPos]
-			if !ok {
-				S = append(S, maxPos)
-				Sexit[maxPos] = struct{}{}
-			}
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, S.s[i_].x, S.s[i_].y})
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, S.s[j_].x, S.s[j_].y})
+			a, b := S.s[i_], S.s[j_]
+			S.delete(a)
+			S.delete(b)
+			S.append(maxPos)
 		} else {
 			break
 		}
 	}
-	for _, k := range S {
+	for _, k := range S.s {
 		ans = append(ans, [4]int{0, 0, k.x, k.y})
 	}
 	out := bytes.Buffer{}
@@ -139,5 +126,38 @@ func maxInt(a, b int) int {
 func ReverseSlice(a [][4]int) {
 	for i, j := 0, len(a)-1; i < j; i, j = i+1, j-1 {
 		a[i], a[j] = a[j], a[i]
+	}
+}
+
+type setSoda struct {
+	s    []soda
+	exit map[soda]struct{}
+}
+
+func newSetSoda() *setSoda {
+	return &setSoda{
+		s:    make([]soda, 0),
+		exit: make(map[soda]struct{}, 0),
+	}
+}
+
+func (s *setSoda) append(x soda) {
+	if _, ok := s.exit[x]; ok {
+		return
+	}
+	s.s = append(s.s, x)
+	s.exit[x] = struct{}{}
+}
+
+func (s *setSoda) delete(x soda) {
+	if _, ok := s.exit[x]; !ok {
+		return
+	}
+	delete(s.exit, x)
+	for i := range s.s {
+		if s.s[i] == x {
+			s.s = append(s.s[:i], s.s[i+1:]...)
+			return
+		}
 	}
 }
