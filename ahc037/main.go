@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -72,14 +71,12 @@ func solve(in Input) {
 	for _, k := range S.s {
 		ans = append(ans, [4]int{0, 0, k.x, k.y})
 	}
-	out := bytes.Buffer{}
-	out.WriteString(fmt.Sprintf("%d\n", len(ans)))
+	fmt.Printf("%d\n", len(ans))
 	//slices.Reverse(ans)
 	ReverseSlice(ans)
 	for _, a := range ans {
-		out.WriteString(fmt.Sprintf("%d %d %d %d\n", a[0], a[1], a[2], a[3]))
+		fmt.Printf("%d %d %d %d\n", a[0], a[1], a[2], a[3])
 	}
-	out.WriteTo(os.Stdout)
 }
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
@@ -90,6 +87,7 @@ func main() {
 		log.SetOutput(io.Discard)
 	}
 	flag.Parse()
+
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -101,11 +99,13 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
-	startTime := time.Now()
+
 	in := readInput()
+	startTime := time.Now()
 	solve(in)
 	elapsedTime := time.Since(startTime)
 	log.Printf("elapsedT=%v\n", elapsedTime)
+
 }
 
 // utils
@@ -135,7 +135,7 @@ type setSoda struct {
 
 func newSetSoda() *setSoda {
 	return &setSoda{
-		s: make([]soda, 0),
+		s: make([]soda, 0, 1000),
 	}
 }
 
