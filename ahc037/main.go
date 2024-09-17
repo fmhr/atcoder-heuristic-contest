@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+	"slices" // "golang.org/x/exp/slices"
 	"time"
 )
 
@@ -130,30 +131,23 @@ func ReverseSlice(a [][4]int) {
 }
 
 type setSoda struct {
-	s    []soda
-	exit map[soda]struct{}
+	s []soda
 }
 
 func newSetSoda() *setSoda {
 	return &setSoda{
-		s:    make([]soda, 0),
-		exit: make(map[soda]struct{}, 0),
+		s: make([]soda, 0),
 	}
 }
 
 func (s *setSoda) append(x soda) {
-	if _, ok := s.exit[x]; ok {
+	if slices.Contains(s.s, x) {
 		return
 	}
 	s.s = append(s.s, x)
-	s.exit[x] = struct{}{}
 }
 
 func (s *setSoda) delete(x soda) {
-	if _, ok := s.exit[x]; !ok {
-		return
-	}
-	delete(s.exit, x)
 	for i := range s.s {
 		if s.s[i] == x {
 			s.s = append(s.s[:i], s.s[i+1:]...)
