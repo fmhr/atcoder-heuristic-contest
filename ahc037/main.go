@@ -1,10 +1,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io"
 	"log"
-	"math"
-	"sort"
+	"os"
+	"runtime/pprof"
+	"slices" // "golang.org/x/exp/slices"
+	"time"
 )
 
 const (
@@ -17,38 +21,7 @@ type Input struct {
 }
 
 type soda struct {
-	x, y     int
-	parent   int
-	children []int
-	cost     int // parentからのコスト
-	created  bool
-}
-
-func searchMini(u []soda, n int) (p int) {
-	c := u[n]
-	miniCost := (c.x + c.y) * 2
-	for i := 0; i < len(u); i++ {
-		if i == n {
-			continue
-		}
-		if c.x >= u[i].x && c.y >= u[i].y {
-			cost := c.x - u[i].x + c.y - u[i].y
-			if cost < miniCost {
-				miniCost = cost
-				p = i
-			}
-		}
-	}
-	return
-}
-
-type ans struct {
-	out  [][4]int
-	cost int
-}
-
-func (a ans) Score(L int) int {
-	return int(math.Round(1000000 * (float64((N * L)) / float64(1+a.cost))))
+	x, y int
 }
 
 func readInput() (in Input) {
@@ -62,103 +35,77 @@ func readInput() (in Input) {
 	return in
 }
 
-// x = seet, y = carbon とすると、
-// x'>=x y'>=y なので、小さいものからつくっていく
-
 func solve(in Input) {
-	sort.Slice(in.sodas[:], func(i, j int) bool {
-		a, b := in.sodas[i], in.sodas[j]
-		//return a.x+a.y < b.x+b.y
-		return a.x < b.x
-	})
-
-	used := map[[2]int]bool{}
-	S := make([]soda, 0, N+1)
-	S = append(S, soda{x: 0, y: 0, created: true})
-	for i := 0; i < N; i++ {
-		S = append(S, in.sodas[i])
-		used[[2]int{in.sodas[i].x, in.sodas[i].y}] = true
+	S := newSetSoda()
+	for _, s := range in.sodas {
+		S.append(s)
 	}
-
-	lenSize := len(S)
-again:
-
-	for i := 1; i < len(S); i++ {
-		p := searchMini(S, i)
-		S[i].parent = p
-		S[p].children = append(S[p].children, i)
-	}
-
-	// chiledrenが２以上のものをさがす
-	for i := 0; i < len(S); i++ {
-		if len(S[i].children) >= 2 {
-			// 2つの子供の中間地点を作る
-			var p, a, b Point
-			p.x, p.y = S[i].x, S[i].y
-			a.x, a.y = S[S[i].children[0]].x, S[S[i].children[0]].y
-			b.x, b.y = S[S[i].children[1]].x, S[S[i].children[1]].y
-			y := minInt(a.y, b.y)
-			x := minInt(a.x, b.x)
-			//log.Println(p, x >= p.x, y >= p.y)
-			//log.Println(a, a.x >= x, a.y >= y)
-			//log.Println(b, b.x >= x, b.y >= y)
-			//log.Println(x, y)
-			if x == p.x && y == p.y {
-				continue
+	ans := make([][4]int, 0, 2000)
+	for {
+		max := int(0)
+		maxPos := soda{}
+		i_, j_ := -1, -1
+		for i := range S.s {
+			for j := i + 1; j < len(S.s); j++ {
+				if i == j {
+					continue
+				}
+				x, y := minInt(S.s[i].x, S.s[j].x), minInt(S.s[i].y, S.s[j].y)
+				if max < x+y {
+					max = x + y
+					maxPos.x, maxPos.y = x, y
+					i_, j_ = i, j
+				}
 			}
-			if _, ok := used[[2]int{x, y}]; ok {
-				continue
-			}
-			S = append(S, soda{x: x, y: y})
-			used[[2]int{x, y}] = true
+		}
+		if max > 0 {
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, S.s[i_].x, S.s[i_].y})
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, S.s[j_].x, S.s[j_].y})
+			S.deleteIndex(j_) // i<j なので、jを先に削除しないとjがずれる
+			S.deleteIndex(i_)
+			S.append(maxPos)
+		} else {
+			break
 		}
 	}
-	if lenSize != len(S) {
-		for i := 0; i < len(S); i++ {
-			S[i].parent = 0
-			S[i].children = make([]int, 0)
-		}
-		log.Println("again", len(S))
-		lenSize = len(S)
-		goto again
+	for _, k := range S.s {
+		ans = append(ans, [4]int{0, 0, k.x, k.y})
 	}
-
-	for i := 1; i < len(S); i++ {
-		p := searchMini(S, i)
-		S[i].parent = p
-		//S[p].children = append(S[p].children, i)
-	}
-
-	var a ans
-	var createSoda func(i int)
-	createSoda = func(i int) {
-		if S[i].created {
-			return
-		}
-		p := S[S[i].parent]
-		if !p.created {
-			createSoda(S[i].parent)
-			//fmt.Println(p.x, p.y, S[i].x, S[i].y)
-		}
-		a.out = append(a.out, [4]int{p.x, p.y, S[i].x, S[i].y})
-		a.cost += S[i].x - p.x + S[i].y - p.y
-		S[i].created = true
-	}
-	// 1000個作る 10001個目以降は中継地点
-	for i := 1; i < N+1; i++ {
-		createSoda(i)
-	}
-	log.Println(len(a.out), a.cost, a.Score(in.L))
-	fmt.Println(len(a.out))
-	for i := 0; i < len(a.out); i++ {
-		fmt.Println(a.out[i][0], a.out[i][1], a.out[i][2], a.out[i][3])
+	fmt.Printf("%d\n", len(ans))
+	//slices.Reverse(ans)
+	ReverseSlice(ans)
+	for _, a := range ans {
+		fmt.Printf("%d %d %d %d\n", a[0], a[1], a[2], a[3])
 	}
 }
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+
 func main() {
 	log.SetFlags(log.Lshortfile)
+	if os.Getenv("ATCODER") == "1" {
+		log.SetOutput(io.Discard)
+	}
+	flag.Parse()
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
 	in := readInput()
+	startTime := time.Now()
 	solve(in)
+	elapsedTime := time.Since(startTime)
+	log.Printf("elapsedT=%v\n", elapsedTime)
+
 }
 
 // utils
@@ -176,11 +123,38 @@ func maxInt(a, b int) int {
 	return b
 }
 
-type Point struct {
-	x, y int
+func ReverseSlice(a [][4]int) {
+	for i, j := 0, len(a)-1; i < j; i, j = i+1, j-1 {
+		a[i], a[j] = a[j], a[i]
+	}
 }
 
-// 2点間の距離
-func distance(p1, p2 Point) float64 {
-	return math.Sqrt(float64((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y)))
+type setSoda struct {
+	s []soda
+}
+
+func newSetSoda() *setSoda {
+	return &setSoda{
+		s: make([]soda, 0, 1000),
+	}
+}
+
+func (s *setSoda) append(x soda) {
+	if slices.Contains(s.s, x) {
+		return
+	}
+	s.s = append(s.s, x)
+}
+
+func (s *setSoda) delete(x soda) {
+	for i := range s.s {
+		if s.s[i] == x {
+			s.s = append(s.s[:i], s.s[i+1:]...)
+			return
+		}
+	}
+}
+
+func (s *setSoda) deleteIndex(i int) {
+	s.s = append(s.s[:i], s.s[i+1:]...)
 }
