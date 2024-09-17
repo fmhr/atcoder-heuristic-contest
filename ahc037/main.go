@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
-	"sort"
 	"time"
 )
 
@@ -18,48 +16,16 @@ type Input struct {
 }
 
 type soda struct {
-	x, y     int
-	parent   int
-	children []int
-	cost     int // parentからのコスト
-	created  bool
-	required bool
+	x, y int
 }
 
-func searchMini(u []soda, n int) (p int) {
-	if n == 0 {
-		log.Println("n=0", u[0])
-	}
-	if u[n].x == 0 && u[n].y == 0 {
-		return -1
-	}
-	c := u[n]
-	miniCost := int(math.MaxInt64)
-	for i := 0; i < len(u); i++ {
-		if i == n {
-			continue
-		}
-		if c.x >= u[i].x && c.y >= u[i].y {
-			cost := (c.x - u[i].x) + (c.y - u[i].y)
-			if cost < miniCost {
-				miniCost = cost
-				p = i
-				if n == 0 {
-					log.Println(miniCost, p, u[p])
-				}
-			}
+func containsSoda(slice []soda, item soda) bool {
+	for _, s := range slice {
+		if s.x == item.x && s.y == item.y {
+			return true
 		}
 	}
-	return
-}
-
-type ans struct {
-	out  [][4]int
-	cost int
-}
-
-func (a ans) Score(L int) int {
-	return int(math.Round(1000000 * (float64((N * L)) / float64(1+a.cost))))
+	return false
 }
 
 func readInput() (in Input) {
@@ -69,7 +35,6 @@ func readInput() (in Input) {
 		fmt.Scan(&in.sodas[i].x, &in.sodas[i].y)
 		in.L = maxInt(in.L, in.sodas[i].x)
 		in.L = maxInt(in.L, in.sodas[i].y)
-		in.sodas[i].required = true
 	}
 	return in
 }
@@ -78,92 +43,52 @@ func readInput() (in Input) {
 // x'>=x y'>=y なので、小さいものからつくっていく
 
 func solve(in Input) {
-	sort.Slice(in.sodas[:], func(i, j int) bool {
-		return in.sodas[i].x+in.sodas[i].y > in.sodas[j].x+in.sodas[j].y
-	})
-
-	used := map[[2]int]bool{}
-	used[[2]int{0, 0}] = true
 	S := make([]soda, 0, N+1)
-	S = append(S, soda{x: 0, y: 0, created: true})
 	for i := 0; i < N; i++ {
 		S = append(S, in.sodas[i])
-		used[[2]int{in.sodas[i].x, in.sodas[i].y}] = true
 	}
+	ans := make([][4]int, 0)
+	for {
+		max := int(0)
+		maxPos := soda{}
+		i_, j_ := -1, -1
+		for i := 0; i < len(S); i++ {
+			for j := i + 1; j < len(S); j++ {
+				x, y := minInt(S[i].x, S[j].x), minInt(S[i].y, S[j].y)
+				if max < x+y {
+					max = x + y
+					maxPos.x, maxPos.y = x, y
+					i_, j_ = i, j
+				}
+			}
+		}
+		if max > 0 {
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, S[i_].x, S[i_].y})
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, S[j_].x, S[j_].y})
+			S = append(S[:j_], S[j_+1:]...)
+			S = append(S[:i_], S[i_+1:]...)
+			if !containsSoda(S, maxPos) {
+				S = append(S, maxPos)
+			}
+		} else {
+			break
+		}
+		if len(S) < 10 {
+			log.Println(S)
+		}
+	}
+	if len(S) > 0 {
+		log.Println(S[0])
+		ans = append(ans, [4]int{0, 0, S[0].x, S[0].y})
+		S = S[1:]
+	}
+	log.Println(len(ans))
+	fmt.Println(len(ans) - 1)
+	for i := len(ans) - 1; i > 0; i-- {
+		fmt.Println(ans[i][0], ans[i][1], ans[i][2], ans[i][3])
+	}
+	return
 
-	for i := 0; i < len(S); i++ {
-		if !S[i].required {
-			continue
-		}
-		min_cost := int(math.MaxInt32)
-		var c soda
-		for j := 0; j < len(S); j++ {
-			if i == j {
-				continue
-			}
-			a := S[i]
-			b := S[j]
-			if a.x == b.x || a.y == b.y {
-				continue
-			}
-			x, y := minInt(a.x, b.x), minInt(a.y, b.y)
-			// 中間点がa, bのどちらかと同じ座標だったらスキップ
-			if (a.x == x && a.y == y) || (b.x == x && b.y == y) {
-				continue
-			}
-			// すでに使われていたらスキップ
-			if _, ok := used[[2]int{x, y}]; ok {
-				continue
-			}
-			cost := (a.x - x) + (a.y - y) + (b.x - x) + (b.y - y)
-			if min_cost > cost {
-				// 追加
-				min_cost = cost
-				c.x, c.y = x, y
-				used[[2]int{x, y}] = true
-			}
-		}
-		if min_cost == int(math.MaxInt32) {
-			continue
-		}
-		//log.Println("add", c.y+c.x)
-		S = append(S, c)
-		sort.Slice(S, func(i, j int) bool {
-			return S[i].x+S[i].y > S[j].x+S[j].y
-		})
-	}
-	log.Println(len(S))
-	for i := 0; i < len(S); i++ {
-		p := searchMini(S, i)
-		S[i].parent = p
-		//S[p].children = append(S[p].children, i)
-	}
-
-	var a ans
-	var createSoda func(i int)
-	createSoda = func(i int) {
-		if S[i].created || S[i].parent == -1 {
-			return
-		}
-		p := S[S[i].parent]
-		if !p.created {
-			createSoda(S[i].parent)
-		}
-		a.out = append(a.out, [4]int{p.x, p.y, S[i].x, S[i].y})
-		a.cost += S[i].x - p.x + S[i].y - p.y
-		S[i].created = true
-	}
-	for i := 0; i < len(S); i++ {
-		if S[i].required {
-			createSoda(i)
-		}
-	}
-	log.Println(len(a.out), a.cost, a.Score(in.L))
-	fmt.Println(len(a.out))
-	log.Printf("point=%d\n", len(a.out))
-	for i := 0; i < len(a.out); i++ {
-		fmt.Println(a.out[i][0], a.out[i][1], a.out[i][2], a.out[i][3])
-	}
 }
 
 func main() {
