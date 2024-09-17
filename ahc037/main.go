@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
+	"os"
+	"slices"
 	"time"
 )
 
@@ -17,15 +20,6 @@ type Input struct {
 
 type soda struct {
 	x, y int
-}
-
-func containsSoda(slice []soda, item soda) bool {
-	for _, s := range slice {
-		if s.x == item.x && s.y == item.y {
-			return true
-		}
-	}
-	return false
 }
 
 func readInput() (in Input) {
@@ -43,53 +37,48 @@ func readInput() (in Input) {
 // x'>=x y'>=y なので、小さいものからつくっていく
 
 func solve(in Input) {
-	S := make([]soda, 0, N+1)
-	for i := 0; i < N; i++ {
-		S = append(S, in.sodas[i])
+	S := map[soda]struct{}{}
+	for i := 0; i < len(in.sodas); i++ {
+		S[in.sodas[i]] = struct{}{}
 	}
-	ans := make([][4]int, 0)
+	ans := make([][4]int, 0, 2000)
 	for {
 		max := int(0)
 		maxPos := soda{}
-		i_, j_ := -1, -1
-		for i := 0; i < len(S); i++ {
-			for j := i + 1; j < len(S); j++ {
-				if (S[i].x-S[j].x)*(S[j].y-S[i].y) > 0 {
+		i_, j_ := soda{}, soda{}
+		for ki := range S {
+			for kj := range S {
+				if ki == kj {
 					continue
 				}
-				x, y := minInt(S[i].x, S[j].x), minInt(S[i].y, S[j].y)
+				x, y := minInt(ki.x, kj.x), minInt(ki.y, kj.y)
 				if max < x+y {
 					max = x + y
 					maxPos.x, maxPos.y = x, y
-					i_, j_ = i, j
+					i_, j_ = ki, kj
 				}
 			}
 		}
 		if max > 0 {
-			ans = append(ans, [4]int{maxPos.x, maxPos.y, S[i_].x, S[i_].y})
-			ans = append(ans, [4]int{maxPos.x, maxPos.y, S[j_].x, S[j_].y})
-			S = append(S[:j_], S[j_+1:]...)
-			S = append(S[:i_], S[i_+1:]...)
-			if !containsSoda(S, maxPos) {
-				S = append(S, maxPos)
-			}
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, i_.x, i_.y})
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, j_.x, j_.y})
+			delete(S, i_)
+			delete(S, j_)
+			S[soda{maxPos.x, maxPos.y}] = struct{}{}
 		} else {
 			break
 		}
-		if len(S) < 10 {
-			log.Println(S)
-		}
 	}
-	if len(S) > 0 {
-		log.Println(S[0])
-		ans = append(ans, [4]int{0, 0, S[0].x, S[0].y})
-		S = S[1:]
+	for k := range S {
+		ans = append(ans, [4]int{0, 0, k.x, k.y})
 	}
-	log.Println(len(ans))
-	fmt.Println(len(ans) - 1)
-	for i := len(ans) - 1; i > 0; i-- {
-		fmt.Println(ans[i][0], ans[i][1], ans[i][2], ans[i][3])
+	out := bytes.Buffer{}
+	out.WriteString(fmt.Sprintf("%d\n", len(ans)))
+	slices.Reverse(ans)
+	for _, a := range ans {
+		out.WriteString(fmt.Sprintf("%d %d %d %d\n", a[0], a[1], a[2], a[3]))
 	}
+	out.WriteTo(os.Stdout)
 	return
 
 }
