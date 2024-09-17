@@ -54,6 +54,9 @@ func solve(in Input) {
 		i_, j_ := -1, -1
 		for i := 0; i < len(S); i++ {
 			for j := i + 1; j < len(S); j++ {
+				if (S[i].x-S[j].x)*(S[j].y-S[i].y) > 0 {
+					continue
+				}
 				x, y := minInt(S[i].x, S[j].x), minInt(S[i].y, S[j].y)
 				if max < x+y {
 					max = x + y
