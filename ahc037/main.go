@@ -62,9 +62,8 @@ func solve(in Input) {
 		if max > 0 {
 			ans = append(ans, [4]int{maxPos.x, maxPos.y, S.s[i_].x, S.s[i_].y})
 			ans = append(ans, [4]int{maxPos.x, maxPos.y, S.s[j_].x, S.s[j_].y})
-			a, b := S.s[i_], S.s[j_]
-			S.delete(a)
-			S.delete(b)
+			S.deleteIndex(j_) // i<j なので、jを先に削除しないとjがずれる
+			S.deleteIndex(i_)
 			S.append(maxPos)
 		} else {
 			break
@@ -154,4 +153,8 @@ func (s *setSoda) delete(x soda) {
 			return
 		}
 	}
+}
+
+func (s *setSoda) deleteIndex(i int) {
+	s.s = append(s.s[:i], s.s[i+1:]...)
 }
