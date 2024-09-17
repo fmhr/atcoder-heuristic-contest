@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"slices"
 	"time"
 )
 
@@ -74,13 +73,12 @@ func solve(in Input) {
 	}
 	out := bytes.Buffer{}
 	out.WriteString(fmt.Sprintf("%d\n", len(ans)))
-	slices.Reverse(ans)
+	//slices.Reverse(ans)
+	ReverseSlice(ans)
 	for _, a := range ans {
 		out.WriteString(fmt.Sprintf("%d %d %d %d\n", a[0], a[1], a[2], a[3]))
 	}
 	out.WriteTo(os.Stdout)
-	return
-
 }
 
 func main() {
@@ -107,13 +105,8 @@ func maxInt(a, b int) int {
 	return b
 }
 
-func absInt(a int) int {
-	if a < 0 {
-		return -a
+func ReverseSlice(a [][4]int) {
+	for i, j := 0, len(a)-1; i < j; i, j = i+1, j-1 {
+		a[i], a[j] = a[j], a[i]
 	}
-	return a
-}
-
-type Point struct {
-	x, y int
 }
