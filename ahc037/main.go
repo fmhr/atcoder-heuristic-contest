@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"sort"
+	"time"
 )
 
 const (
@@ -22,20 +23,30 @@ type soda struct {
 	children []int
 	cost     int // parentからのコスト
 	created  bool
+	required bool
 }
 
 func searchMini(u []soda, n int) (p int) {
+	if n == 0 {
+		log.Println("n=0", u[0])
+	}
+	if u[n].x == 0 && u[n].y == 0 {
+		return -1
+	}
 	c := u[n]
-	miniCost := (c.x + c.y) * 2
+	miniCost := int(math.MaxInt64)
 	for i := 0; i < len(u); i++ {
 		if i == n {
 			continue
 		}
 		if c.x >= u[i].x && c.y >= u[i].y {
-			cost := c.x - u[i].x + c.y - u[i].y
+			cost := (c.x - u[i].x) + (c.y - u[i].y)
 			if cost < miniCost {
 				miniCost = cost
 				p = i
+				if n == 0 {
+					log.Println(miniCost, p, u[p])
+				}
 			}
 		}
 	}
@@ -58,6 +69,7 @@ func readInput() (in Input) {
 		fmt.Scan(&in.sodas[i].x, &in.sodas[i].y)
 		in.L = maxInt(in.L, in.sodas[i].x)
 		in.L = maxInt(in.L, in.sodas[i].y)
+		in.sodas[i].required = true
 	}
 	return in
 }
@@ -67,12 +79,11 @@ func readInput() (in Input) {
 
 func solve(in Input) {
 	sort.Slice(in.sodas[:], func(i, j int) bool {
-		a, b := in.sodas[i], in.sodas[j]
-		//return a.x+a.y < b.x+b.y
-		return a.x < b.x
+		return in.sodas[i].x+in.sodas[i].y > in.sodas[j].x+in.sodas[j].y
 	})
 
 	used := map[[2]int]bool{}
+	used[[2]int{0, 0}] = true
 	S := make([]soda, 0, N+1)
 	S = append(S, soda{x: 0, y: 0, created: true})
 	for i := 0; i < N; i++ {
@@ -80,50 +91,49 @@ func solve(in Input) {
 		used[[2]int{in.sodas[i].x, in.sodas[i].y}] = true
 	}
 
-	lenSize := len(S)
-again:
-
-	for i := 1; i < len(S); i++ {
-		p := searchMini(S, i)
-		S[i].parent = p
-		S[p].children = append(S[p].children, i)
-	}
-
-	// chiledrenが２以上のものをさがす
 	for i := 0; i < len(S); i++ {
-		if len(S[i].children) >= 2 {
-			// 2つの子供の中間地点を作る
-			var p, a, b Point
-			p.x, p.y = S[i].x, S[i].y
-			a.x, a.y = S[S[i].children[0]].x, S[S[i].children[0]].y
-			b.x, b.y = S[S[i].children[1]].x, S[S[i].children[1]].y
-			y := minInt(a.y, b.y)
-			x := minInt(a.x, b.x)
-			//log.Println(p, x >= p.x, y >= p.y)
-			//log.Println(a, a.x >= x, a.y >= y)
-			//log.Println(b, b.x >= x, b.y >= y)
-			//log.Println(x, y)
-			if x == p.x && y == p.y {
+		if !S[i].required {
+			continue
+		}
+		min_cost := int(math.MaxInt32)
+		var c soda
+		for j := 0; j < len(S); j++ {
+			if i == j {
 				continue
 			}
+			a := S[i]
+			b := S[j]
+			if a.x == b.x || a.y == b.y {
+				continue
+			}
+			x, y := minInt(a.x, b.x), minInt(a.y, b.y)
+			// 中間点がa, bのどちらかと同じ座標だったらスキップ
+			if (a.x == x && a.y == y) || (b.x == x && b.y == y) {
+				continue
+			}
+			// すでに使われていたらスキップ
 			if _, ok := used[[2]int{x, y}]; ok {
 				continue
 			}
-			S = append(S, soda{x: x, y: y})
-			used[[2]int{x, y}] = true
+			cost := (a.x - x) + (a.y - y) + (b.x - x) + (b.y - y)
+			if min_cost > cost {
+				// 追加
+				min_cost = cost
+				c.x, c.y = x, y
+				used[[2]int{x, y}] = true
+			}
 		}
-	}
-	if lenSize != len(S) {
-		for i := 0; i < len(S); i++ {
-			S[i].parent = 0
-			S[i].children = make([]int, 0)
+		if min_cost == int(math.MaxInt32) {
+			continue
 		}
-		log.Println("again", len(S))
-		lenSize = len(S)
-		goto again
+		//log.Println("add", c.y+c.x)
+		S = append(S, c)
+		sort.Slice(S, func(i, j int) bool {
+			return S[i].x+S[i].y > S[j].x+S[j].y
+		})
 	}
-
-	for i := 1; i < len(S); i++ {
+	log.Println(len(S))
+	for i := 0; i < len(S); i++ {
 		p := searchMini(S, i)
 		S[i].parent = p
 		//S[p].children = append(S[p].children, i)
@@ -132,24 +142,25 @@ again:
 	var a ans
 	var createSoda func(i int)
 	createSoda = func(i int) {
-		if S[i].created {
+		if S[i].created || S[i].parent == -1 {
 			return
 		}
 		p := S[S[i].parent]
 		if !p.created {
 			createSoda(S[i].parent)
-			//fmt.Println(p.x, p.y, S[i].x, S[i].y)
 		}
 		a.out = append(a.out, [4]int{p.x, p.y, S[i].x, S[i].y})
 		a.cost += S[i].x - p.x + S[i].y - p.y
 		S[i].created = true
 	}
-	// 1000個作る 10001個目以降は中継地点
-	for i := 1; i < N+1; i++ {
-		createSoda(i)
+	for i := 0; i < len(S); i++ {
+		if S[i].required {
+			createSoda(i)
+		}
 	}
 	log.Println(len(a.out), a.cost, a.Score(in.L))
 	fmt.Println(len(a.out))
+	log.Printf("point=%d\n", len(a.out))
 	for i := 0; i < len(a.out); i++ {
 		fmt.Println(a.out[i][0], a.out[i][1], a.out[i][2], a.out[i][3])
 	}
@@ -157,8 +168,11 @@ again:
 
 func main() {
 	log.SetFlags(log.Lshortfile)
+	startTime := time.Now()
 	in := readInput()
 	solve(in)
+	elapsedTime := time.Since(startTime)
+	log.Printf("elapsedT=%v\n", elapsedTime)
 }
 
 // utils
@@ -176,11 +190,13 @@ func maxInt(a, b int) int {
 	return b
 }
 
-type Point struct {
-	x, y int
+func absInt(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
 }
 
-// 2点間の距離
-func distance(p1, p2 Point) float64 {
-	return math.Sqrt(float64((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y)))
+type Point struct {
+	x, y int
 }
