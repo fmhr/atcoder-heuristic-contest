@@ -35,43 +35,54 @@ func readInput() (in Input) {
 	return in
 }
 
-// x = seet, y = carbon とすると、
-// x'>=x y'>=y なので、小さいものからつくっていく
-
 func solve(in Input) {
-	S := map[soda]struct{}{}
+	S := make([]soda, len(in.sodas))
+	copy(S, in.sodas[:])
+	Sexit := map[soda]struct{}{}
 	for i := 0; i < len(in.sodas); i++ {
-		S[in.sodas[i]] = struct{}{}
+		Sexit[in.sodas[i]] = struct{}{}
 	}
 	ans := make([][4]int, 0, 2000)
 	for {
 		max := int(0)
 		maxPos := soda{}
-		i_, j_ := soda{}, soda{}
-		for ki := range S {
-			for kj := range S {
-				if ki == kj {
+		i_, j_ := -1, -1
+		for i := range S {
+			for j := i + 1; j < len(S); j++ {
+				if i == j {
 					continue
 				}
-				x, y := minInt(ki.x, kj.x), minInt(ki.y, kj.y)
+				x, y := minInt(S[i].x, S[j].x), minInt(S[i].y, S[j].y)
 				if max < x+y {
 					max = x + y
 					maxPos.x, maxPos.y = x, y
-					i_, j_ = ki, kj
+					i_, j_ = i, j
 				}
 			}
 		}
 		if max > 0 {
-			ans = append(ans, [4]int{maxPos.x, maxPos.y, i_.x, i_.y})
-			ans = append(ans, [4]int{maxPos.x, maxPos.y, j_.x, j_.y})
-			delete(S, i_)
-			delete(S, j_)
-			S[soda{maxPos.x, maxPos.y}] = struct{}{}
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, S[i_].x, S[i_].y})
+			ans = append(ans, [4]int{maxPos.x, maxPos.y, S[j_].x, S[j_].y})
+			delete(Sexit, S[i_])
+			delete(Sexit, S[j_])
+
+			//if i_ < j_ {
+			//i_, j_ = j_, i_
+			//}
+			S[j_], S[len(S)-2] = S[len(S)-2], S[j_]
+			S[i_], S[len(S)-1] = S[len(S)-1], S[i_]
+			S = S[:len(S)-2]
+
+			_, ok := Sexit[maxPos]
+			if !ok {
+				S = append(S, maxPos)
+				Sexit[maxPos] = struct{}{}
+			}
 		} else {
 			break
 		}
 	}
-	for k := range S {
+	for _, k := range S {
 		ans = append(ans, [4]int{0, 0, k.x, k.y})
 	}
 	out := bytes.Buffer{}
