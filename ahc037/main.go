@@ -104,7 +104,7 @@ func main() {
 	startTime := time.Now()
 	solve(in)
 	elapsedTime := time.Since(startTime)
-	log.Printf("elapsedT=%v\n", elapsedTime)
+	log.Printf("time=%v\n", elapsedTime)
 
 }
 
