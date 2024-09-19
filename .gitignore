@@ -10,10 +10,10 @@
 */target/
 
 # 実行ファイル
+bin/
 *.exe
 *.out
 main
-*/bin/*
 
 
 
