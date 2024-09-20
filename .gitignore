@@ -15,6 +15,9 @@ bin/
 *.out
 main
 
+# 出力ファイル
+out/
+out.txt
 
 
 # AtCoder tools

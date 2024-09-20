@@ -1,0 +1,1061 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"log"
+	"math"
+	"math/rand"
+	"os"
+	"runtime/pprof"
+	"time"
+)
+
+// serchZeroFirst : 初期値で0のマスを探す
+// 各油田がすべてのケースにあるとして、探索する
+func searchZeroFirst() (oilCnt [20 * 20]int) {
+	cc := 1
+	for i := 0; i < numberOfOil; i++ {
+		oil := oilField[i]
+		cnt := 0
+		for yx := 0; yx < islandSize*islandSize; yx++ {
+			y := yx / islandSize
+			x := yx % islandSize
+			ng := false
+			var j int
+			for j = 0; j < oilFieldSize[i]; j++ {
+				oilY := y + oil[j][0]
+				oilX := x + oil[j][1]
+				if oilY < 0 || oilY >= islandSize || oilX < 0 || oilX >= islandSize {
+					ng = true
+					break
+				}
+				oilYX := oilY*islandSize + oilX
+				oilCnt[oilYX]++
+			}
+			if ng {
+				for j--; j >= 0; j-- {
+					oilY := y + oil[j][0]
+					oilX := x + oil[j][1]
+					oilYX := oilY*islandSize + oilX
+					oilCnt[oilYX]--
+				}
+			} else {
+				cnt++
+			}
+		}
+		cc *= cnt
+	}
+	sum := 0
+	for i := 0; i < islandSize*islandSize; i++ {
+		sum += oilCnt[i]
+	}
+	for i := 0; i < islandSize; i++ {
+		log.Println(i, oilCnt[i*islandSize:i*islandSize+islandSize])
+	}
+	log.Println("sum", sum)
+	//log.Println("cnt", cc)
+	return oilCnt
+}
+
+func solver_zero() {
+	oilCnt := searchZeroFirst()
+	zeros := make([]int, 0, 20)
+	for i := 0; i < islandSize*islandSize; i++ {
+		if oilCnt[i] == 0 {
+			zeros = append(zeros, i)
+		}
+	}
+	for i := 0; i < islandSize; i++ {
+		rndP := rand.Intn(islandSize * islandSize)
+		if oilCnt[rndP] == 0 {
+			continue
+		}
+
+	}
+}
+
+// ////////////////////////////////////////////////////////////////////////
+var oilParam float64 = 0.02
+
+type State struct {
+	ans   [20]int         // 油田の位置
+	grids [20][20]float64 // 基礎点＋グリッド上の油田の数 * paramater
+	rate  float64         // 評価値 mappingとの差
+}
+
+// move: 油田の位置を変更する rateも差分更新する
+func (s *State) move(selectedOil int, direction int, mapping [20][20]squareInfo) bool {
+	y := s.ans[selectedOil] / islandSize
+	x := s.ans[selectedOil] % islandSize
+	y += dy[direction]
+	x += dx[direction]
+	// 移動可能か調べる
+	for p := 0; p < oilFieldSize[selectedOil]; p++ {
+		// 現在の評価値
+		// 新しい点に移動した場合の評価値
+		py := y + oilField[selectedOil][p][0]
+		px := x + oilField[selectedOil][p][1]
+		if py < 0 || py >= islandSize || px < 0 || px >= islandSize {
+			return false
+		}
+	}
+	// 更新
+	s.ans[selectedOil] = y*islandSize + x
+	var oldRate, newRate float64
+	for p := 0; p < oilFieldSize[selectedOil]; p++ {
+		ny := s.ans[selectedOil]/islandSize + oilField[selectedOil][p][0]
+		nx := s.ans[selectedOil]%islandSize + oilField[selectedOil][p][1]
+		oldRate += math.Abs(s.grids[ny][nx] - mapping[ny][nx].mean) //　移動前のマスの更新前の評価値
+		s.grids[ny][nx] -= oilParam
+		oldRate += math.Abs(s.grids[ny][nx] - mapping[ny][nx].mean) // 移動前のマスの更新後の評価値
+		py := y + oilField[selectedOil][p][0]
+		px := x + oilField[selectedOil][p][1]
+		newRate += math.Abs(s.grids[py][px] - mapping[py][px].mean) // 移動後のマスの更新前の評価値
+		s.grids[py][px] += oilParam
+		newRate += math.Abs(s.grids[py][px] - mapping[py][px].mean) // 移動後のマスの更新後の評価値
+	}
+	// rateの更新
+	s.rate += newRate - oldRate
+	return true
+}
+
+// movePoint: 油田の位置を変更する rateも差分更新する
+func (s *State) movePoint(selectedOil int, p int, mapping [20][20]squareInfo) bool {
+	y := p / islandSize
+	x := p % islandSize
+	// 移動可能か調べる
+	for i := 0; i < oilFieldSize[selectedOil]; i++ {
+		py := y + oilField[selectedOil][i][0]
+		px := x + oilField[selectedOil][i][1]
+		if py < 0 || py >= islandSize || px < 0 || px >= islandSize {
+			return false
+		}
+	}
+	// 更新
+	s.ans[selectedOil] = y*islandSize + x
+	var oldRate, newRate float64
+	for p := 0; p < oilFieldSize[selectedOil]; p++ {
+		ny := s.ans[selectedOil]/islandSize + oilField[selectedOil][p][0]
+		nx := s.ans[selectedOil]%islandSize + oilField[selectedOil][p][1]
+		oldRate += math.Abs(s.grids[ny][nx] - mapping[ny][nx].mean) //　移動前のマスの更新前の評価値
+		s.grids[ny][nx] -= oilParam
+		oldRate += math.Abs(s.grids[ny][nx] - mapping[ny][nx].mean) // 移動前のマスの更新後の評価値
+		py := y + oilField[selectedOil][p][0]
+		px := x + oilField[selectedOil][p][1]
+		newRate += math.Abs(s.grids[py][px] - mapping[py][px].mean) // 移動後のマスの更新前の評価値
+		s.grids[py][px] += oilParam
+		newRate += math.Abs(s.grids[py][px] - mapping[py][px].mean) // 移動後のマスの更新後の評価値
+	}
+	// rateの更新
+	s.rate += newRate - oldRate
+	return true
+}
+
+// calculate : 現在の状態での評価値を計算する 初回しか使わない
+func (s State) calculate(mapping [20][20]squareInfo) (v float64) {
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			v += math.Abs(s.grids[i][j] - mapping[i][j].mean)
+		}
+	}
+	return v
+}
+
+// randomInitialize : 油田の位置をランダムに初期化する
+func (s *State) randomInitialize(mapping [20][20]squareInfo) {
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			s.grids[i][j] = baseOil
+		}
+	}
+	for i := 0; i < numberOfOil; i++ {
+		for {
+			var ng bool
+			yx := rand.Intn(islandSize * islandSize)
+			y := yx / islandSize
+			x := yx % islandSize
+			for p := 0; p < oilFieldSize[i]; p++ {
+				py := y + oilField[i][p][0]
+				px := x + oilField[i][p][1]
+				if py < 0 || py >= islandSize || px < 0 || px >= islandSize {
+					ng = true
+					break
+				}
+			}
+			if ng {
+				continue
+			}
+			s.ans[i] = y*islandSize + x
+			break
+		}
+		for p := 0; p < oilFieldSize[i]; p++ {
+			py := s.ans[i]/islandSize + oilField[i][p][0]
+			px := s.ans[i]%islandSize + oilField[i][p][1]
+			s.grids[py][px] += oilParam
+		}
+	}
+	s.rate = s.calculate(mapping)
+}
+
+func (s *squareInfo) update2(newMean, newVariance float64, sampleSize int) {
+	if sampleSize == 1 {
+		// サンプリング(占い)を１マスで行った場合は正確な値が出る
+		s.mean = newMean
+		s.variance = 0
+		s.times = 1
+		return
+	} else if s.variance == 0 {
+		// 既に正確な値が出ている場合は何もしない
+		//log.Println("already accurate")
+		//s.times++
+		return
+	}
+	s.mean = (s.mean*float64(s.times) + newMean) / float64(s.times+1)
+	s.variance = s.variance * eP * eP / (eP*eP + aP*aP*s.variance)
+
+	//s.mean = (s.mean*float64(s.times) + newMean) / float64(s.times+1)
+	//s.variance = (s.variance*float64(s.times) + newVariance) / float64(s.times+1)
+	s.times++
+}
+
+// samplingOileSharp : 油田の形状でのサンプリング
+func samplingOileSharp() (mapping [20][20]squareInfo) {
+	mapping = initializeMapping()
+	for o := 0; o < numberOfOil; o++ {
+		for i := 0; i < islandSize*islandSize; i++ {
+			y := i / islandSize
+			x := i % islandSize
+			sq := make([][2]int, 0, oilFieldSize[o])
+			var ng bool
+			for j := 0; j < oilFieldSize[o]; j++ {
+				y2 := y + oilField[o][j][0]
+				x2 := x + oilField[o][j][1]
+				if y2 < 0 || y2 >= islandSize || x2 < 0 || x2 >= islandSize {
+					ng = true
+					break
+				}
+				sq = append(sq, [2]int{y2, x2})
+			}
+			if ng {
+				continue
+			}
+			sumMean, _ := divine(sq)
+			variance := float64(len(sq)) * errP * (1 - errP)
+			for p := 0; p < len(sq); p++ {
+				y := sq[p][0]
+				x := sq[p][1]
+				mapping[y][x].update(float64(sumMean)/float64(len(sq)), variance, len(sq))
+			}
+		}
+	}
+	return
+}
+
+func samplingSquare(size int) (mapping [20][20]squareInfo) {
+	mapping = initializeMapping()
+	for i := 0; i < islandSize; i++ {
+		i2 := i + size
+		if i2 > islandSize {
+			break
+		}
+		for j := 0; j < islandSize; j++ {
+			j2 := j + size
+			if j2 > islandSize {
+				break
+			}
+			sq := make([][2]int, 0, size*size)
+			for y := i; y < i2; y++ {
+				for x := j; x < j2; x++ {
+					sq = append(sq, [2]int{y, x})
+				}
+			}
+			sumMean, _ := divine(sq)
+			variance := float64(len(sq)) * errP * (1 - errP)
+			for p := 0; p < len(sq); p++ {
+				y := sq[p][0]
+				x := sq[p][1]
+				mapping[y][x].update2(float64(sumMean)/float64(len(sq)), variance, len(sq))
+			}
+		}
+	}
+	return
+}
+
+func samplingRandom() (mapping [20][20]squareInfo) {
+	mapping = initializeMapping()
+	//sum := 100
+	sampleSize := islandSize * islandSize / 2
+	//samplingCount := intMin(islandSize*islandSize, sum/sampleSize+1)
+	samplingCount := intMin(islandSize*islandSize, islandSize*islandSize*20/sampleSize)
+	for c := 0; c < samplingCount; c++ {
+		samplePoints := make([][2]int, sampleSize)
+		used := map[int]bool{}
+		//sampleSize = max(10, rand.Intn(20))
+		for i := 0; i < sampleSize; i++ {
+			var p int
+			for {
+				p = rand.Intn(islandSize * islandSize)
+				if !used[p] {
+					used[p] = true
+					break
+				}
+			}
+			samplePoints[i][0] = p / islandSize
+			samplePoints[i][1] = p % islandSize
+		}
+		sumMean, _ := divine(samplePoints[:sampleSize])
+		// 公式の計算が底上げされているので、補正する
+		sumMeanf := float64(sumMean) - (-1.1+float64(sampleSize))/2*errP
+		//log.Println("sumMean", sumMean, float64(sumMean)/float64(sampleSize))
+		variance := float64(sampleSize) * errP * (1 - errP)
+		mean := sumMeanf / float64(sampleSize)
+		//log.Println("mean", mean, "variance", variance, "sampleSize", sampleSize)
+		for i := 0; i < sampleSize; i++ {
+			mapping[samplePoints[i][0]][samplePoints[i][1]].update(mean, variance, sampleSize)
+		}
+	}
+	return
+}
+
+// solver_sa : mappingした推定値をもとに油田の位置を焼きなまし法で最適化する
+func solver_sa() {
+	mapping := samplingRandom()
+	//mapping := samplingSquare(10)
+	//mapping := samplingOileSharp()
+	visualizeMapping(mapping)
+	// 焼きなまし法で最適化する
+	var state State
+	state.randomInitialize(mapping)
+	log.Println("init", state.rate)
+	var timeElapsed = time.Since(timeStart)
+	for timeElapsed < timeLimit {
+		// まずはランダムのみ
+		oldRate := state.rate
+		selectedOil := rand.Intn(numberOfOil)
+		oldPoint := state.ans[selectedOil]
+		newPoint := rand.Intn(islandSize * islandSize)
+		ok := state.movePoint(selectedOil, newPoint, mapping)
+		if ok {
+			//log.Println("move", selectedOil, selectedPoint, state.rate)
+			if state.rate < oldRate {
+				//log.Println("move", selectedOil, newPoint, state.rate, oldRate)
+			} else {
+				// Redo
+				state.movePoint(selectedOil, oldPoint, mapping)
+			}
+		}
+		// 遷移候補
+		//var oldRate = state.rate
+		//switch rand.Intn(3) {
+		//case 0: // 遷移: 油田を１つずらす
+		//selelctedOil := rand.Intn(numberOfOil)
+		//// ４方向試す
+		//d := rand.Intn(4)
+		//ok := state.move(selelctedOil, d, mapping)
+		//if ok {
+		////log.Println("move", selelctedOil, d, state.rate)
+		//if state.rate < oldRate {
+		//log.Println("move", selelctedOil, d, state.rate, oldRate)
+		//} else {
+		//// Redo
+		//state.move(selelctedOil, (d+2)%4, mapping)
+		//}
+		//}
+		//case 1: // 遷移: 油田の位置を入れ替える
+		//case 2: // 遷移: 油田の位置をランダムに変更する
+		//selectedOil := rand.Intn(numberOfOil)
+		//}
+		timeElapsed = time.Since(timeStart)
+	}
+	log.Println("rate", state.rate)
+	visualizeAns(state.ans)
+	visualizeGrids(state.grids)
+	log.Printf("totalCost=%f", totalCost)
+}
+
+// exteneComfirm : 確定したマスに隣接したマスを占い、確定したマスを広げる
+func extentComfirm(mapping *[20][20]squareInfo) {
+	sumConfirmed := 0
+	var visited [20][20]bool
+	stack := make([][2]int, 0)
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if mapping[i][j].variance == 0 && mapping[i][j].mean >= 1 {
+				stack = append(stack, [2]int{i, j})
+				sumConfirmed += int(mapping[i][j].mean)
+			}
+		}
+	}
+	for len(stack) > 0 {
+		now := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		for d := 0; d < 4; d++ {
+			ny, nx := now[0]+dy[d], now[1]+dx[d]
+			if ny < 0 || ny >= islandSize || nx < 0 || nx >= islandSize {
+				continue
+			}
+			if mapping[ny][nx].variance == 0 {
+				continue
+			}
+			if visited[ny][nx] {
+				continue
+			}
+			// ここで占いを行う
+			a, _ := divine([][2]int{{ny, nx}})
+			mapping[ny][nx].update(float64(a), 1*errP*(1-errP), 1)
+			if a > 0 {
+				stack = append(stack, [2]int{ny, nx})
+				sumConfirmed += a
+			}
+		}
+	}
+}
+
+type samplingInfo struct {
+	SamMean  int
+	Variance float64
+	Points   [][2]int
+	Size     int
+}
+
+func newSamplingInfo(sum, num int, points [][2]int) samplingInfo {
+	variance := float64(num) * errP * (1 - errP)
+	return samplingInfo{SamMean: sum, Variance: variance, Points: points, Size: num}
+}
+
+func visualizeAns(ans [20]int) {
+	log.Println("visualizeAns")
+	var grids [20][20]int
+	for i := 0; i < numberOfOil; i++ {
+		for j := 0; j < oilFieldSize[i]; j++ {
+			grids[ans[i]/islandSize+oilField[i][j][0]][ans[i]%islandSize+oilField[i][j][1]]++
+		}
+	}
+	for i := 0; i < islandSize; i++ {
+		var str string
+		for j := 0; j < islandSize; j++ {
+			str += fmt.Sprintf("%d ", grids[i][j])
+		}
+		log.Println(str)
+	}
+}
+
+func visualizeGrids(grids [20][20]float64) {
+	log.Println("visualizeGrids")
+	for i := 0; i < islandSize; i++ {
+		var str string
+		for j := 0; j < islandSize; j++ {
+			str += fmt.Sprintf("%.2f ", grids[i][j])
+		}
+		log.Println(str)
+	}
+}
+
+// mapppingの可視化
+func visualizeMapping(mapping [20][20]squareInfo) {
+	log.Println("mean")
+	for i := 0; i < islandSize; i++ {
+		var str string
+		for j := 0; j < islandSize; j++ {
+			str += fmt.Sprintf("%.2f ", mapping[i][j].mean)
+		}
+		log.Println(str)
+	}
+	log.Println("variance")
+	for i := 0; i < islandSize; i++ {
+		var str string
+		for j := 0; j < islandSize; j++ {
+			str += fmt.Sprintf("%.2f ", mapping[i][j].variance)
+		}
+		log.Println(str)
+	}
+	log.Println("times")
+	for i := 0; i < islandSize; i++ {
+		var str string
+		for j := 0; j < islandSize; j++ {
+			str += fmt.Sprintf("%3d ", mapping[i][j].times)
+		}
+		log.Println(str)
+	}
+	//	log.Println("confirmed")
+	//for i := 0; i < islandSize; i++ {
+	//var str string
+	//for j := 0; j < islandSize; j++ {
+	//if mapping[i][j].variance == 0 {
+	//str += fmt.Sprintf("%d ", int(mapping[i][j].mean))
+	//} else {
+	//str += "x "
+	//}
+	//}
+	//log.Println(str)
+	//}
+	var cntOil int
+	for i := 0; i < islandSize; i++ {
+		var str string
+		for j := 0; j < islandSize; j++ {
+			if mapping[i][j].mean >= baseOil {
+				str += fmt.Sprintf("%d ", int(mapping[i][j].mean+1))
+				cntOil++
+			} else {
+				str += "x "
+			}
+		}
+		log.Println(str)
+	}
+	log.Println("cntOil", cntOil, sumOils)
+}
+
+func divideGrid(si, sj, ei, ej int) (regionPoints [4][][2]int) {
+	size := ei - si
+	half := size/2 + (size % 2)
+	// 4つの領域に分ける
+	// 1 3
+	// 2 4
+	// 奇数にも対応（1以外の領域が大きくなる）
+	regionStart := [4][2]int{{si, sj}, {si + half, sj}, {si, sj + half}, {si + half, sj + half}}
+	regionEnd := [4][2]int{{si + half, sj + half}, {ei, sj + half}, {si + half, ej}, {ei, ej}}
+
+	for k := 0; k < 4; k++ {
+		startI, startJ := regionStart[k][0], regionStart[k][1]
+		endI, endJ := regionEnd[k][0], regionEnd[k][1]
+		for i := startI; i < endI; i++ {
+			for j := startJ; j < endJ; j++ {
+				regionPoints[k] = append(regionPoints[k], [2]int{i, j})
+			}
+		}
+	}
+	return regionPoints
+}
+
+type squareInfo struct {
+	mean     float64
+	variance float64
+	times    int
+}
+
+// paramater
+var eP = 1.0 // ノイズ
+var aP = 1.0 // 拡散係数
+
+// numはサンプリングした時の数
+func (s *squareInfo) update(newMean, newVariance float64, sampleSize int) {
+	if sampleSize == 1 {
+		// サンプリング(占い)を１マスで行った場合は正確な値が出る
+		s.mean = newMean
+		s.variance = 0
+		s.times = 1
+		return
+	} else if s.variance == 0 {
+		// 既に正確な値が出ている場合は何もしない
+		//log.Println("already accurate")
+		//s.times++
+		return
+	}
+	s.mean = (s.mean*eP*eP + aP*s.variance*newMean) / (eP*eP + aP*aP*s.variance)
+	s.variance = s.variance * eP * eP / (eP*eP + aP*aP*s.variance)
+
+	//s.mean = (s.mean*float64(s.times) + newMean) / float64(s.times+1)
+	//s.variance = (s.variance*float64(s.times) + newVariance) / float64(s.times+1)
+	s.times++
+}
+
+// 始めの情報だけで初期値を設定する
+func initializeMapping() (mapping [20][20]squareInfo) {
+	sumOils := 0
+	for i := 0; i < numberOfOil; i++ {
+		sumOils += oilFieldSize[i]
+	}
+	sumMean := float64(sumOils) / float64(islandSize*islandSize)
+	//sumMean := 0.0
+	//sumVariance := float64(islandSize*islandSize) * errP * (1 - errP)
+	sumVariance := 1.0
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			mapping[i][j] = squareInfo{mean: sumMean, variance: sumVariance, times: 1}
+		}
+	}
+	return
+}
+
+func solver_mini_case() {
+	//samplingLogs := make([]samplingInfo, 0)
+	mapping := initializeMapping()
+	// 地図上で油田の占める割合が小さいケースでの実装
+	// 油田がありそうなところを探して、その周囲を探索する
+	// 全体を４分割して、最初の１マスを決める
+	subgrids := divideGrid(0, 0, islandSize, islandSize)
+	for {
+		maxDivine := 0
+		maxDivineIndex := 0
+		for k := 0; k < 4; k++ {
+			a, cost := divine(subgrids[k])
+			_ = cost
+			//log.Printf("divine:%d size:%d num:%d cost: %.3f\n", k, len(subgrids[k]), a, cost)
+			for i := 0; i < len(subgrids[k]); i++ {
+				variance := float64(len(subgrids[k])) * errP * (1 - errP)
+				mapping[subgrids[k][i][0]][subgrids[k][i][1]].update(float64(a)/float64(len(subgrids[k])), variance, len(subgrids[k]))
+				//samplingLogs = append(samplingLogs, newSamplingInfo(a, len(subgrids[k]), subgrids[k]))
+			}
+			if a > maxDivine {
+				maxDivine = a
+				maxDivineIndex = k
+			}
+		}
+		next := subgrids[maxDivineIndex]
+		if len(next) <= 1 {
+			if len(next) == 0 {
+				break
+			}
+			if mapping[next[0][0]][next[0][1]].variance == 0.0 {
+				break
+			}
+		}
+		subgrids = divideGrid(next[0][0], next[0][1], next[len(next)-1][0]+1, next[len(next)-1][1]+1)
+		//for k := 0; k < 4; k++ {
+		//log.Println("next", k, "size", len(subgrids[k]), subgrids[k])
+		//}
+	}
+	//visualizeMapping(mapping)
+	// 確定した油田のマスを広げていく
+	extentComfirm(&mapping)
+	//visualizeMapping(mapping)
+	//log.Println("reSampling")
+	//visualizeMapping(mapping)
+	// 油田が全て見つかるまで繰り返す
+	var numOil int
+	for numOil != sumOils {
+		// 油田の出る確率が大きいものを探す
+		maxMean := -10000.0
+		maxPoints := make([][2]int, 0)
+		for i := 0; i < islandSize; i++ {
+			for j := 0; j < islandSize; j++ {
+				if mapping[i][j].variance != 0 {
+					if mapping[i][j].mean > maxMean {
+						maxMean = mapping[i][j].mean
+						maxPoints = [][2]int{{i, j}}
+					} else if mapping[i][j].mean == maxMean {
+						maxPoints = append(maxPoints, [2]int{i, j})
+					}
+				}
+			}
+		}
+		//log.Println("maxMean", maxMean, maxPoints)
+		// ４分割して、最初の１マスを決める
+		for {
+			var subgrids [4][][2]int
+			subgrids[0] = maxPoints[:len(maxPoints)/4]
+			subgrids[1] = maxPoints[len(maxPoints)/4 : len(maxPoints)/2]
+			subgrids[2] = maxPoints[len(maxPoints)/2 : len(maxPoints)*3/4]
+			subgrids[3] = maxPoints[len(maxPoints)*3/4:]
+			maxIndex := 0
+			maxMean := -10000.0
+			for i := 0; i < 4; i++ {
+				sumMean, cost := divine(subgrids[i])
+				sampleSize := len(subgrids[i])
+				if sampleSize == 0 {
+					continue
+				}
+				newMean := float64(sumMean) / float64(sampleSize)
+				_ = cost
+				for j := 0; j < len(subgrids[i]); j++ {
+					newVariance := float64(sampleSize) * errP * (1 - errP)
+					mapping[subgrids[i][j][0]][subgrids[i][j][1]].update(newMean, newVariance, sampleSize)
+				}
+				if newMean > maxMean {
+					maxMean = newMean
+					maxIndex = i
+				}
+			}
+			maxPoints = subgrids[maxIndex]
+			if len(maxPoints) <= 1 {
+				break
+			}
+		}
+		//visualizeMapping(mapping)
+		extentComfirm(&mapping)
+		//log.Println("extentComfirm")
+		//visualizeMapping(mapping)
+		numOil = 0
+		for i := 0; i < islandSize; i++ {
+			for j := 0; j < islandSize; j++ {
+				if mapping[i][j].variance == 0 {
+					numOil += int(mapping[i][j].mean)
+				}
+			}
+		}
+		//log.Println("sumOils:", sumOils, "numOil", numOil)
+	}
+	//log.Println("sumOils:", sumOils, "numOil", numOil)
+	// 結果を出力する
+	ans := make([][20][2]int, 0, numOil)
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if mapping[i][j].variance == 0 && mapping[i][j].mean > 0 {
+				ans = append(ans, [20][2]int{{i, j}})
+			}
+		}
+	}
+	fmt.Printf("a %d ", len(ans))
+	for i := 0; i < len(ans); i++ {
+		fmt.Printf("%d %d ", ans[i][0][0], ans[i][0][1])
+	}
+	fmt.Println("")
+	var rtn int
+	fmt.Scan(&rtn)
+	log.Printf("totalCost=%f", totalCost)
+	log.Printf("costPerGrids=%f", totalCost/float64(islandSize*islandSize))
+	visualizeMapping(mapping)
+}
+
+var ansF [][20][2]int
+var cntCheckFilled int
+
+// 探索済みで1以上の観測地点にその値が入っているか確認する
+func checkFilled(confirmed [20][20]int, field [20][20]int) bool {
+	cntCheckFilled++
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if confirmed[i][j] > 0 && confirmed[i][j]-1 != field[i][j] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// 深さ優先探索で条件に合うものを全探索する
+func searchOilField(confirmed [20][20]int, field [20][20]int, oilNum int, ans [20][2]int) {
+	if oilNum == numberOfOil {
+		if checkFilled(confirmed, field) {
+			//log.Println("find!", ans[:numberOfOil])
+			//r := output(ans)
+			//if r == 1 {
+			//os.Exit(0)
+			//}
+			//log.Println(r)
+			ansF = append(ansF, ans)
+		}
+		return
+	}
+	// 全マスを探索する
+	var x, y int
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			var ng bool
+			var k int
+			// TODO 油田がひとつもconfirmedとヒットしないときは、探索をスキップする
+			for ; k < oilFieldSize[oilNum]; k++ {
+				// ここに油田があると仮定して, confirmedと矛盾がないか調べる
+				y = i + oilField[oilNum][k][0]
+				x = j + oilField[oilNum][k][1]
+				if y < 0 || y >= islandSize {
+					ng = true
+					break
+				}
+				if x < 0 || x >= islandSize {
+					ng = true
+					break
+				}
+				// confirmedが0の場所は未探索なので、矛盾しない
+				if confirmed[y][x] == 0 {
+					continue
+				}
+				// confirmedが1以上の場所は探索済みなので、矛盾がないか調べる
+				// +1したときconfirmedより大きくなる場合は矛盾する
+				if confirmed[y][x]-1 > field[y][x] {
+					field[y][x]++
+				} else {
+					ng = true
+					break
+				}
+			}
+			if !ng {
+				// ここに油田があると仮定して、次の油田を探索する
+				ans[oilNum][0] = i
+				ans[oilNum][1] = j
+				searchOilField(confirmed, field, oilNum+1, ans)
+				// ここでbreakすると、他のありえる場所を探索しない
+			}
+			// 油田が矛盾するor他の可能性を探すためにのUndo
+			for k--; k >= 0; k-- {
+				field[i+oilField[oilNum][k][0]][j+oilField[oilNum][k][1]]--
+			}
+		}
+	}
+}
+
+// 油田の存在するすべてのマスを列挙する
+func output(ans [20][2]int) (rtn int) {
+	var fiels [20][20]bool
+	for i := 0; i < numberOfOil; i++ {
+		for j := 0; j < oilFieldSize[i]; j++ {
+			fiels[ans[i][0]+oilField[i][j][0]][ans[i][1]+oilField[i][j][1]] = true
+		}
+	}
+	cnt := 0
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if fiels[i][j] {
+				cnt++
+			}
+		}
+	}
+	fmt.Print("a ", cnt, " ")
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if fiels[i][j] {
+				fmt.Print(i, " ", j, " ")
+			}
+		}
+	}
+	fmt.Print("\n")
+	fmt.Scan(&rtn)
+	if rtn == 0 {
+		totalCost++
+	}
+	return rtn
+}
+
+var totalCost float64
+
+// 1マスの油田の存在を確認する
+func singleDivine(x, y int) (v int, c float64) {
+	fmt.Println("q 1", x, y)
+	fmt.Scan(&v)
+	c = 1
+	totalCost++
+	return
+}
+
+// 複数マスの油田の存在を占う
+func divine(set [][2]int) (sumMean int, cost float64) {
+	if len(set) == 0 {
+		//	log.Println("divine empty set")
+		return 0, 0
+	}
+	if len(set) == 1 {
+		return singleDivine(set[0][0], set[0][1])
+	}
+	fmt.Print("q ", len(set), " ")
+	for i := 0; i < len(set); i++ {
+		fmt.Print(set[i][0], " ", set[i][1], " ")
+	}
+	fmt.Println()
+	fmt.Scan(&sumMean)
+	k := len(set)
+	cost = 1 / math.Log2(float64(k))
+	totalCost += 1 / math.Log2(float64(k))
+	return sumMean, cost
+}
+
+// すべてのマスの油田の存在を確認する
+func solver() {
+	var confirmed [20][20]int
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			//if i%3 == 0 && j%3 == 0 {
+			//continue
+			//}
+			r, _ := singleDivine(i, j)
+			confirmed[i][j] = r + 1
+		}
+	}
+	// ここでconfirmedの状態を確認する
+	cnt := 0
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if confirmed[i][j] > 1 {
+				cnt++
+			}
+		}
+	}
+	log.Printf("confirmeK=%f", float64(cnt)/float64(islandSize*islandSize))
+	log.Println("solver")
+	for i := 0; i < islandSize; i++ {
+		log.Println(confirmed[i][:islandSize])
+	}
+	var f [20][20]int
+	var ans [20][2]int
+	searchOilField(confirmed, f, 0, ans)
+	log.Println(ansF[0][:numberOfOil])
+	log.Printf("ansSize=%d", len(ansF))
+	for i := 0; i < len(ansF); i++ {
+		r := output(ansF[i])
+		// 1なら終了
+		if r == 1 {
+			break
+		}
+	}
+	log.Printf("totalCost=%f", totalCost)
+	log.Printf("CheckFill=%d", cntCheckFilled)
+}
+
+var islandSize, numberOfOil int
+var errP float64          // エラーパラメータ ϵ
+var oilField [20][][2]int // 最大２０個の油田と、それぞれの油田の座標
+var oilFieldSize [20]int
+var sumOils int
+var baseOil float64 // 全体の油田の平均
+
+func read(r *os.File) {
+	fmt.Fscan(r, &islandSize, &numberOfOil, &errP)
+	ds := make([]int, numberOfOil)
+	for i := 0; i < numberOfOil; i++ {
+		fmt.Fscan(r, &oilFieldSize[i])
+		ds[i] = oilFieldSize[i]
+		oilField[i] = make([][2]int, oilFieldSize[i])
+		for j := 0; j < oilFieldSize[i]; j++ {
+			fmt.Fscan(r, &oilField[i][j][0], &oilField[i][j][1])
+		}
+		// visualize
+		var vis [20][20]int
+		for j := 0; j < oilFieldSize[i]; j++ {
+			vis[oilField[i][j][0]][oilField[i][j][1]] = 1
+		}
+		//log.Println("visualize", i, "th oilField:")
+		//for j := 0; j < islandSize; j++ {
+		//log.Println(vis[j][:islandSize])
+		//}
+	}
+	maxD := intsMax(0, ds...)
+	minD := intsMin(ds[0], ds...)
+	//abgD := intsMean(ds...)
+	sumD := intsSum(ds...)
+	sumOils = sumD
+	baseOil = float64(sumD) / float64(islandSize*islandSize)
+	log.Printf("size=%d, oils=%d, errorP=%f d_max=%d d_min=%d\n", islandSize, numberOfOil, errP, maxD, minD)
+	log.Printf("K=%f\n", float64(sumD)/float64(islandSize*islandSize))
+	//log.Printf("sumD=%d K=%v\n", sumD, float64(sumD)/float64(islandSize*islandSize))
+}
+
+// ./bin/main -cpuprofile cpu.out < tools/in/0000.txt && go tool pprof -http=localhost:8888 a.out cpu.out
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+
+var timeLimit = time.Duration(3 * time.Second)
+var timeStart time.Time
+
+func main() {
+	///////////////////////////////
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+	////////////////////////////////
+	log.SetFlags(log.Lshortfile)
+	rand.Seed(0)
+	s := time.Now()
+	timeStart = s
+	read(os.Stdin)
+	//solver()
+	//solver_mini_case()
+	//solver_sa()
+	solver_zero()
+	//testError()
+	//testCost()
+	//testError2()
+	elp := time.Since(s)
+	log.Printf("time=%v s", elp.Seconds())
+}
+
+// 以下、ユーティリティ
+func intMax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func intsMax(a int, b ...int) int {
+	for i := 0; i < len(b); i++ {
+		a = intMax(a, b[i])
+	}
+	return a
+}
+
+func intMin(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func intsMin(a int, b ...int) int {
+	for i := 0; i < len(b); i++ {
+		a = intMin(a, b[i])
+	}
+	return a
+}
+
+func intsMean(a ...int) float64 {
+	var sum int
+	for i := 0; i < len(a); i++ {
+		sum += a[i]
+	}
+	return float64(sum) / float64(len(a))
+}
+
+func intsSum(a ...int) int {
+	var sum int
+	for i := 0; i < len(a); i++ {
+		sum += a[i]
+	}
+	return sum
+}
+
+var dy = []int{0, 1, 0, -1}
+var dx = []int{1, 0, -1, 0}
+
+func testError() {
+	for i := 0; i < 20; i++ {
+		e := 0.01 * float64(i+1)
+		log.Println(e, e*(1-e))
+	}
+}
+
+func testCost() {
+	for i := 1; i < 100; i++ {
+		log.Println(i, 1/math.Log2(float64(i)))
+	}
+}
+
+func testError2() {
+	var k float64
+	for k = 1; k <= 20; k++ {
+		for i := 1; i <= 20; i++ {
+			e := 0.01 * float64(i)
+			v := k * e * (1 - e)
+			p := p95(v)
+			log.Println(k, e, p)
+		}
+	}
+}
+
+// 標準正規分布の累積分布関数
+func stdNormalCDF(x float64) float64 {
+	return 0.5 * (1 + math.Erf(x/math.Sqrt2))
+}
+
+// 0.5以上になる確率
+func p95(variance float64) float64 {
+	mean := 1.0
+	//variance := 0.16
+	stdDev := math.Sqrt(variance)
+
+	// 標準化した値を計算
+	zScore := (0.5 - mean) / stdDev
+
+	// 標準正規分布の累積分布関数を用いて確率を計算
+	probability := 1 - stdNormalCDF(zScore)
+
+	//fmt.Println("確率:", probability)
+	return probability
+}
