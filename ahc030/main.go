@@ -1,660 +1,623 @@
 package main
 
 import (
-	"container/list"
+	"flag"
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
 	"os"
-	"slices"
-	"sort"
+	"runtime/pprof"
 	"time"
 )
 
-// TODO upsolve中。動かない。
-func main() {
-	startTime := time.Now()
-	input := readInput()
-	// 時間調整のために難易度（＝必要ターン数）を推定する。可能な配置数が多く、epsが大きいほど難易度が高い
-	numPossibilities := 1
-	for i := 0; i < input.m; i++ {
-		numPossibilities *= (input.n - input.maxI[i]) * (input.n - input.maxJ[i])
-	}
-	// capacity=エントロピーの平均？
-	capacity := 1.0*input.eps*math.Log2(input.eps) + (1.0-input.eps)*math.Log2((1.0-input.eps))
-	difficulty := math.Log2(float64(numPossibilities)) / capacity
-	// ２つのポリオミノの位置を入れ替える操作を行うために、入れ替えた際にどれだけ１をずらせば良いかを予め計算しておく
-	// swap[p][q] := pとq+Δができるだけ一致するようなΔ
-	swap := make([][][]int, input.m, input.m)
-	for i := 0; i < input.m; i++ {
-		swap[i] = make([][]int, input.m, input.m)
-	}
-	for p := 0; p < input.m; p++ {
-		bs := make([]bool, input.n2, input.n2)
-		for _, ij := range input.ts[p] {
-			bs[ij] = true
+func extentConfirmWithHeap(mapping *[20][20]squareInfo) {
+	// 確定したマスに隣接したマスの中から、最も平均の高いマスを選び、占いを行う
+
+}
+
+// exteneComfirm : 確定したマスに隣接したマスを占い、確定したマスを広げる
+func extentComfirm(mapping *[20][20]squareInfo) {
+	sumConfirmed := 0
+	var visited [20][20]bool
+	stack := make([][2]int, 0)
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if mapping[i][j].variance == 0 && mapping[i][j].mean >= 1 {
+				stack = append(stack, [2]int{i, j})
+				sumConfirmed += int(mapping[i][j].mean)
+			}
 		}
-		for q := 0; q < input.m; q++ {
-			if p == q {
+	}
+	for len(stack) > 0 {
+		now := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		for d := 0; d < 4; d++ {
+			ny, nx := now[0]+dy[d], now[1]+dx[d]
+			if ny < 0 || ny >= islandSize || nx < 0 || nx >= islandSize {
 				continue
 			}
-			list := make([][3]int, 0, input.n2)
-			for di := -input.maxI[q]; di < input.n-input.maxI[p]; di++ {
-				for dj := -input.maxJ[q]; dj < input.n-input.maxJ[p]; dj++ {
-					count := 0
-					for _, ij := range input.ts[q] {
-						i := ij/uint(input.n) + uint(di)
-						j := ij%uint(input.n) + uint(dj)
-						if i < uint(input.n) && j < uint(input.n) && bs[i*uint(input.n)+j] {
-							count++
-						}
+			if mapping[ny][nx].variance == 0 {
+				continue
+			}
+			if visited[ny][nx] {
+				continue
+			}
+			// ここで占いを行う
+			a, _ := divine([][2]int{{ny, nx}})
+			mapping[ny][nx].update(float64(a), 1*errP*(1-errP), 1)
+			if a > 0 {
+				stack = append(stack, [2]int{ny, nx})
+				sumConfirmed += a
+			}
+		}
+	}
+}
+
+type samplingInfo struct {
+	SamMean  int
+	Variance float64
+	Points   [][2]int
+	Size     int
+}
+
+func newSamplingInfo(sum, num int, points [][2]int) samplingInfo {
+	variance := float64(num) * errP * (1 - errP)
+	return samplingInfo{SamMean: sum, Variance: variance, Points: points, Size: num}
+}
+
+// mapppingの可視化
+func visualizeMapping(mapping [20][20]squareInfo) {
+	log.Println("mean")
+	for i := 0; i < islandSize; i++ {
+		var str string
+		for j := 0; j < islandSize; j++ {
+			str += fmt.Sprintf("%.2f ", mapping[i][j].mean)
+		}
+		log.Println(str)
+	}
+	log.Println("variance")
+	for i := 0; i < islandSize; i++ {
+		var str string
+		for j := 0; j < islandSize; j++ {
+			str += fmt.Sprintf("%.2f ", mapping[i][j].variance)
+		}
+		log.Println(str)
+	}
+	log.Println("confirmed")
+	for i := 0; i < islandSize; i++ {
+		var str string
+		for j := 0; j < islandSize; j++ {
+			if mapping[i][j].variance == 0 {
+				str += fmt.Sprintf("%d ", int(mapping[i][j].mean))
+			} else {
+				str += "x "
+			}
+		}
+		log.Println(str)
+	}
+}
+
+func divideGrid(si, sj, ei, ej int) (regionPoints [4][][2]int) {
+	log.Println("divideGrid", si, sj, ei, ej)
+	size := ei - si
+	half := size/2 + (size % 2)
+	// 4つの領域に分ける
+	// 1 3
+	// 2 4
+	// 奇数にも対応（1以外の領域が大きくなる）
+	regionStart := [4][2]int{{si, sj}, {si + half, sj}, {si, sj + half}, {si + half, sj + half}}
+	regionEnd := [4][2]int{{si + half, sj + half}, {ei, sj + half}, {si + half, ej}, {ei, ej}}
+
+	for k := 0; k < 4; k++ {
+		startI, startJ := regionStart[k][0], regionStart[k][1]
+		endI, endJ := regionEnd[k][0], regionEnd[k][1]
+		for i := startI; i < endI; i++ {
+			for j := startJ; j < endJ; j++ {
+				regionPoints[k] = append(regionPoints[k], [2]int{i, j})
+			}
+		}
+	}
+	return regionPoints
+}
+
+type squareInfo struct {
+	mean     float64
+	variance float64
+	times    int
+}
+
+// numはサンプリングした時の数
+func (s *squareInfo) update(newMean, newVariance float64, sampleSize int) {
+	if sampleSize == 1 {
+		// サンプリング(占い)を１マスで行った場合は正確な値が出る
+		s.mean = newMean
+		s.variance = 0
+		s.times = 1
+		return
+	} else if s.variance == 0 {
+		// 既に正確な値が出ている場合は何もしない
+		//log.Println("already accurate")
+		//s.times++
+		return
+	}
+	s.mean = (s.mean*float64(s.times) + newMean) / float64(s.times+1)
+	s.variance = (s.variance*float64(s.times) + newVariance) / float64(s.times+1)
+	s.times++
+}
+
+// 始めの情報だけで初期値を設定する
+func initializeMapping() (mapping [20][20]squareInfo) {
+	sumOils := 0
+	for i := 0; i < numberOfOil; i++ {
+		sumOils += oilFieldSize[i]
+	}
+	sumMean := float64(sumOils) / float64(islandSize*islandSize)
+	sumVariance := float64(islandSize*islandSize) * errP * (1 - errP)
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			mapping[i][j] = squareInfo{mean: sumMean, variance: sumVariance, times: 1}
+		}
+	}
+	return
+}
+
+// reSampling : 確定したマスでサンプリングの結果を更新して、新しいマッピングを作成する
+func reSampling(mapping [20][20]squareInfo, samplingLogs []samplingInfo) (newMapping [20][20]squareInfo) {
+	newMapping = initializeMapping()
+	// サンプリングログを確認して、確定マスでサンプリング記録を更新する
+	for i := 0; i < len(samplingLogs); i++ {
+		for j := 0; j < len(samplingLogs[i].Points); j++ {
+			p := samplingLogs[i].Points[j]
+			// 確定マスが存在するので、Logを更新する
+			if mapping[p[0]][p[1]].variance == 0.0 {
+				samplingLogs[i].SamMean -= int(mapping[p[0]][p[1]].mean)
+				samplingLogs[i].Variance -= 1 * errP * (1 - errP)
+				newMapping[p[0]][p[1]] = mapping[p[0]][p[1]] // 確定マスの情報をコピー
+				// Sizeは精度に関係するので更新しない
+				// Pointsの確定マスはスキップされるのでここでは削除しない
+			}
+		}
+	}
+	// 新しいサンプリングで新しいマッピングを作成する
+	for i := 0; i < len(samplingLogs); i++ {
+		if samplingLogs[i].Size == 0 {
+			continue
+		}
+		for j := 0; j < len(samplingLogs[i].Points); j++ {
+			p := samplingLogs[i].Points[j]
+			v := float64(samplingLogs[i].Size) * errP * (1 - errP)
+			if v == 0 {
+				log.Println(p, samplingLogs[i].SamMean, samplingLogs[i].Size, v)
+			}
+			newMapping[p[0]][p[1]].update(float64(samplingLogs[i].SamMean)/float64(samplingLogs[i].Size), v, samplingLogs[i].Size)
+		}
+	}
+	//visualizeMapping(newMapping)
+	return
+}
+
+func solver_mini_case() {
+	samplingLogs := make([]samplingInfo, 0)
+	mapping := initializeMapping()
+	// 地図上で油田の占める割合が小さいケースでの実装
+	// 油田がありそうなところを探して、その周囲を探索する
+	// 全体を４分割して、最初の１マスを決める
+	subgrids := divideGrid(0, 0, islandSize, islandSize)
+	for {
+		maxDivine := 0
+		maxDivineIndex := 0
+		for k := 0; k < 4; k++ {
+			a, cost := divine(subgrids[k])
+			log.Printf("divine:%d size:%d num:%d cost: %.3f\n", k, len(subgrids[k]), a, cost)
+			for i := 0; i < len(subgrids[k]); i++ {
+				variance := float64(len(subgrids[k])) * errP * (1 - errP)
+				mapping[subgrids[k][i][0]][subgrids[k][i][1]].update(float64(a)/float64(len(subgrids[k])), variance, len(subgrids[k]))
+				samplingLogs = append(samplingLogs, newSamplingInfo(a, len(subgrids[k]), subgrids[k]))
+			}
+			if a > maxDivine {
+				maxDivine = a
+				maxDivineIndex = k
+			}
+		}
+		next := subgrids[maxDivineIndex]
+		if len(next) <= 1 {
+			if len(next) == 0 {
+				break
+			}
+			if mapping[next[0][0]][next[0][1]].variance == 0.0 {
+				break
+			}
+		}
+		subgrids = divideGrid(next[0][0], next[0][1], next[len(next)-1][0]+1, next[len(next)-1][1]+1)
+		for k := 0; k < 4; k++ {
+			log.Println("next", k, "size", len(subgrids[k]), subgrids[k])
+		}
+	}
+	visualizeMapping(mapping)
+	// 確定した油田のマスを広げていく
+	extentComfirm(&mapping)
+	log.Println("extentComfirm")
+
+	visualizeMapping(mapping)
+	log.Println("totalCost", totalCost)
+	//mapping = reSampling(mapping, samplingLogs)
+	log.Println("reSampling")
+	visualizeMapping(mapping)
+	// 油田が全て見つかるまで繰り返す
+	var numOil int
+	for numOil != sumOils {
+		// 油田の出る確率が大きいものを探す
+		maxMean := -10000.0
+		maxPoints := make([][2]int, 0)
+		for i := 0; i < islandSize; i++ {
+			for j := 0; j < islandSize; j++ {
+				if mapping[i][j].variance != 0 {
+					if mapping[i][j].mean > maxMean {
+						maxMean = mapping[i][j].mean
+						maxPoints = [][2]int{{i, j}}
+					} else if mapping[i][j].mean == maxMean {
+						maxPoints = append(maxPoints, [2]int{i, j})
 					}
-					list = append(list, [3]int{count, di, dj})
 				}
 			}
-			sort.Slice(list, func(i, j int) bool {
-				if list[i][0] == list[j][0] {
-					if list[i][1] == list[j][1] {
-						return list[i][2] < list[j][2]
-					}
-					return list[i][1] < list[j][1]
-				}
-				return list[i][0] < list[j][0]
-			})
-			list = list[:4]
-			ijList := make([]int, 4, 4)
+		}
+		log.Println("maxMean", maxMean, maxPoints)
+		// ４分割して、最初の１マスを決める
+		for {
+			var subgrids [4][][2]int
+			subgrids[0] = maxPoints[:len(maxPoints)/4]
+			subgrids[1] = maxPoints[len(maxPoints)/4 : len(maxPoints)/2]
+			subgrids[2] = maxPoints[len(maxPoints)/2 : len(maxPoints)*3/4]
+			subgrids[3] = maxPoints[len(maxPoints)*3/4:]
+			maxIndex := 0
+			maxMean := -10000.0
 			for i := 0; i < 4; i++ {
-				ijList[i] = list[i][1]*input.n + list[i][2]
-			}
-			swap[p][q] = ijList
-		}
-	}
-
-	sim := NewSim(input)
-	state := NewState(input)
-	// 尤度が高い配置候補を覚えておき、更新してく
-	pool := make([]Entry, 0, 0)
-	ITER := int(math.Min(math.Round(30000.0*math.Pow(2, 160.0/difficulty)), 5000000))
-	for t := 0; ; t++ {
-		fmt.Printf("# time = %.3f", time.Since(startTime).Seconds())
-		if sim.rem == 0 {
-			log.Println("!log giveup 1", input.n, input.m)
-			break
-		}
-		if time.Since(startTime) > 2900*time.Millisecond {
-			sim.giveup()
-			break
-		}
-		// 各配置の対数尤度を計算
-		for _, e := range pool {
-			if len(e.count) == 0 && len(e.ps) != 0 {
-				e.count = input.get_count(e.ps)
-			}
-			e.prob = sim.ln_prob(state, e.count, e.ps)
-		}
-		sort.Slice(pool, func(i, j int) bool {
-			return pool[i].prob < pool[j].prob
-		})
-		set := make(map[uint64]float64)
-		for _, e := range pool {
-			set[e.hash] = e.prob
-		}
-		if t == 0 {
-			// 1ターン目はすべての配置が等確率なのでランダムに候補を生成する
-			for i := 0; i < ITER; i++ {
-				for p := 0; p < input.m; p++ {
-					i := rand.Intn(input.n - input.maxI[p])
-					j := rand.Intn(input.n - input.maxJ[p])
-					state.move_to(uint(p), uint(i*input.n+j))
+				sumMean, cost := divine(subgrids[i])
+				sampleSize := len(subgrids[i])
+				if sampleSize == 0 {
+					continue
 				}
-				if _, ok := set[state.hash]; !ok {
-					set[state.hash] = 0.0
-					pool = append(pool, Entry{
-						hash:  state.hash,
-						prob:  0.0,
-						ps:    append([]uint(nil), state.ps...),
-						count: append([]uint8(nil), state.count...),
-					})
+				newMean := float64(sumMean) / float64(sampleSize)
+				_ = cost
+				for j := 0; j < len(subgrids[i]); j++ {
+					newVariance := float64(sampleSize) * errP * (1 - errP)
+					mapping[subgrids[i][j][0]][subgrids[i][j][1]].update(newMean, newVariance, sampleSize)
+				}
+				if newMean > maxMean {
+					maxMean = newMean
+					maxIndex = i
 				}
 			}
-		} else {
-			// １番尤度が高い配置からスタートし、焼きなまし法を実行することで配置行をを沢山生成する
-			crt := pool[0].prob
-			for p := 0; p < input.m; p++ {
-				state.move_to(uint(p), pool[0].ps[p])
-			}
-			fmt.Printf("# %.4f -> ", crt)
-			max := crt
-			T0 := 2.0
-			T1 := 1.0
-			// TLEにならないように、残り時間が少なくなったら反復回数を減らす
-			ITER = int(float64(ITER) * (3.0 - math.Min(1.0, time.Since(startTime).Seconds())))
-			for t := 0; t < ITER; t++ {
-				temp := T0 + (T1-T0)*float64(t)/float64(ITER)
-				coin := rand.Float64() * 10.0
-				if coin < 3.0 {
-					// ポリオミノをランダムに選び、上下左右に１マス移動
-					p := rand.Intn(input.m)
-					dij := DIJ[rand.Intn(4)]
-					i2 := state.ps[p]/uint(input.n) + uint(dij[0])
-					j2 := state.ps[p]%uint(input.n) + uint(dij[1])
-					if i2 < uint(input.n-input.maxI[p]) && j2 < uint(input.n-input.maxJ[p]) {
-						bk := state.ps[p]
-						state.move_to(uint(p), i2*uint(input.n)+j2)
-						next, ok := set[state.hash]
-						if !ok {
-							next = sim.ln_prob_state(&state)
-							set[state.hash] = next
-							if next-max >= 10.0 {
-								pool = append(pool, Entry{
-									hash:  state.hash,
-									prob:  next,
-									ps:    append([]uint(nil), state.ps...),
-									count: append([]uint8(nil), state.count...),
-								})
-							}
-						}
-						if crt <= next || rand.Float64() < math.Exp((next-crt)/temp) {
-							crt = next
-						} else {
-							state.move_to(uint(p), bk)
-						}
-					}
-				} else if coin < 4.0 {
-					// ポリオミノをランダムに選び、ランダムな位置に移動
-					p := rand.Intn(input.m)
-					i2 := rand.Intn(input.n - input.maxI[p])
-					j2 := rand.Intn(input.n - input.maxJ[p])
-					bk := slices.Clone(state.ps) // * スライスのコピーはこの方法が正しい。他の箇所も同様
-					state.move_to(uint(p), uint(i2*input.n+j2))
-					next, ok := set[state.hash]
-					if !ok {
-						next = sim.ln_prob_state(&state)
-						set[state.hash] = next
-						if next-max >= -10.0 {
-							pool = append(pool, Entry{
-								hash:  state.hash,
-								prob:  next,
-								ps:    append([]uint(nil), state.ps...),
-								count: append([]uint8(nil), state.count...),
-							})
-						}
-					}
-					if crt <= next || rand.Float64() < math.Exp((next-crt)/temp) {
-						crt = next
-					} else {
-						state.ps = bk
-					}
-				} else {
-					// ポリオミノを２つランダムに選び、互いの位置を交換
-					// TODO
-				}
-			}
-		}
-	}
-
-	log.Println("input", input)
-	log.Println("time", time.Since(startTime))
-}
-
-// 焼きなましの差分計算用のデータ
-type State struct {
-	ts [][]uint
-	// 各ポリオミノの配置
-	ps []uint
-	// 各マスの埋蔵量(失敗した占い結果と同じ領域火を判断するのに使用しており、失敗するまでは不要なので計算をのぞいている)
-	count []uint8
-	// これまでの各占いに対する合計埋蔵量
-	query_count []uint8
-	// [p][ij][q] := p番のポリオミノを(i, j)に配置した時の、q番の占いに対する合計埋蔵量の増加量
-	pij_to_queru_count [][][]uint8
-	hashes             [][]uint64
-	hash               uint64
-}
-
-func NewState(input Input) (state State) {
-	src := rand.NewSource(8904281)
-	rng := rand.New(src)
-	hashes := make([][]uint64, input.m)
-	for i := 0; i < input.m; i++ {
-		hashes[i] = make([]uint64, input.n2)
-	}
-	for p := 0; p < input.m; p++ {
-		// 同じ図形は同じハッシュ値を使用することで、同じ形の図形の位置を入れ替えた状態を同一視する。
-		// 同じ図形が同じ位置にある状態が正解の場合に、hashが衝突して解が見つからなくなるが、稀なので
-		// そのようなレアケースは捨てて速度を優先
-		if p > 0 && equlaUints(input.ts[p-1], input.ts[p]) {
-			hashes[p] = hashes[p-1]
-		} else {
-			for ij := 0; ij < input.n2; ij++ {
-				hashes[p][ij] = rng.Uint64()
-			}
-		}
-	}
-	var hash uint64
-	for p := 0; p < input.m; p++ {
-		hash ^= hashes[p][0]
-	}
-	sub_pij_to_queru_count := make([][][]uint8, input.m)
-	for p := 0; p < input.m; p++ {
-		sub_pij_to_queru_count[p] = make([][]uint8, input.n2)
-	}
-	state = State{
-		ts:                 input.ts,
-		ps:                 make([]uint, input.m),
-		count:              make([]uint8, 0),
-		query_count:        make([]uint8, 0),
-		pij_to_queru_count: sub_pij_to_queru_count,
-		hashes:             hashes,
-		hash:               hash,
-	}
-	return state
-}
-
-// p番目のポリオミノを(i, j)に移動する
-func (self *State) move_to(p uint, tij uint) {
-	self.hash ^= self.hashes[p][self.ps[p]] ^ self.hashes[p][tij]
-	for i := range self.pij_to_queru_count[p][self.ps[p]] {
-		sub := self.pij_to_queru_count[p][self.ps[p]][i]
-		add := self.pij_to_queru_count[p][tij][i]
-		self.query_count[i] += add - sub
-	}
-	if len(self.count) > 0 {
-		for _, ij := range self.ts[p] {
-			self.count[ij+self.ps[p]] -= 1
-			self.count[ij+tij] += 1
-		}
-	}
-	self.ps[p] = tij
-}
-
-// 占ったマス集合qsを追加
-func (self *State) add_query(input Input, qs []uint) {
-	in_query := make([]bool, input.n2)
-	for _, ij := range qs {
-		in_query[ij] = true
-	}
-	for p := 0; p < input.m; p++ {
-		for di := 0; di < input.n-input.maxI[p]; di++ {
-			for dj := 0; dj < input.n-input.maxJ[p]; dj++ {
-				dij := uint(di*input.n + dj)
-				c := 0
-				for _, ij := range input.ts[p] {
-					if in_query[ij+dij] {
-						c++
-					}
-				}
-				self.pij_to_queru_count[p][dij] = append(self.pij_to_queru_count[p][dij], uint8(c))
-			}
-		}
-	}
-	count := input.get_count(qs)
-	var c uint8
-	for _, ij := range qs {
-		c += count[ij]
-	}
-	self.query_count = append(self.query_count, c)
-}
-
-type Input struct {
-	n, m  int
-	eps   float64
-	total int
-	maxI  []int
-	maxJ  []int
-	ts    [][]uint
-	n2    int
-}
-
-func (self *Input) get_count(ps []uint) []uint8 {
-	count := make([]uint8, self.n2)
-	for p := 0; p < len(ps); p++ {
-		pij := ps[p]
-		for _, ij := range self.ts[p] {
-			count[ij+pij] += 1
-		}
-	}
-	return count
-}
-
-func readInput() (input Input) {
-	var n, m int
-	var eps float64
-
-	fmt.Scan(&n, &m, &eps)
-	ts2 := make([][][2]int, m, m)
-	var total int
-	for i := 0; i < m; i++ {
-		var d int
-		fmt.Scan(&d)
-		ts2[i] = make([][2]int, d, d)
-		for j := 0; j < d; j++ {
-			fmt.Scan(&ts2[i][j][0], &ts2[i][j][1])
-		}
-		total += d
-	}
-	// ポリオ味ののサイズでソート
-	sort.Slice(ts2, func(i, j int) bool {
-		return len(ts2[i]) < len(ts2[j])
-	})
-	// ポリオミノの大きさを保存する
-	maxI := make([]int, m, m)
-	maxJ := make([]int, m, m)
-	for i := 0; i < m; i++ {
-		maxI[i] = maxInt(maxI[i], ts2[i][0][0])
-	}
-	for i := 0; i < m; i++ {
-		maxJ[i] = maxInt(maxJ[i], ts2[i][0][1])
-	}
-	ts := make([][]uint, m, m)
-	for i := 0; i < m; i++ {
-		ts[i] = make([]uint, len(ts2[i]), len(ts2[i]))
-		for j := 0; j < len(ts2[i]); j++ {
-			ts[i][j] = uint(ts2[i][j][0]*n + ts2[i][j][1])
-		}
-	}
-	input = Input{n, m, eps, total, maxI, maxJ, ts, n * n}
-	return input
-}
-
-// 配置候補の情報
-type Entry struct {
-	hash  uint64
-	prob  float64
-	ps    []uint
-	count []uint8
-}
-
-const EPS float64 = 1e-6
-
-// 各クエリ処理を行うためのデータ
-type Sim struct {
-	n     int
-	n2    int
-	m     int
-	total int
-	eps   float64
-	query [][]int
-	// (i, j, resp)
-	mined [][2]int
-	// probs[k][S][r] := kマスに対してクエリして真の値がSであるときに（lb＋r)が返ってくる確率、そのln)
-	// ある程度外れると確率はほぼ０になるので、高速化のため、必要な範囲だけ保持している
-	probs_lb [][]int
-	probs    [][][][2]float64
-	// ln_probs_query[q][S] := q番目のクエリに対して真の根がSであるときに実際の返答が返ってくる確率のln
-	ln_probs_query [][]float64
-	// 失敗した推測履歴
-	failed [][]int
-	// 残りクエリ数
-	rem int
-}
-
-func NewSim(input Input) (sim Sim) {
-	n := input.n
-	n2 := input.n2
-	m := input.m
-	total := input.total
-	eps := input.eps
-	query := make([][]int, 0, 0)
-	mined := make([][2]int, 0, 0)
-	probs_lb := make([][]int, input.n2+1, input.n2+1)
-	probs_ub := 0.0
-	for i := 0; i <= input.n2; i++ {
-		probs_lb[i] = make([]int, input.total+1, input.total+1)
-	}
-	probs := make([][][][2]float64, input.n2+1, input.n2+1)
-	for i := 0; i <= input.n2; i++ {
-		probs[i] = make([][][2]float64, input.total+1, input.total+1)
-	}
-	for k := 1; k < input.n2; k++ {
-		for S := 0; S < input.total; S++ {
-			mu := float64(k-S)*input.eps + float64(S)*(1.0-input.eps)
-			sigma := math.Sqrt(float64(k) * input.eps * (1.0 - input.eps))
-			for r := int(math.Round(mu)); r >= 0; r-- {
-				var prob float64
-				if r == 0 {
-					prob = probability_in_range(mu, sigma, -100.0, float64(r)+0.5)
-				} else {
-					prob = probability_in_range(mu, sigma, float64(r)-0.5, float64(r)+0.5)
-				}
-				if prob < EPS {
-					break
-				}
-				probs[k][S] = append(probs[k][S], [2]float64{prob, math.Log(prob)})
-				probs_ub = math.Max(probs_ub, float64(r)+1)
-			}
-		}
-	}
-	log.Println("n2=", input.n2)
-	log.Println("total=", input.total)
-	log.Println("ub=", probs_ub)
-	ln_probs_query := make([][]float64, 0, 0)
-	failed := make([][]int, 0, 0)
-	rem := total
-	sim = Sim{n, n2, m, total, eps, query, mined, probs_lb, probs, ln_probs_query, failed, rem}
-	return sim
-}
-
-func (self *Sim) Ans(T []int) bool {
-	if self.rem == 0 {
-		log.Println("!log giveup 1", self.n, self.m)
-		os.Exit(1)
-	}
-	self.rem -= 1
-	fmt.Printf("a %d", len(T))
-	for _, t := range T {
-		fmt.Printf(" %d %d ", t/self.n, t%self.n)
-		fmt.Println()
-	}
-	var ret int
-	fmt.Scan(&ret)
-	if ret == 1 {
-		return true
-	}
-	self.failed = append(self.failed, T)
-	return false
-}
-
-func (self *Sim) Query(ps []int) int {
-	if self.rem == 0 {
-		log.Println("!log giveup 2", self.n, self.m)
-		os.Exit(1)
-	}
-	self.rem -= 1
-	fmt.Printf("q %d", len(ps))
-	for _, ij := range ps {
-		fmt.Printf(" %d %d", ij/self.n, ij%self.n)
-	}
-	fmt.Println()
-	var ret int
-	fmt.Scan(&ret)
-	self.query = append(self.query, ps)
-	probs := make([]float64, self.total+1, self.total+1)
-	// すべてのSについて、queryの結果を反映させる
-	for S := 0; S <= self.total; S++ {
-		k := float64(len(ps))
-		mu := (k-float64(S))*self.eps + float64(S)*(1.0-self.eps)
-		sigma := math.Sqrt(k * self.eps * (1.0 - self.eps))
-		var prob float64
-		if ret == 0 {
-			prob = probability_in_range(mu, sigma, -100.0, float64(ret)+0.5)
-		} else {
-			prob = probability_in_range(mu, sigma, float64(ret)-0.5, float64(ret)+0.5)
-		}
-		probs[S] = math.Log(prob)
-	}
-	for i := 0; i < len(probs)-1; i++ {
-		if !math.IsInf(probs[i], 0) && math.IsInf(probs[i+1], 0) {
-			probs[i+1] = probs[i] - 10.0
-		}
-	}
-	for i := len(probs) - 1; i > 0; i-- {
-		if !math.IsInf(probs[i], 0) && math.IsInf(probs[i-1], 0) {
-			probs[i-1] = probs[i] - 10.0
-		}
-	}
-	self.ln_probs_query = append(self.ln_probs_query, probs)
-	return ret
-}
-
-func (self *Sim) Mine(i, j int) int {
-	if self.rem == 0 {
-		log.Println("!log giveup 3", self.n, self.m)
-		os.Exit(1)
-	}
-	self.rem -= 1
-	fmt.Printf("q 1 %d %d\n", i, j)
-	var ret int
-	fmt.Scan(&ret)
-	self.mined = append(self.mined, [2]int{i*self.n + j, ret})
-	return ret
-}
-
-// 埋蔵量がvsで各ポリオミノのいちがpsのときの対数尤度を計算
-func (self *Sim) ln_prob(state State, vs []uint8, ps []uint) float64 {
-	for _, qs := range self.failed {
-		for _, ij := range qs {
-			c_flag := false
-			if vs[ij] == 0 {
-				c_flag = true
-			}
-			if c_flag {
+			maxPoints = subgrids[maxIndex]
+			log.Println(len(maxPoints), maxPoints)
+			if len(maxPoints) <= 1 {
 				break
 			}
+			log.Println(subgrids[maxIndex])
 		}
-		size := 0
-		for ij := 0; ij < self.n2; ij++ {
-			if vs[ij] > 0 {
-				size += 1
-			}
-		}
-		if size == len(qs) {
-			return -1e20
-		}
-	}
-	prob := 0.0
-	for q := 0; q < len(self.query); q++ {
-		count := 0
-		for p, ij := range ps {
-			count += int(state.pij_to_queru_count[p][ij][q])
-		}
-		prob += self.ln_probs_query[q][count]
-	}
-	return prob
-}
-
-// 状態stateのときの対数尤度を計算
-func (self *Sim) ln_prob_state(state *State) float64 {
-	for _, qs := range self.failed {
-		continue_flag := false
-		for _, ij := range qs {
-			if state.count[ij] == 0 {
-				continue_flag = true
-				break
-			}
-		}
-		if continue_flag {
-			continue
-		}
-		size := 0
-		for ij := 0; ij < self.n2; ij++ {
-			if state.count[ij] > 0 {
-				size += 1
-			}
-		}
-		if size == len(qs) {
-			return -1e20
-		}
-	}
-	sum := 0.0
-	for i := range self.ln_probs_query {
-		sum += self.ln_probs_query[i][state.query_count[i]]
-	}
-	return sum
-}
-
-// 実行切れしたときはBFSで掘る。滅多に実行されない上に相対スコアへの影響が小さいので手抜き
-func (self *Sim) giveup() {
-	log.Println("!log giveup 4", self.n, self.m)
-	que := list.New()
-	que.PushBack([2]int{self.n / 2, self.n / 2})
-	list := make([]int, 0, 0)
-	rem := self.total
-	used := make([][]bool, self.n)
-	for i := 0; i < self.n; i++ {
-		used[i] = make([]bool, self.n)
-	}
-	for que.Len() > 0 {
-		ij := que.Front().Value.([2]int)
-		i := ij[0]
-		j := ij[1]
-		if !used[i][j] {
-			used[i][j] = true
-			continue
-		}
-		ret := self.Mine(i, j)
-		if ret > 0 {
-			list = append(list, i*self.n+j)
-			rem -= ret
-			if rem == 0 {
-				break
-			}
-		}
-		for _, dij := range DIJ {
-			i2 := i + dij[0]
-			j2 := j + dij[1]
-			if i2 < self.n && j2 < self.n {
-				if ret == 0 {
-					que.PushBack([2]int{i2, j2})
-				} else {
-					que.PushFront([2]int{i2, j2})
+		//visualizeMapping(mapping)
+		extentComfirm(&mapping)
+		log.Println("extentComfirm")
+		visualizeMapping(mapping)
+		numOil = 0
+		for i := 0; i < islandSize; i++ {
+			for j := 0; j < islandSize; j++ {
+				if mapping[i][j].variance == 0 {
+					numOil += int(mapping[i][j].mean)
 				}
 			}
 		}
-		self.Ans(list)
+		log.Println("sumOils:", sumOils, "numOil", numOil)
 	}
+	log.Println("sumOils:", sumOils, "numOil", numOil)
+	// 結果を出力する
+	ans := make([][20][2]int, 0, numOil)
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if mapping[i][j].variance == 0 && mapping[i][j].mean > 0 {
+				ans = append(ans, [20][2]int{{i, j}})
+			}
+		}
+	}
+	fmt.Printf("a %d ", len(ans))
+	for i := 0; i < len(ans); i++ {
+		fmt.Printf("%d %d ", ans[i][0][0], ans[i][0][1])
+	}
+	fmt.Println("")
+	var rtn int
+	fmt.Scan(&rtn)
+	log.Println(rtn)
 }
 
-// util
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
+var ansF [][20][2]int
+var cntCheckFilled int
 
-func normal_cdf(x, mean, std_dev float64) float64 {
-	return 0.5 * (1.0 + math.Erf((x-mean)/(std_dev*math.Sqrt2)))
-}
-
-// 正規分布の確率密度関数 aからbまでの確率を求める
-func probability_in_range(mean, std_dev, a, b float64) float64 {
-	if mean < a {
-		return probability_in_range(mean, std_dev, 2.0*mean-b, 2.0*mean-a)
-	}
-	p_a := normal_cdf(a, mean, std_dev)
-	p_b := normal_cdf(b, mean, std_dev)
-	return p_b - p_a
-}
-
-func maxFloat(a, b float64) float64 {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-var DIJ = [4][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
-
-func equlaUints(a, b []uint) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
+// 探索済みで1以上の観測地点にその値が入っているか確認する
+func checkFilled(confirmed [20][20]int, field [20][20]int) bool {
+	cntCheckFilled++
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if confirmed[i][j] > 0 && confirmed[i][j]-1 != field[i][j] {
+				return false
+			}
 		}
 	}
 	return true
 }
+
+// 深さ優先探索で条件に合うものを全探索する
+func searchOilField(confirmed [20][20]int, field [20][20]int, oilNum int, ans [20][2]int) {
+	if oilNum == numberOfOil {
+		if checkFilled(confirmed, field) {
+			//log.Println("find!", ans[:numberOfOil])
+			//r := output(ans)
+			//if r == 1 {
+			//os.Exit(0)
+			//}
+			//log.Println(r)
+			ansF = append(ansF, ans)
+		}
+		return
+	}
+	// 全マスを探索する
+	var x, y int
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			var ng bool
+			var k int
+			// TODO 油田がひとつもconfirmedとヒットしないときは、探索をスキップする
+			for ; k < oilFieldSize[oilNum]; k++ {
+				// ここに油田があると仮定して, confirmedと矛盾がないか調べる
+				y = i + oilField[oilNum][k][0]
+				x = j + oilField[oilNum][k][1]
+				if y < 0 || y >= islandSize {
+					ng = true
+					break
+				}
+				if x < 0 || x >= islandSize {
+					ng = true
+					break
+				}
+				// confirmedが0の場所は未探索なので、矛盾しない
+				if confirmed[y][x] == 0 {
+					continue
+				}
+				// confirmedが1以上の場所は探索済みなので、矛盾がないか調べる
+				// +1したときconfirmedより大きくなる場合は矛盾する
+				if confirmed[y][x]-1 > field[y][x] {
+					field[y][x]++
+				} else {
+					ng = true
+					break
+				}
+			}
+			if !ng {
+				// ここに油田があると仮定して、次の油田を探索する
+				ans[oilNum][0] = i
+				ans[oilNum][1] = j
+				searchOilField(confirmed, field, oilNum+1, ans)
+				// ここでbreakすると、他のありえる場所を探索しない
+			}
+			// 油田が矛盾するor他の可能性を探すためにのUndo
+			for k--; k >= 0; k-- {
+				field[i+oilField[oilNum][k][0]][j+oilField[oilNum][k][1]]--
+			}
+		}
+	}
+}
+
+// 油田の存在するすべてのマスを列挙する
+func output(ans [20][2]int) (rtn int) {
+	var fiels [20][20]bool
+	for i := 0; i < numberOfOil; i++ {
+		for j := 0; j < oilFieldSize[i]; j++ {
+			fiels[ans[i][0]+oilField[i][j][0]][ans[i][1]+oilField[i][j][1]] = true
+		}
+	}
+	cnt := 0
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if fiels[i][j] {
+				cnt++
+			}
+		}
+	}
+	fmt.Print("a ", cnt, " ")
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if fiels[i][j] {
+				fmt.Print(i, " ", j, " ")
+			}
+		}
+	}
+	fmt.Print("\n")
+	fmt.Scan(&rtn)
+	if rtn == 0 {
+		totalCost++
+	}
+	return rtn
+}
+
+var totalCost float64
+
+// 1マスの油田の存在を確認する
+func singleDivine(x, y int) (v int, c float64) {
+	fmt.Println("q 1", x, y)
+	fmt.Scan(&v)
+	c = 1
+	totalCost++
+	return
+}
+
+// 複数マスの油田の存在を占う
+func divine(set [][2]int) (sumMean int, cost float64) {
+	if len(set) == 0 {
+		log.Println("divine empty set")
+		return 0, 0
+	}
+	if len(set) == 1 {
+		return singleDivine(set[0][0], set[0][1])
+	}
+	fmt.Print("q ", len(set), " ")
+	for i := 0; i < len(set); i++ {
+		fmt.Print(set[i][0], " ", set[i][1], " ")
+	}
+	fmt.Println()
+	fmt.Scan(&sumMean)
+	k := len(set)
+	cost = 1 / math.Log2(float64(k))
+	totalCost += 1 / math.Log2(float64(k))
+	return sumMean, cost
+}
+
+// すべてのマスの油田の存在を確認する
+func solver() {
+	var confirmed [20][20]int
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			//if i%3 == 0 && j%3 == 0 {
+			//continue
+			//}
+			r, _ := singleDivine(i, j)
+			confirmed[i][j] = r + 1
+		}
+	}
+	// ここでconfirmedの状態を確認する
+	cnt := 0
+	for i := 0; i < islandSize; i++ {
+		for j := 0; j < islandSize; j++ {
+			if confirmed[i][j] > 1 {
+				cnt++
+			}
+		}
+	}
+	log.Printf("confirmeK=%f", float64(cnt)/float64(islandSize*islandSize))
+	log.Println("solver")
+	for i := 0; i < islandSize; i++ {
+		log.Println(confirmed[i][:islandSize])
+	}
+	var f [20][20]int
+	var ans [20][2]int
+	searchOilField(confirmed, f, 0, ans)
+	log.Println(ansF[0][:numberOfOil])
+	log.Printf("ansSize=%d", len(ansF))
+	for i := 0; i < len(ansF); i++ {
+		r := output(ansF[i])
+		// 1なら終了
+		if r == 1 {
+			break
+		}
+	}
+	log.Printf("totalCost=%f", totalCost)
+	log.Printf("CheckFill=%d", cntCheckFilled)
+}
+
+var islandSize, numberOfOil int
+var errP float64
+var oilField [20][][2]int // 最大２０個の油田と、それぞれの油田の座標
+var oilFieldSize [20]int
+var sumOils int
+
+func read(r *os.File) {
+	fmt.Fscan(r, &islandSize, &numberOfOil, &errP)
+	ds := make([]int, numberOfOil)
+	for i := 0; i < numberOfOil; i++ {
+		fmt.Fscan(r, &oilFieldSize[i])
+		ds[i] = oilFieldSize[i]
+		oilField[i] = make([][2]int, oilFieldSize[i])
+		for j := 0; j < oilFieldSize[i]; j++ {
+			fmt.Fscan(r, &oilField[i][j][0], &oilField[i][j][1])
+		}
+		// visualize
+		var vis [20][20]int
+		for j := 0; j < oilFieldSize[i]; j++ {
+			vis[oilField[i][j][0]][oilField[i][j][1]] = 1
+		}
+		//log.Println("visualize", i, "th oilField:")
+		//for j := 0; j < islandSize; j++ {
+		//log.Println(vis[j][:islandSize])
+		//}
+	}
+	maxD := intsMax(0, ds...)
+	minD := intsMin(ds[0], ds...)
+	abgD := intsMean(ds...)
+	sumD := intsSum(ds...)
+	sumOils = sumD
+	log.Printf("size=%d, oils=%d, errorP=%f d_max=%d d_min=%d d_avg=%f\n", islandSize, numberOfOil, errP, maxD, minD, abgD)
+	log.Printf("sumD=%d K=%v\n", sumD, float64(sumD)/float64(islandSize*islandSize))
+}
+
+// ./bin/main -cpuprofile cpu.out < tools/in/0000.txt && go tool pprof -http=localhost:8888 a.out cpu.out
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+
+func main() {
+	///////////////////////////////
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+	////////////////////////////////
+	log.SetFlags(log.Lshortfile)
+	s := time.Now()
+	read(os.Stdin)
+	//solver()
+	solver_mini_case()
+	elp := time.Since(s)
+	log.Printf("time=%v s", elp.Seconds())
+}
+
+// 以下、ユーティリティ
+func intMax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func intsMax(a int, b ...int) int {
+	for i := 0; i < len(b); i++ {
+		a = intMax(a, b[i])
+	}
+	return a
+}
+
+func intMin(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func intsMin(a int, b ...int) int {
+	for i := 0; i < len(b); i++ {
+		a = intMin(a, b[i])
+	}
+	return a
+}
+
+func intsMean(a ...int) float64 {
+	var sum int
+	for i := 0; i < len(a); i++ {
+		sum += a[i]
+	}
+	return float64(sum) / float64(len(a))
+}
+
+func intsSum(a ...int) int {
+	var sum int
+	for i := 0; i < len(a); i++ {
+		sum += a[i]
+	}
+	return sum
+}
+
+var dy = []int{0, 1, 0, -1}
+var dx = []int{1, 0, -1, 0}

@@ -1,4 +1,4 @@
-BINARY=bin/a
+BINARY=a.out
 SRC=src/main.go
 SEED=0000
 

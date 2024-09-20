@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"time"
 )
 
 var sc = bufio.NewScanner(os.Stdin)
@@ -132,6 +133,7 @@ func distance(a, b Vertice) (d float64) {
 }
 
 func solver() {
+	startTime := time.Now()
 	var vertices [N]Vertice
 	for i := 0; i < N; i++ {
 		vertices[i].x = nextInt()
@@ -207,7 +209,9 @@ func solver() {
 	A := calcDistance(plan, edges)
 	log.Println(A, B)
 	log.Printf("Score=%.0f\n", math.Round(100000000*B/A))
-	log.Printf("Cost=%.0f\n", cost)
+	elapsedTime := time.Since(startTime)
+	log.Printf("time=%v\n", elapsedTime)
+	log.Printf("cost=%.0f\n", cost)
 }
 
 func calcDistance(plan [M]int, edges [M]Edge) (sum float64) {
