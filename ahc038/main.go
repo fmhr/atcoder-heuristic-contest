@@ -88,11 +88,13 @@ func viewField(f BitArray) {
 }
 
 type State struct {
-	startPos       Point
-	nodes          [15]Node
-	s              BitArray
-	t              BitArray
-	remainTakoyaki int
+	startPos        Point
+	nodes           [15]Node
+	s               BitArray
+	t               BitArray
+	remainTakoyaki  int
+	takoyakiOnField int
+	takoyakiInRobot int
 }
 
 func newState() (s State) {
@@ -144,7 +146,7 @@ Reset:
 	}
 	s.MoveRobot(move, &s.nodes[0])
 	action = append(action, V0Action[move]) // V0 の移動
-	// V1 ~ 回転ランダム
+	// V1 ~
 	for i := 1; i < V; i++ {
 		if s.nodes[i].isLeaf() {
 			center := s.nodes[i].parent.Point
@@ -192,6 +194,8 @@ Reset:
 				s.nodes[i].HasTakoyaki = true
 				s.s.Unset(s.nodes[i].Y, s.nodes[i].X)
 				action = append(action, 'P')
+				s.takoyakiInRobot++
+				s.takoyakiOnField--
 			} else {
 				// なにもできない
 				action = append(action, '.')
@@ -203,6 +207,7 @@ Reset:
 				s.t.Unset(s.nodes[i].Y, s.nodes[i].X)
 				s.remainTakoyaki--
 				action = append(action, 'P')
+				s.takoyakiInRobot--
 			} else {
 				// なにもできない
 				action = append(action, '.')
@@ -232,10 +237,12 @@ func solver(in Input) {
 	state.startPos.Y = N / 2
 	state.startPos.X = N / 2
 	state.remainTakoyaki = M
+	state.takoyakiOnField = M
 	for i := 0; i < N; i++ {
 		for j := 0; j < N; j++ {
 			if state.s.Get(i, j) && state.t.Get(i, j) {
 				state.remainTakoyaki--
+				state.takoyakiOnField--
 			}
 		}
 	}
@@ -271,7 +278,8 @@ func solver(in Input) {
 			break
 		}
 		if pre != state.remainTakoyaki {
-			log.Println(i, "remain takoyaki", state.remainTakoyaki, "turn", i-preTurn)
+			log.Println(i, "remain", state.remainTakoyaki, "turn", i-preTurn)
+			log.Println("takoyakiOnField", state.takoyakiOnField, "takoyakiInRobot", state.takoyakiInRobot)
 			pre = state.remainTakoyaki
 		}
 	}
