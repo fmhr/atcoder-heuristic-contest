@@ -98,6 +98,23 @@ type State struct {
 	takoyakiInRobot int
 }
 
+// closestTakoyaki はpに最も近いたこ焼きの座標を返す
+func (s State) closestTakoyaki(p Point) (t Point) {
+	minDist := 1000
+	for i := 0; i < N; i++ {
+		for j := 0; j < N; j++ {
+			if s.s.Get(i, j) && !s.t.Get(i, j) {
+				dist := abs(p.Y-i) + abs(p.X-j)
+				if dist < minDist {
+					minDist = dist
+					t = Point{i, j}
+				}
+			}
+		}
+	}
+	return t
+}
+
 func (s State) firstOutput() []byte {
 	var out bytes.Buffer
 	out.WriteString(fmt.Sprintf("%d\n", V))
@@ -143,6 +160,24 @@ func (s *State) RotateRobot(direction int, node *Node, center Point) {
 	}
 	node.Point = node.Point.Rotate(center, direction)
 }
+
+// 状態
+// フィールドにたこ焼きがある
+//   たこ焼きを持っている
+//    持っているたこ焼きを置きにいく
+//      この時持っているロボットがi=1とは限らない
+//   たこ焼きを持っていない
+//    たこ焼きを取りに行く
+//       どのアームで撮りに行くのが最適かわからない
+// フィールドにたこ焼きがない
+//   たこ焼きを持っている
+//     たこ焼きを置きに行く
+//   たこ焼きを持っていない
+//     終了
+
+// 状態評価
+//  アームが４方向すべべての方向にあるとして考える？
+//  どうすれば、たこ焼きを最短で取りに行けるか？
 
 func turnSolver(s *State) []byte {
 	action := make([]byte, 0, 2*V)
@@ -292,6 +327,9 @@ func solver(in Input) {
 			//log.Printf("%d remain:%d(%d %d) turn:%d\n", i, state.remainTakoyaki, state.takoyakiOnField, state.takoyakiInRobot, i-preTurn)
 			//pre = state.remainTakoyaki
 			//}
+			if minOut != nil && len(out) > len(minOut) {
+				break
+			}
 		}
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
@@ -385,4 +423,11 @@ func (b *BitArray) Reset() {
 	for i := 0; i < arraySize; i++ {
 		b[i] = 0
 	}
+}
+
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
 }
