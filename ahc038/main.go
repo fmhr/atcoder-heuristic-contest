@@ -37,9 +37,9 @@ var VAction = []byte{'.', 'R', 'L'}
 var VAction2 = []byte{'.', '?', '?', '?', 'P'}
 
 // rotate は中心を中心にdirection方向に回転する
-func (p *Point) Rotate(center Point, direction int) {
+func (p Point) Rotate(center Point, direction int) (np Point) {
 	if direction == None {
-		return
+		return p
 	}
 	translatedX := p.X - center.X
 	translatedY := p.Y - center.Y
@@ -53,8 +53,9 @@ func (p *Point) Rotate(center Point, direction int) {
 	} else {
 		panic("invalid direction")
 	}
-	p.X = center.X + rotatedX
-	p.Y = center.Y + rotatedY
+	np.X = center.X + rotatedX
+	np.Y = center.Y + rotatedY
+	return np
 }
 
 type Node struct {
@@ -116,15 +117,18 @@ func (s *State) MoveRobot(direction int, node *Node) {
 
 func (s *State) RotateRobot(direction int, node *Node, center Point) {
 	if node == nil {
-		panic("node is nil")
+		log.Fatal("node is nil")
 	}
 	if direction == None {
 		return
 	}
+	if direction != CW && direction != CCW {
+		log.Fatal("invalid direction")
+	}
 	for i := 0; i < len(node.children); i++ {
 		s.RotateRobot(direction, node.children[i], center)
 	}
-	node.Point.Rotate(center, direction)
+	node.Point = node.Point.Rotate(center, direction)
 }
 
 func turnSolver(s *State) {
@@ -142,10 +146,31 @@ Reset:
 	action = append(action, V0Action[move]) // V0 の移動
 	// V1 ~ 回転ランダム
 	for i := 1; i < V; i++ {
-		move = rand.Intn(3) // 0:None, 1:CW, 2:CCW
-		center := s.nodes[i].parent.Point
-		s.RotateRobot(move, &s.nodes[i], center)
-		action = append(action, VAction[move]) // (V-1)回転
+		if s.nodes[i].isLeaf() {
+			center := s.nodes[i].parent.Point
+			var j int
+			for j = 0; j < 3; j++ {
+				nextPoint := s.nodes[i].Point.Rotate(center, j)
+				if !inField(nextPoint) {
+					continue
+				}
+				// releaseできる
+				if s.nodes[i].HasTakoyaki && s.t.Get(nextPoint.Y, nextPoint.X) && !s.s.Get(nextPoint.Y, nextPoint.X) {
+					break
+				}
+				// catchできる
+				if !s.nodes[i].HasTakoyaki && s.s.Get(nextPoint.Y, nextPoint.X) && !s.t.Get(nextPoint.Y, nextPoint.X) {
+					break
+				}
+			}
+			if j == 3 {
+				j = 1
+			}
+			move = j // 0:None, 1:CW, 2:CCW
+			//center := s.nodes[i].parent.Point
+			s.RotateRobot(move, &s.nodes[i], center)
+			action = append(action, VAction[move]) // (V-1)回転
+		}
 	}
 	// たこ焼きをつかむor離す どちらもできるときはする
 	for i := 0; i < V; i++ {
@@ -178,7 +203,6 @@ Reset:
 				s.t.Unset(s.nodes[i].Y, s.nodes[i].X)
 				s.remainTakoyaki--
 				action = append(action, 'P')
-				//log.Println("release takoyaki", i)
 			} else {
 				// なにもできない
 				action = append(action, '.')
@@ -239,6 +263,7 @@ func solver(in Input) {
 	}
 	fmt.Printf("%d %d\n", state.nodes[0].Point.X, state.nodes[0].Point.Y)
 	pre := state.remainTakoyaki
+	preTurn := 0
 	for i := 0; i < 50000; i++ {
 		turnSolver(&state)
 		if state.remainTakoyaki == 0 {
@@ -246,7 +271,7 @@ func solver(in Input) {
 			break
 		}
 		if pre != state.remainTakoyaki {
-			log.Println(i, "remain takoyaki", state.remainTakoyaki)
+			log.Println(i, "remain takoyaki", state.remainTakoyaki, "turn", i-preTurn)
 			pre = state.remainTakoyaki
 		}
 	}
