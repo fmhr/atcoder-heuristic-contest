@@ -18,6 +18,7 @@ main
 # 出力ファイル
 out/
 out.txt
+vis.html
 
 
 # AtCoder tools
@@ -25,4 +26,3 @@ out.txt
 
 # mac
 .DS_Store
-ahc038/sample.py
