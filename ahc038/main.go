@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"math/bits"
@@ -97,6 +98,16 @@ type State struct {
 	takoyakiInRobot int
 }
 
+func (s State) firstOutput() []byte {
+	var out bytes.Buffer
+	out.WriteString(fmt.Sprintf("%d\n", V))
+	for i := 1; i < V; i++ {
+		out.WriteString(fmt.Sprintf("%d %d\n", s.nodes[i].parent.index, s.nodes[i].length))
+	}
+	out.WriteString(fmt.Sprintf("%d %d\n", s.nodes[0].Point.X, s.nodes[0].Point.Y))
+	return out.Bytes()
+}
+
 func newState() (s State) {
 	for i := 0; i < 15; i++ {
 		s.nodes[i].index = -1
@@ -133,7 +144,7 @@ func (s *State) RotateRobot(direction int, node *Node, center Point) {
 	node.Point = node.Point.Rotate(center, direction)
 }
 
-func turnSolver(s *State) {
+func turnSolver(s *State) []byte {
 	action := make([]byte, 0, 2*V)
 	// V0の移動
 Reset:
@@ -215,75 +226,80 @@ Reset:
 		}
 	}
 	//log.Println(len(action), string(action))
-	fmt.Println(string(action))
+	action = append(action, '\n')
+	return action
 }
 
 func solver(in Input) {
-	state := newState()
-	for i := 0; i < in.N; i++ {
-		for j := 0; j < in.N; j++ {
-			if in.s[i][j] == '1' { // 1: たこ焼きあり
-				state.s.Set(i, j)
-			}
-			if in.t[i][j] == '1' {
-				state.t.Set(i, j)
-			}
-		}
-	}
-	viewField(state.s)
-	log.Println("----")
-	viewField(state.t)
-	// 初期化
-	state.startPos.Y = N / 2
-	state.startPos.X = N / 2
-	state.remainTakoyaki = M
-	state.takoyakiOnField = M
-	for i := 0; i < N; i++ {
-		for j := 0; j < N; j++ {
-			if state.s.Get(i, j) && state.t.Get(i, j) {
-				state.remainTakoyaki--
-				state.takoyakiOnField--
+	iterations := 0
+	var minOut []byte
+	for elapsed := time.Since(startTime); elapsed < timeLimit; elapsed = time.Since(startTime) {
+		iterations++
+		state := newState()
+		for i := 0; i < in.N; i++ {
+			for j := 0; j < in.N; j++ {
+				if in.s[i][j] == '1' { // 1: たこ焼きあり
+					state.s.Set(i, j)
+				}
+				if in.t[i][j] == '1' {
+					state.t.Set(i, j)
+				}
 			}
 		}
-	}
-	for i := 0; i < V; i++ {
-		state.nodes[i].index = i
-		state.nodes[i].length = rand.Intn(N)/2 + 1
-		state.nodes[i].HasTakoyaki = false
-		if i == 0 {
-			state.nodes[i].Point = state.startPos
-		} else {
-			state.nodes[i].parent = &state.nodes[0]
-			p := state.nodes[i].parent
-			p.children = append(p.children, &state.nodes[i])
-			state.nodes[i].Point.Y = state.nodes[i].parent.Point.Y
-			state.nodes[i].Point.X = state.nodes[i].parent.Point.X + state.nodes[i].length
+		// 初期化
+		state.startPos.Y = N / 2
+		state.startPos.X = N / 2
+		state.remainTakoyaki = M
+		state.takoyakiOnField = M
+		for i := 0; i < N; i++ {
+			for j := 0; j < N; j++ {
+				if state.s.Get(i, j) && state.t.Get(i, j) {
+					state.remainTakoyaki--
+					state.takoyakiOnField--
+				}
+			}
+		}
+		for i := 0; i < V; i++ {
+			state.nodes[i].index = i
+			state.nodes[i].length = rand.Intn(N)/2 + 1
+			state.nodes[i].HasTakoyaki = false
+			if i == 0 {
+				state.nodes[i].Point = state.startPos
+			} else {
+				state.nodes[i].parent = &state.nodes[0]
+				p := state.nodes[i].parent
+				p.children = append(p.children, &state.nodes[i])
+				state.nodes[i].Point.Y = state.nodes[i].parent.Point.Y
+				state.nodes[i].Point.X = state.nodes[i].parent.Point.X + state.nodes[i].length
+			}
+		}
+		//	for i := 0; i < V; i++ {
+		//log.Printf("%+v\n", state.nodes[i])
+		//}
+		// 初期出力
+		out := state.firstOutput()
+		// シミュレーション
+		//pre := state.remainTakoyaki
+		//preTurn := 0
+		for i := 0; i < 50000; i++ {
+			tout := turnSolver(&state)
+			out = append(out, tout...)
+			if state.remainTakoyaki == 0 {
+				log.Printf("finish turn=%d\n", i)
+				break
+			}
+			//if pre != state.remainTakoyaki {
+			//log.Printf("%d remain:%d(%d %d) turn:%d\n", i, state.remainTakoyaki, state.takoyakiOnField, state.takoyakiInRobot, i-preTurn)
+			//pre = state.remainTakoyaki
+			//}
+		}
+		if minOut == nil || len(out) < len(minOut) {
+			minOut = out
 		}
 	}
-	for i := 0; i < V; i++ {
-		log.Printf("%+v\n", state.nodes[i])
-	}
-	// 初期出力
-	fmt.Println(V)
-	for i := 1; i < V; i++ {
-		fmt.Printf("%d %d\n", state.nodes[i].parent.index, state.nodes[i].length)
-	}
-	fmt.Printf("%d %d\n", state.nodes[0].Point.X, state.nodes[0].Point.Y)
-	pre := state.remainTakoyaki
-	preTurn := 0
-	for i := 0; i < 50000; i++ {
-		turnSolver(&state)
-		if state.remainTakoyaki == 0 {
-			log.Printf("finish turn=%d\n", i)
-			break
-		}
-		if pre != state.remainTakoyaki {
-			log.Println(i, "remain", state.remainTakoyaki, "turn", i-preTurn)
-			log.Println("takoyakiOnField", state.takoyakiOnField, "takoyakiInRobot", state.takoyakiInRobot)
-			pre = state.remainTakoyaki
-		}
-	}
-
+	fmt.Print(string(minOut))
+	log.Println(len(minOut))
+	log.Printf("iter=%d\n", iterations)
 }
 
 var N, M, V int
@@ -313,9 +329,13 @@ func readInput() Input {
 	return input
 }
 
+var startTime time.Time
+var timeLimit time.Duration = 2500 * time.Millisecond
+
 func main() {
 	log.SetFlags(log.Lshortfile)
-	startTime := time.Now()
+	rand.Seed(1)
+	startTime = time.Now()
 	in := readInput()
 	log.Printf("N=%d, M=%d, V=%d\n", in.N, in.M, in.V)
 	solver(in)
