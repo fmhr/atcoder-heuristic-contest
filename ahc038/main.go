@@ -89,13 +89,14 @@ func viewField(f BitArray) {
 }
 
 type State struct {
-	startPos        Point
-	nodes           [15]Node
-	s               BitArray
-	t               BitArray
-	remainTakoyaki  int
-	takoyakiOnField int
-	takoyakiInRobot int
+	startPos          Point
+	nodes             [15]Node
+	s                 BitArray
+	t                 BitArray
+	remainTakoyaki    int
+	takoyakiOnField   int
+	takoyakiInRobot   int
+	relatevePositions [15][]Point
 }
 
 // closestTakoyaki はpに最も近いたこ焼きの座標を返す
@@ -113,6 +114,68 @@ func (s State) closestTakoyaki(p Point) (t Point) {
 		}
 	}
 	return t
+}
+
+// countMatchingTakoyaki はpのx座標またはy座標が一致するたこ焼きの数を返す
+// 一致するたこ焼きがない場合、最小移動回数を返す
+func (s State) countMatchingTakoyaki(p Point) (count int) {
+	minMove := 0
+	for i := 0; i < N; i++ {
+		for j := 0; j < N; j++ {
+			if s.s.Get(i, j) && !s.t.Get(i, j) { // たこ焼きがあるがターゲットではない
+				if p.Y == i || p.X == j {
+					count++
+				} else {
+					m := min(abs(p.Y-i), abs(p.X-j)) // どちらかの座標が一致するまでの最小移動回数
+					minMove = min(minMove, m)
+				}
+			}
+		}
+	}
+	if count == 0 {
+		return minMove
+	}
+	return count
+}
+
+// countMatchingTakoyakiTarget はpのx座標またはy座標が一致するターゲットの数を返す
+// 一致するターゲットがない場合、最小移動回数を返す
+func (s State) countMatchingTakoyakiTarget(p Point) (count int) {
+	minMove := 0
+	for i := 0; i < N; i++ {
+		for j := 0; j < N; j++ {
+			if !s.s.Get(i, j) && s.t.Get(i, j) { // ターゲットかつたこ焼きがない
+				if p.Y == i || p.X == j {
+					count++
+				} else {
+					m := min(abs(p.Y-i), abs(p.X-j))
+					minMove = min(minMove, m)
+				}
+			}
+		}
+	}
+	if count == 0 {
+		return minMove
+	}
+	return count
+}
+
+// ロボットアームの指先が取りうる位置を計算する
+func (s *State) calcRelatevePosition() {
+	for i := 0; i < V; i++ {
+		if s.nodes[i].parent == nil { // root
+			s.relatevePositions[i] = append(s.relatevePositions[i], s.nodes[i].Point)
+			continue
+		}
+		for _, center := range s.relatevePositions[s.nodes[i].parent.index] {
+			for d := 1; d < 5; d++ {
+				var nextPoint Point
+				nextPoint.Y = center.Y + dy[d]*s.nodes[i].length
+				nextPoint.X = center.X + dx[d]*s.nodes[i].length
+				s.relatevePositions[i] = append(s.relatevePositions[i], nextPoint)
+			}
+		}
+	}
 }
 
 func (s State) firstOutput() []byte {
@@ -178,6 +241,10 @@ func (s *State) RotateRobot(direction int, node *Node, center Point) {
 // 状態評価
 //  アームが４方向すべべての方向にあるとして考える？
 //  どうすれば、たこ焼きを最短で取りに行けるか？
+
+// rootの位置に評価をつける
+//  x,またはyの位置が一致しているたこ焼きの数
+//  １つも一致したいない場合、何回移動すれば一致するか
 
 func turnSolver(s *State) []byte {
 	action := make([]byte, 0, 2*V)
@@ -296,18 +363,25 @@ func solver(in Input) {
 		}
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
-			state.nodes[i].length = rand.Intn(N)/2 + 1
+			if i != 0 {
+				state.nodes[i].length = rand.Intn(N)/2 + 1
+			}
 			state.nodes[i].HasTakoyaki = false
 			if i == 0 {
 				state.nodes[i].Point = state.startPos
 			} else {
-				state.nodes[i].parent = &state.nodes[0]
+				state.nodes[i].parent = &state.nodes[0] // root
 				p := state.nodes[i].parent
 				p.children = append(p.children, &state.nodes[i])
 				state.nodes[i].Point.Y = state.nodes[i].parent.Point.Y
 				state.nodes[i].Point.X = state.nodes[i].parent.Point.X + state.nodes[i].length
 			}
 		}
+		//	state.calcRelatevePosition()
+		//	for i := 0; i < V; i++ {
+		//		log.Printf("%d %d %+v\n", i, state.nodes[i].length, state.relatevePositions[i])
+		//	}
+		//	os.Exit(0)
 		//	for i := 0; i < V; i++ {
 		//log.Printf("%+v\n", state.nodes[i])
 		//}
