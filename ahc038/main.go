@@ -6,7 +6,6 @@ import (
 	"log"
 	"math/bits"
 	"math/rand"
-	"os"
 	"time"
 )
 
@@ -453,10 +452,10 @@ func solver(in Input) {
 			}
 		}
 		state.calcRelatevePosition()
-		for i := 0; i < V; i++ {
-			log.Printf("%d %d %+v\n", i, state.nodes[i].length, state.relatevePositions[i])
-		}
-		os.Exit(0)
+		//for i := 0; i < V; i++ {
+		//	log.Printf("%d %d %+v\n", i, state.nodes[i].length, state.relatevePositions[i])
+		//}
+		//os.Exit(0)
 		//	for i := 0; i < V; i++ {
 		//log.Printf("%+v\n", state.nodes[i])
 		//}
