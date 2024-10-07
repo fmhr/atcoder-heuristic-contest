@@ -508,7 +508,6 @@ func solver(in Input) {
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
 		}
-		break
 	}
 	fmt.Print(string(minOut))
 	log.Println(len(minOut))
