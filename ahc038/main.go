@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/bits"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -26,6 +27,28 @@ var V0Action = []byte{'.', 'U', 'D', 'L', 'R'}
 
 type Point struct {
 	Y, X int
+}
+
+func DistancePP(p1, p2 Point) int {
+	return abs(p1.Y-p2.Y) + abs(p1.X-p2.X)
+}
+
+// DirectionPP はp1からp2への方向を返す
+// 0:None, 1:Up, 2:Down, 3:Left, 4:Right の優先度をもつ
+func DirectionPP(p1, p2 Point) int {
+	if p1.X == p2.X && p1.Y == p2.Y {
+		return None
+	}
+	if p1.Y == p2.Y {
+		if p1.X < p2.X {
+			return Right
+		}
+		return Left
+	}
+	if p1.Y < p2.Y {
+		return Down
+	}
+	return Up
 }
 
 const (
@@ -72,6 +95,13 @@ func (n Node) isLeaf() bool {
 	return len(n.children) == 0
 }
 
+func (n Node) root() *Node {
+	if n.parent == nil {
+		return &n
+	}
+	return n.parent.root()
+}
+
 func viewField(f BitArray) {
 	var line [30][30]byte
 	for i := 0; i < N; i++ {
@@ -96,7 +126,7 @@ type State struct {
 	remainTakoyaki    int
 	takoyakiOnField   int
 	takoyakiInRobot   int
-	relatevePositions [15][]Point
+	relatevePositions [15][]Point // この値をrootからの相対位置
 }
 
 // closestTakoyaki はpに最も近いたこ焼きの座標を返す
@@ -164,7 +194,7 @@ func (s State) countMatchingTakoyakiTarget(p Point) (count int) {
 func (s *State) calcRelatevePosition() {
 	for i := 0; i < V; i++ {
 		if s.nodes[i].parent == nil { // root
-			s.relatevePositions[i] = append(s.relatevePositions[i], s.nodes[i].Point)
+			s.relatevePositions[i] = append(s.relatevePositions[i], Point{0, 0})
 			continue
 		}
 		for _, center := range s.relatevePositions[s.nodes[i].parent.index] {
@@ -176,6 +206,45 @@ func (s *State) calcRelatevePosition() {
 			}
 		}
 	}
+}
+
+// calcMoveDirection は最適な移動方向を計算する
+// v1がなにももっていないとき
+// v1 の位置から最も近いたこ焼きの位置最小にする
+// v1がたこ焼きを持っているとき
+// v1の位置から最も近い設定位置を最小にする
+func (s State) calcMoveDirection() (direction int) {
+	miniD := 1000
+	var p2 Point
+	root := s.nodes[0].Point
+	log.Println("root", root)
+	for _, p := range s.relatevePositions[1] {
+		log.Printf("p %+v\n", p)
+		p2.Y = root.Y + p.Y
+		p2.X = root.X + p.X
+		t := s.closestTakoyaki(p2)
+		log.Println("p2", p2, "t", t)
+		// このとき、rootが範囲外にあってはいけない
+		dy := t.Y - p2.Y
+		dx := t.X - p2.X
+		root.Y += dy
+		root.X += dx
+		if !inField(root) {
+			continue
+		}
+		d := DistancePP(p2, t)
+		if d < miniD {
+			direction = DirectionPP(p2, t)
+			miniD = d
+			log.Println("d", d, "is mini")
+			log.Println("direction", direction)
+		}
+	}
+	if miniD == 1000 {
+		return None
+	}
+	log.Println("------------")
+	return direction
 }
 
 func (s State) firstOutput() []byte {
@@ -246,9 +315,7 @@ func (s *State) RotateRobot(direction int, node *Node, center Point) {
 //  x,またはyの位置が一致しているたこ焼きの数
 //  １つも一致したいない場合、何回移動すれば一致するか
 
-func turnSolver(s *State) []byte {
-	action := make([]byte, 0, 2*V)
-	// V0の移動
+func (s State) moveRandom() int {
 Reset:
 	move := rand.Intn(5)
 	v0Point := s.nodes[0].Point
@@ -257,6 +324,14 @@ Reset:
 	if v0Point.Y < 0 || v0Point.Y >= N || v0Point.X < 0 || v0Point.X >= N {
 		goto Reset
 	}
+	return move
+}
+
+func turnSolver(s *State) []byte {
+	action := make([]byte, 0, 2*V)
+	// V0の移動
+	//move := s.moveRandom()
+	move := s.calcMoveDirection()
 	s.MoveRobot(move, &s.nodes[0])
 	action = append(action, V0Action[move]) // V0 の移動
 	// V1 ~
@@ -377,11 +452,11 @@ func solver(in Input) {
 				state.nodes[i].Point.X = state.nodes[i].parent.Point.X + state.nodes[i].length
 			}
 		}
-		//	state.calcRelatevePosition()
-		//	for i := 0; i < V; i++ {
-		//		log.Printf("%d %d %+v\n", i, state.nodes[i].length, state.relatevePositions[i])
-		//	}
-		//	os.Exit(0)
+		state.calcRelatevePosition()
+		for i := 0; i < V; i++ {
+			log.Printf("%d %d %+v\n", i, state.nodes[i].length, state.relatevePositions[i])
+		}
+		os.Exit(0)
 		//	for i := 0; i < V; i++ {
 		//log.Printf("%+v\n", state.nodes[i])
 		//}
@@ -390,7 +465,7 @@ func solver(in Input) {
 		// シミュレーション
 		//pre := state.remainTakoyaki
 		//preTurn := 0
-		for i := 0; i < 50000; i++ {
+		for i := 0; i < 500; i++ {
 			tout := turnSolver(&state)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
@@ -408,6 +483,7 @@ func solver(in Input) {
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
 		}
+		break // 1回だけ
 	}
 	fmt.Print(string(minOut))
 	log.Println(len(minOut))
