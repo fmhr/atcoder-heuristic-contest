@@ -22,6 +22,8 @@ const (
 	Right
 )
 
+var DirectionDict []string = []string{"None", "Up", "Down", "Left", "Right"}
+
 var V0Action = []byte{'.', 'U', 'D', 'L', 'R'}
 
 type Point struct {
@@ -145,6 +147,23 @@ func (s State) closestTakoyaki(p Point) (t Point) {
 	return t
 }
 
+// closestTakoyaki はpに最も近いたこ焼きの座標を返す
+func (s State) closestTarget(p Point) (t Point) {
+	minDist := 1000
+	for i := 0; i < N; i++ {
+		for j := 0; j < N; j++ {
+			if !s.s.Get(i, j) && s.t.Get(i, j) {
+				dist := abs(p.Y-i) + abs(p.X-j)
+				if dist < minDist {
+					minDist = dist
+					t = Point{i, j}
+				}
+			}
+		}
+	}
+	return t
+}
+
 // countMatchingTakoyaki はpのx座標またはy座標が一致するたこ焼きの数を返す
 // 一致するたこ焼きがない場合、最小移動回数を返す
 func (s State) countMatchingTakoyaki(p Point) (count int) {
@@ -213,16 +232,26 @@ func (s *State) calcRelatevePosition() {
 // v1がたこ焼きを持っているとき
 // v1の位置から最も近い設定位置を最小にする
 func (s State) calcMoveDirection() (direction int) {
+	v := 1
+	if s.takoyakiOnField == 0 && !s.nodes[v].HasTakoyaki {
+		for !s.nodes[v].HasTakoyaki {
+			v++
+		}
+	}
 	miniD := 1000
 	var p2 Point
-	root := s.nodes[0].Point
-	log.Println("root", root)
-	for _, p := range s.relatevePositions[1] {
-		log.Printf("p %+v\n", p)
+	//log.Println("V0", s.nodes[0].Point, "V1", s.nodes[1].Point)
+	//log.Println(s.relatevePositions[1])
+	for _, p := range s.relatevePositions[v] {
+		root := s.nodes[0].Point
 		p2.Y = root.Y + p.Y
 		p2.X = root.X + p.X
-		t := s.closestTakoyaki(p2)
-		log.Println("p2", p2, "t", t)
+		var t Point
+		if s.nodes[v].HasTakoyaki {
+			t = s.closestTarget(p2)
+		} else {
+			t = s.closestTakoyaki(p2)
+		}
 		// このとき、rootが範囲外にあってはいけない
 		dy := t.Y - p2.Y
 		dx := t.X - p2.X
@@ -235,14 +264,11 @@ func (s State) calcMoveDirection() (direction int) {
 		if d < miniD {
 			direction = DirectionPP(p2, t)
 			miniD = d
-			log.Println("d", d, "is mini")
-			log.Println("direction", direction)
 		}
 	}
 	if miniD == 1000 {
 		return None
 	}
-	log.Println("------------")
 	return direction
 }
 
@@ -464,7 +490,7 @@ func solver(in Input) {
 		// シミュレーション
 		//pre := state.remainTakoyaki
 		//preTurn := 0
-		for i := 0; i < 500; i++ {
+		for i := 0; i < 50000; i++ {
 			tout := turnSolver(&state)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
@@ -482,7 +508,7 @@ func solver(in Input) {
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
 		}
-		break // 1回だけ
+		break
 	}
 	fmt.Print(string(minOut))
 	log.Println(len(minOut))
@@ -579,4 +605,11 @@ func abs(a int) int {
 		return -a
 	}
 	return a
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
