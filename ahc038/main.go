@@ -417,8 +417,15 @@ func turnSolver(s *State) []byte {
 					break
 				}
 			}
-			if j == 4 || j == 3 {
-				j = 1 // とりあえず回す 180度回転
+			if j == 3 {
+				j = 1
+			}
+			if j == 4 {
+				if inField(s.nodes[i].Point) {
+					j = 0
+				} else {
+					j = 1
+				}
 			}
 			move = j // 0:None, 1:CW, 2:CCW
 			//center := s.nodes[i].parent.Point
