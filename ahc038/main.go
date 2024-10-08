@@ -73,9 +73,10 @@ func deleteItem(a []Point, item Point) []Point {
 }
 
 const (
-	CW  = 1 // "clockwise" は時計回り "R"
-	CCW = 2 // "counterclockwise" は反時計回り "L"
-	P   = 4 // grabs or releases a takoyaki "P"
+	CW   = 1 // "clockwise" は時計回り "R"
+	CCW  = 2 // "counterclockwise" は反時計回り "L"
+	FLIP = 3 // "flip" は180度回転 "RR", "LL"
+	P    = 4 // grabs or releases a takoyaki "P"
 )
 
 var VAction = []byte{'.', 'R', 'L'}
@@ -96,7 +97,7 @@ func (p Point) Rotate(center Point, direction int) (np Point) {
 		rotatedX = translatedY
 		rotatedY = -translatedX
 	} else {
-		panic("invalid direction")
+		panic("invalid direction in rotate(0, 1, 2) but got " + fmt.Sprint(direction))
 	}
 	np.X = center.X + rotatedX
 	np.Y = center.Y + rotatedY
@@ -280,13 +281,13 @@ func (s State) closetTakoyakiRenge(v int) (direction, miniD int) {
 func (s State) calcMoveDirection() (direction int) {
 	v := 1
 	// フィールドにたこ焼きがすでにない、たこ焼きを持っている指先がv1以外の時
-	if s.takoyakiOnField == 0 && !s.nodes[v].HasTakoyaki {
+	if (s.takoyakiOnField == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() {
 		for !s.nodes[v].HasTakoyaki {
 			v++
 		}
 	}
 	miniD := 1000
-	v2 := v + 1 // ここをVまでのばせるように高速化する
+	v2 := v + 1 // TODO ここをVまでのばせるように高速化する
 	v2 = min(v2, V)
 	for v < v2 {
 		direct, length := s.closetTakoyakiRenge(v)
@@ -296,7 +297,6 @@ func (s State) calcMoveDirection() (direction int) {
 		}
 		v++
 	}
-	//log.Println("V0", s.nodes[0].Point, "V1", s.nodes[1].Point)
 	//log.Println(s.relatevePositions[1])
 	if miniD == 1000 {
 		return None
@@ -396,8 +396,15 @@ func turnSolver(s *State) []byte {
 		if s.nodes[i].isLeaf() {
 			center := s.nodes[i].parent.Point
 			var j int
-			for j = 0; j < 3; j++ {
-				nextPoint := s.nodes[i].Point.Rotate(center, j)
+			for j = 0; j < 4; j++ {
+				var nextPoint Point
+				if j == 3 {
+					// 180度回転
+					nextPoint = s.nodes[i].Point.Rotate(center, 1)
+					nextPoint = nextPoint.Rotate(center, 1)
+				} else {
+					nextPoint = s.nodes[i].Point.Rotate(center, j)
+				}
 				if !inField(nextPoint) {
 					continue
 				}
@@ -410,13 +417,16 @@ func turnSolver(s *State) []byte {
 					break
 				}
 			}
-			if j == 3 {
-				j = 1
+			if j == 4 || j == 3 {
+				j = 1 // とりあえず回す 180度回転
 			}
 			move = j // 0:None, 1:CW, 2:CCW
 			//center := s.nodes[i].parent.Point
 			s.RotateRobot(move, &s.nodes[i], center)
 			action = append(action, VAction[move]) // (V-1)回転
+		} else {
+			// not leaf
+			action = append(action, '.')
 		}
 	}
 	// たこ焼きをつかむor離す どちらもできるときはする
@@ -522,7 +532,7 @@ func solver(in Input) {
 		//	log.Printf("%d %d %+v\n", i, state.nodes[i].length, state.relatevePositions[i])
 		//}
 		//os.Exit(0)
-		//	for i := 0; i < V; i++ {
+		//for i := 0; i < V; i++ {
 		//log.Printf("%+v\n", state.nodes[i])
 		//}
 		// 初期出力
