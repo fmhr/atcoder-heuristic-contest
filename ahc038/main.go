@@ -442,8 +442,8 @@ func turnSolver(s *State) []byte {
 			// not leaf
 			subAction[i-1] = '.'
 		}
-		action = append(action, subAction...)
 	}
+	action = append(action, subAction...)
 	// たこ焼きをつかむor離す どちらもできるときはする
 	for i := 0; i < V; i++ {
 		// node is joint, V0もここ
