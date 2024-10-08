@@ -56,6 +56,22 @@ func DirectionPP(p1, p2 Point) int {
 	return Up
 }
 
+// deleteIndex はaのi番目の要素を削除する
+// 順番を考慮しない
+func deleteIndex(a []Point, i int) []Point {
+	a[i] = a[len(a)-1]
+	return a[:len(a)-1]
+}
+
+func deleteItem(a []Point, item Point) []Point {
+	for i, v := range a {
+		if v.Y == item.Y && v.X == item.X {
+			return deleteIndex(a, i)
+		}
+	}
+	return a
+}
+
 const (
 	CW  = 1 // "clockwise" は時計回り "R"
 	CCW = 2 // "counterclockwise" は反時計回り "L"
@@ -132,20 +148,19 @@ type State struct {
 	takoyakiOnField   int
 	takoyakiInRobot   int
 	relatevePositions [15][]Point // この値をrootからの相対位置
+	takoyakiPos       []Point
+	targetPos         []Point
 }
 
 // closestTakoyaki はpに最も近いたこ焼きの座標を返す
 func (s State) closestTakoyaki(p Point) (t Point) {
 	minDist := 1000
-	for i := 0; i < N; i++ {
-		for j := 0; j < N; j++ {
-			if s.s.Get(i, j) && !s.t.Get(i, j) {
-				dist := abs(p.Y-i) + abs(p.X-j)
-				if dist < minDist {
-					minDist = dist
-					t = Point{i, j}
-				}
-			}
+	for ti := range s.takoyakiPos {
+		i, j := s.takoyakiPos[ti].Y, s.takoyakiPos[ti].X
+		dist := abs(p.Y-i) + abs(p.X-j)
+		if dist < minDist {
+			minDist = dist
+			t = Point{i, j}
 		}
 	}
 	return t
@@ -154,15 +169,12 @@ func (s State) closestTakoyaki(p Point) (t Point) {
 // closestTakoyaki はpに最も近いたこ焼きの座標を返す
 func (s State) closestTarget(p Point) (t Point) {
 	minDist := 1000
-	for i := 0; i < N; i++ {
-		for j := 0; j < N; j++ {
-			if !s.s.Get(i, j) && s.t.Get(i, j) {
-				dist := abs(p.Y-i) + abs(p.X-j)
-				if dist < minDist {
-					minDist = dist
-					t = Point{i, j}
-				}
-			}
+	for ti := range s.targetPos {
+		i, j := s.targetPos[ti].Y, s.targetPos[ti].X
+		dist := abs(p.Y-i) + abs(p.X-j)
+		if dist < minDist {
+			minDist = dist
+			t = Point{i, j}
 		}
 	}
 	return t
@@ -429,6 +441,7 @@ func turnSolver(s *State) []byte {
 				action = append(action, 'P')
 				s.takoyakiInRobot++
 				s.takoyakiOnField--
+				s.takoyakiPos = deleteItem(s.takoyakiPos, s.nodes[i].Point)
 			} else {
 				// なにもできない
 				action = append(action, '.')
@@ -441,6 +454,7 @@ func turnSolver(s *State) []byte {
 				s.remainTakoyaki--
 				action = append(action, 'P')
 				s.takoyakiInRobot--
+				s.targetPos = deleteItem(s.targetPos, s.nodes[i].Point)
 			} else {
 				// なにもできない
 				action = append(action, '.')
@@ -462,9 +476,15 @@ func solver(in Input) {
 			for j := 0; j < in.N; j++ {
 				if in.s[i][j] == '1' { // 1: たこ焼きあり
 					state.s.Set(i, j)
+					if in.t[i][j] == '0' {
+						state.takoyakiPos = append(state.takoyakiPos, Point{i, j})
+					}
 				}
 				if in.t[i][j] == '1' {
 					state.t.Set(i, j)
+					if in.s[i][j] == '0' {
+						state.targetPos = append(state.targetPos, Point{i, j})
+					}
 				}
 			}
 		}
