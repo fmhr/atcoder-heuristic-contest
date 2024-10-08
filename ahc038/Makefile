@@ -25,7 +25,7 @@ seed:
 	seq 0 10000 > tools/seed.txt
 
 profile: build
-	$(RUN_CMD) -cpuprofile cpu.prof < tools/in/0000.txt > tmp.out
+	$(RUN_CMD) -cpuprofile cpu.prof < tools/in/0008.txt > 8.out
 # flag.Pars() をわすれない
 
 cpuprofile:
