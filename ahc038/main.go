@@ -296,6 +296,9 @@ func (s State) calcMoveDirection() (direction int) {
 			direction = direct
 		}
 		v++
+		if miniD == 0 {
+			break
+		}
 	}
 	//log.Println(s.relatevePositions[1])
 	if miniD == 1000 {
@@ -419,12 +422,15 @@ func turnSolver(s *State) []byte {
 				}
 			}
 			if j == 3 {
+				// 180度回転
 				j = CW
 			}
 			if j == 4 {
+				// なにもない
 				if inField(s.nodes[i].Point) {
 					j = CW
 				} else {
+					// とりあえず、回した方がスコアが高い
 					j = CW
 				}
 			}
