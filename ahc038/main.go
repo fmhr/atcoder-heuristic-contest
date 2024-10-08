@@ -392,6 +392,7 @@ func turnSolver(s *State) []byte {
 	s.MoveRobot(move, &s.nodes[0])
 	action = append(action, V0Action[move]) // V0 の移動
 	// V1 ~
+	subAction := make([]byte, V-1)
 	for i := 1; i < V; i++ {
 		if s.nodes[i].isLeaf() {
 			center := s.nodes[i].parent.Point
@@ -430,11 +431,12 @@ func turnSolver(s *State) []byte {
 			move = j // 0:None, 1:CW, 2:CCW
 			//center := s.nodes[i].parent.Point
 			s.RotateRobot(move, &s.nodes[i], center)
-			action = append(action, VAction[move]) // (V-1)回転
+			subAction[i-1] = VAction[move]
 		} else {
 			// not leaf
-			action = append(action, '.')
+			subAction[i-1] = '.'
 		}
+		action = append(action, subAction...)
 	}
 	// たこ焼きをつかむor離す どちらもできるときはする
 	for i := 0; i < V; i++ {
