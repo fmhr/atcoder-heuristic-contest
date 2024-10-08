@@ -418,13 +418,13 @@ func turnSolver(s *State) []byte {
 				}
 			}
 			if j == 3 {
-				j = 1
+				j = CW
 			}
 			if j == 4 {
 				if inField(s.nodes[i].Point) {
-					j = 0
+					j = CW
 				} else {
-					j = 1
+					j = CW
 				}
 			}
 			move = j // 0:None, 1:CW, 2:CCW
