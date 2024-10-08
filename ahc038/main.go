@@ -250,10 +250,6 @@ func (s State) closetTakoyakiRenge(v int) (direction, miniD int) {
 		d := DistancePP(p2, t)
 		if d < miniD {
 			direction = DirectionPP(p2, t)
-			if direction == 5 {
-				log.Println(p2, t)
-				panic("invalid direction")
-			}
 			miniD = d
 		}
 	}
@@ -267,16 +263,22 @@ func (s State) closetTakoyakiRenge(v int) (direction, miniD int) {
 // v1の位置から最も近い設定位置を最小にする
 func (s State) calcMoveDirection() (direction int) {
 	v := 1
+	// フィールドにたこ焼きがすでにない、たこ焼きを持っている指先がv1以外の時
 	if s.takoyakiOnField == 0 && !s.nodes[v].HasTakoyaki {
 		for !s.nodes[v].HasTakoyaki {
 			v++
 		}
 	}
 	miniD := 1000
-	direction, length := s.closetTakoyakiRenge(v)
-	//log.Println(direction, length)
-	if miniD > length {
-		miniD = length
+	v2 := v + 1 // ここをVまでのばせるように高速化する
+	v2 = min(v2, V)
+	for v < v2 {
+		direct, length := s.closetTakoyakiRenge(v)
+		if miniD > length {
+			miniD = length
+			direction = direct
+		}
+		v++
 	}
 	//log.Println("V0", s.nodes[0].Point, "V1", s.nodes[1].Point)
 	//log.Println(s.relatevePositions[1])
@@ -371,9 +373,6 @@ func turnSolver(s *State) []byte {
 	// V0の移動
 	//move := s.moveRandom()
 	move := s.calcMoveDirection()
-	if move == 5 {
-		panic("invalid move")
-	}
 	s.MoveRobot(move, &s.nodes[0])
 	action = append(action, V0Action[move]) // V0 の移動
 	// V1 ~
