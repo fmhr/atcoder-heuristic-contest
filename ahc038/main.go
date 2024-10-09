@@ -36,7 +36,7 @@ type Point struct {
 	Y, X int
 }
 
-func centerPoints(ps []Point) Point {
+func meanPoints(ps []Point) Point {
 	var sumY, sumX int
 	for i := range ps {
 		sumY += ps[i].Y
@@ -425,15 +425,15 @@ func turnSolver(s *State) []byte {
 				var nextPoint Point
 				if j == 3 {
 					// 180度回転
-					nextPoint = s.nodes[i].Point.Rotate(center, 1)
-					nextPoint = nextPoint.Rotate(center, 1)
+					nextPoint = s.nodes[i].Point.Rotate(center, CW)
+					nextPoint = nextPoint.Rotate(center, CW)
 				} else {
 					nextPoint = s.nodes[i].Point.Rotate(center, j)
 				}
 				if !inField(nextPoint) {
-					if j == 1 {
+					if j == CW {
 						cwOutField = true
-					} else if j == 2 {
+					} else if j == CCW {
 						ccwOutField = true
 					}
 					continue
@@ -536,35 +536,26 @@ func solver(in Input) {
 			break
 		}
 		state := newState()
+		cnt := 0
 		for i := 0; i < in.N; i++ {
 			for j := 0; j < in.N; j++ {
-				if in.s[i][j] == '1' { // 1: たこ焼きあり
+				if in.s[i][j] == '1' && in.t[i][j] == '1' {
+					continue
+				} else if in.s[i][j] == '1' { // 1: たこ焼きあり
 					state.s.Set(i, j)
-					if in.t[i][j] == '0' {
-						state.takoyakiPos = append(state.takoyakiPos, Point{i, j})
-					}
-				}
-				if in.t[i][j] == '1' {
+					state.takoyakiPos = append(state.takoyakiPos, Point{i, j})
+					state.remainTakoyaki++
+					state.takoyakiOnField++
+					cnt++
+				} else if in.t[i][j] == '1' {
 					state.t.Set(i, j)
-					if in.s[i][j] == '0' {
-						state.targetPos = append(state.targetPos, Point{i, j})
-					}
+					state.targetPos = append(state.targetPos, Point{i, j})
 				}
 			}
 		}
 		// 初期化
 		state.startPos.Y = rand.Intn(N)
 		state.startPos.X = rand.Intn(N)
-		state.remainTakoyaki = M
-		state.takoyakiOnField = M
-		for i := 0; i < N; i++ {
-			for j := 0; j < N; j++ {
-				if state.s.Get(i, j) && state.t.Get(i, j) {
-					state.remainTakoyaki--
-					state.takoyakiOnField--
-				}
-			}
-		}
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
 			if i != 0 {
