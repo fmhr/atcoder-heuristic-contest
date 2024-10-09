@@ -165,6 +165,49 @@ type State struct {
 	targetPos         []Point
 }
 
+func (src State) Clone() (clone State) {
+	clone.startPos = src.startPos
+	clone.nodes = src.nodes
+	clone.s = src.s
+	clone.t = src.t
+	clone.remainTakoyaki = src.remainTakoyaki
+	clone.takoyakiOnField = src.takoyakiOnField
+	clone.takoyakiInRobot = src.takoyakiInRobot
+
+	clone.relatevePositions = [15][]Point{}
+	for i, ps := range src.relatevePositions {
+		if ps != nil {
+			clone.relatevePositions[i] = make([]Point, len(ps))
+			copy(clone.relatevePositions[i], ps)
+		}
+	}
+
+	clone.takoyakiPos = make([]Point, len(src.takoyakiPos))
+	copy(clone.takoyakiPos, src.takoyakiPos)
+
+	clone.targetPos = make([]Point, len(src.targetPos))
+	copy(clone.targetPos, src.targetPos)
+
+	return clone
+}
+
+func (s *State) ResetState() {
+	s.startPos = Point{0, 0}
+	for i := 0; i < 15; i++ {
+		s.nodes[i] = Node{}
+	}
+	s.s.Reset()
+	s.t.Reset()
+	s.remainTakoyaki = 0
+	s.takoyakiOnField = 0
+	s.takoyakiInRobot = 0
+	for i := 0; i < 15; i++ {
+		s.relatevePositions[i] = nil
+	}
+	s.takoyakiPos = nil
+	s.targetPos = nil
+}
+
 func (s State) infoLength() {
 	length := make([]int, V)
 	for i := 0; i < V; i++ {
@@ -511,6 +554,23 @@ func turnSolver(s *State) []byte {
 }
 
 func solver(in Input) {
+	takoyakiPos := make([]Point, 0, 45)
+	targetPos := make([]Point, 0, 45)
+	for i := 0; i < in.N; i++ {
+		for j := 0; j < in.N; j++ {
+			if in.s[i][j] == '1' {
+				takoyakiPos = append(takoyakiPos, Point{i, j})
+			}
+			if in.t[i][j] == '1' {
+				targetPos = append(targetPos, Point{i, j})
+			}
+		}
+	}
+	takoyakiMean := meanPoints(takoyakiPos)
+	targetMean := meanPoints(targetPos)
+	log.Println(takoyakiMean, targetMean)
+	var meanPoints [2]Point = [2]Point{{takoyakiMean.Y, targetMean.X}, {takoyakiMean.Y, targetMean.X}}
+	_ = meanPoints
 	iterations := 0
 	var minOut []byte
 	for elapsed := time.Since(startTime); elapsed < timeLimit; elapsed = time.Since(startTime) {
@@ -544,6 +604,11 @@ func solver(in Input) {
 		// 初期化
 		state.startPos.Y = rand.Intn(N)
 		state.startPos.X = rand.Intn(N)
+		//state.startPos = meanPoints[iterations%2]
+		//state.startPos.Y += rand.Intn(10) - 5
+		//state.startPos.X += rand.Intn(10) - 5
+		//state.startPos.Y = min(max(0, state.startPos.Y), N-1)
+		//state.startPos.X = min(max(0, state.startPos.X), N-1)
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
 			if i != 0 {
