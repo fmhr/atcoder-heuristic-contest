@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"math/bits"
 	"math/rand"
 	"os"
 	"runtime/pprof"
+	"strings"
 	"time"
 )
 
@@ -530,6 +532,9 @@ func solver(in Input) {
 	var minOut []byte
 	for elapsed := time.Since(startTime); elapsed < timeLimit; elapsed = time.Since(startTime) {
 		iterations++
+		if iterations == 2000 {
+			break
+		}
 		state := newState()
 		for i := 0; i < in.N; i++ {
 			for j := 0; j < in.N; j++ {
@@ -613,9 +618,13 @@ func solver(in Input) {
 	fmt.Print(string(minOut))
 	log.Println(len(minOut))
 	log.Printf("iter=%d\n", iterations)
+	turn := len(strings.Split(string(minOut), "\n")) - V - 1 - 1
+	log.Printf("turn=%d\n", turn)
+	log.Printf("per=%f\n", float64(turn)*math.Sqrt(float64(V))/float64(trueM))
 }
 
 var N, M, V int
+var trueM int
 
 func inField(p Point) bool {
 	return 0 <= p.Y && p.Y < N && 0 <= p.X && p.X < N
@@ -669,7 +678,16 @@ func main() {
 	rand.Seed(1)
 	startTime = time.Now()
 	in := readInput()
-	log.Printf("N=%d, M=%d, V=%d\n", in.N, in.M, in.V)
+	trueM = in.M
+	for i := 0; i < in.N; i++ {
+		for j := 0; j < in.N; j++ {
+			if in.s[i][j] == '1' && in.t[i][j] == '1' {
+				trueM--
+			}
+		}
+	}
+
+	log.Printf("N=%d, M=%d, trueM=%d V=%d\n", in.N, in.M, trueM, in.V)
 	solver(in)
 	elapse := time.Since(startTime)
 	log.Printf("time=%v\n", elapse.Seconds())
