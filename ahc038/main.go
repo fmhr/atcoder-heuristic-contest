@@ -441,14 +441,30 @@ func turnSolver(s *State) []byte {
 					}
 					continue
 				}
-				// releaseできる
-				if s.nodes[i].HasTakoyaki && s.t.Get(nextPoint.Y, nextPoint.X) && !s.s.Get(nextPoint.Y, nextPoint.X) {
-					takoAction[i] = 'P'
-					break
-				}
+
 				// catchできる
 				if !s.nodes[i].HasTakoyaki && s.s.Get(nextPoint.Y, nextPoint.X) && !s.t.Get(nextPoint.Y, nextPoint.X) {
-					takoAction[i] = 'P'
+					if j != 3 {
+						takoAction[i] = 'P'
+						s.nodes[i].HasTakoyaki = true
+						//log.Println(s.s.Get(nextPoint.Y, nextPoint.X), s.t.Get(nextPoint.Y, nextPoint.X))
+						s.s.Unset(nextPoint.Y, nextPoint.X)
+						s.takoyakiInRobot++
+						s.takoyakiOnField--
+						s.takoyakiPos = deleteItem(s.takoyakiPos, nextPoint)
+					}
+					break
+				}
+				// releaseできる
+				if s.nodes[i].HasTakoyaki && s.t.Get(nextPoint.Y, nextPoint.X) && !s.s.Get(nextPoint.Y, nextPoint.X) {
+					if j != 3 {
+						takoAction[i] = 'P'
+						s.nodes[i].HasTakoyaki = false
+						s.t.Unset(nextPoint.Y, nextPoint.X)
+						s.remainTakoyaki--
+						s.takoyakiInRobot--
+						s.targetPos = deleteItem(s.targetPos, nextPoint)
+					}
 					break
 				}
 			}
@@ -482,52 +498,11 @@ func turnSolver(s *State) []byte {
 		}
 	}
 	action = append(action, subAction...)
-	subAction2 := make([]byte, V)
-	// たこ焼きをつかむor離す どちらもできるときはする
-	for i := 0; i < V; i++ {
-		subAction2[i] = '.'
-		// node is joint, V0もここ
-		if !s.nodes[i].isLeaf() {
-			continue
-		}
-		// node is out of field
-		if !inField(s.nodes[i].Point) {
-			continue
-		}
-		//node is leaf
-		if !s.nodes[i].HasTakoyaki {
-			if s.s.Get(s.nodes[i].Y, s.nodes[i].X) && !s.t.Get(s.nodes[i].Y, s.nodes[i].X) {
-				//log.Println("catch takoyaki", i, s.nodes[i].Point)
-				// たこ焼きをつかむ
-				s.nodes[i].HasTakoyaki = true
-				s.s.Unset(s.nodes[i].Y, s.nodes[i].X)
-				subAction2[i] = 'P'
-				s.takoyakiInRobot++
-				s.takoyakiOnField--
-				s.takoyakiPos = deleteItem(s.takoyakiPos, s.nodes[i].Point)
-			} else {
-				// なにもできない
-			}
-		} else {
-			if inField(s.nodes[i].Point) && s.t.Get(s.nodes[i].Y, s.nodes[i].X) && !s.s.Get(s.nodes[i].Y, s.nodes[i].X) {
-				// たこ焼きを離す
-				s.nodes[i].HasTakoyaki = false
-				s.t.Unset(s.nodes[i].Y, s.nodes[i].X)
-				s.remainTakoyaki--
-				subAction2[i] = 'P'
-				s.takoyakiInRobot--
-				s.targetPos = deleteItem(s.targetPos, s.nodes[i].Point)
-			} else {
-				// なにもできない
-			}
-		}
-	}
-	action = append(action, subAction2...)
-	//log.Println(len(action), string(action))
+	action = append(action, takoAction...)
 	action = append(action, '\n')
 	//log.Println(string(action))
 	//log.Printf("%+v\n", s.nodes[0])
-	//log.Printf("%+v\n", s.nodes[1])
+	//log.Printf("%+v %+v %+v\n", s.nodes[1], s.s.Get(10, 13), s.t.Get(10, 13))
 	return action
 }
 
@@ -536,9 +511,9 @@ func solver(in Input) {
 	var minOut []byte
 	for elapsed := time.Since(startTime); elapsed < timeLimit; elapsed = time.Since(startTime) {
 		iterations++
-		if iterations == 2000 {
-			break
-		}
+		//	if iterations == 2000 {
+		//		break
+		//	}
 		state := newState()
 		cnt := 0
 		for i := 0; i < in.N; i++ {
@@ -557,6 +532,11 @@ func solver(in Input) {
 				}
 			}
 		}
+		//viewField(state.s)
+		//log.Println("----")
+		//viewField(state.t)
+		////log.Println(state.takoyakiPos)
+
 		// 初期化
 		state.startPos.Y = rand.Intn(N)
 		state.startPos.X = rand.Intn(N)
@@ -611,7 +591,6 @@ func solver(in Input) {
 		}
 	}
 	fmt.Print(string(minOut))
-	log.Println(len(minOut))
 	log.Printf("iter=%d\n", iterations)
 	turn := len(strings.Split(string(minOut), "\n")) - V - 1 - 1
 	log.Printf("turn=%d\n", turn)
@@ -691,23 +670,33 @@ func main() {
 // ------------------------------------------------------------------
 // util
 // bitArrayを管理するためのセット
-const widthBits = 30
-const arraySize = 30 * 30
 const uint64Size = 64
+const widthBits = 30
+const heightBits = 30
+const arraySize = (widthBits*heightBits*uint64Size - 1) / uint64Size
 
 type BitArray [arraySize]uint64
 
 func (b *BitArray) Set(y, x int) {
+	if y < 0 || y >= heightBits || x < 0 || x >= widthBits {
+		panic("out of range")
+	}
 	index := y*widthBits + x
 	b[index/uint64Size] |= 1 << (index % uint64Size)
 }
 
 func (b *BitArray) Unset(y, x int) {
+	if y < 0 || y >= heightBits || x < 0 || x >= widthBits {
+		panic("out of range")
+	}
 	index := y*widthBits + x
 	b[index/uint64Size] &= ^(1 << (index % uint64Size))
 }
 
 func (b *BitArray) Get(y, x int) bool {
+	if y < 0 || y >= heightBits || x < 0 || x >= widthBits {
+		panic("out of range")
+	}
 	if y < 0 || y >= widthBits || x < 0 || x >= widthBits {
 		panic("out of range")
 	}
