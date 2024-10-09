@@ -34,6 +34,15 @@ type Point struct {
 	Y, X int
 }
 
+func centerPoints(ps []Point) Point {
+	var sumY, sumX int
+	for i := range ps {
+		sumY += ps[i].Y
+		sumX += ps[i].X
+	}
+	return Point{sumY / len(ps), sumX / len(ps)}
+}
+
 func DistancePP(p1, p2 Point) int {
 	return abs(p1.Y-p2.Y) + abs(p1.X-p2.X)
 }
@@ -153,6 +162,14 @@ type State struct {
 	targetPos         []Point
 }
 
+func (s State) infoLength() {
+	length := make([]int, V)
+	for i := 0; i < V; i++ {
+		length[i] = s.nodes[i].length
+	}
+	//log.Println(length)
+}
+
 // closestTakoyaki はpに最も近いたこ焼きの座標を返す
 func (s State) closestTakoyaki(p Point) (t Point) {
 	minDist := 1000
@@ -226,7 +243,7 @@ func (s State) countMatchingTakoyakiTarget(p Point) (count int) {
 }
 
 // ロボットアームの指先が取りうる位置を計算する
-func (s *State) calcRelatevePosition() {
+func (s *State) calcRelativePosition() {
 	for i := 0; i < V; i++ {
 		if s.nodes[i].parent == nil { // root
 			s.relatevePositions[i] = append(s.relatevePositions[i], Point{0, 0})
@@ -313,7 +330,7 @@ func (s State) firstOutput() []byte {
 	for i := 1; i < V; i++ {
 		out.WriteString(fmt.Sprintf("%d %d\n", s.nodes[i].parent.index, s.nodes[i].length))
 	}
-	out.WriteString(fmt.Sprintf("%d %d\n", s.nodes[0].Point.X, s.nodes[0].Point.Y))
+	out.WriteString(fmt.Sprintf("%d %d\n", s.nodes[0].Point.Y, s.nodes[0].Point.X))
 	return out.Bytes()
 }
 
@@ -472,7 +489,7 @@ func turnSolver(s *State) []byte {
 				action = append(action, '.')
 			}
 		} else {
-			if s.t.Get(s.nodes[i].Y, s.nodes[i].X) && !s.s.Get(s.nodes[i].Y, s.nodes[i].X) {
+			if inField(s.nodes[i].Point) && s.t.Get(s.nodes[i].Y, s.nodes[i].X) && !s.s.Get(s.nodes[i].Y, s.nodes[i].X) {
 				// たこ焼きを離す
 				s.nodes[i].HasTakoyaki = false
 				s.t.Unset(s.nodes[i].Y, s.nodes[i].X)
@@ -488,6 +505,9 @@ func turnSolver(s *State) []byte {
 	}
 	//log.Println(len(action), string(action))
 	action = append(action, '\n')
+	//log.Println(string(action))
+	//log.Printf("%+v\n", s.nodes[0])
+	//log.Printf("%+v\n", s.nodes[1])
 	return action
 }
 
@@ -514,8 +534,8 @@ func solver(in Input) {
 			}
 		}
 		// 初期化
-		state.startPos.Y = N / 2
-		state.startPos.X = N / 2
+		state.startPos.Y = rand.Intn(N)
+		state.startPos.X = rand.Intn(N)
 		state.remainTakoyaki = M
 		state.takoyakiOnField = M
 		for i := 0; i < N; i++ {
@@ -529,7 +549,7 @@ func solver(in Input) {
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
 			if i != 0 {
-				state.nodes[i].length = rand.Intn(N)/2 + 1
+				state.nodes[i].length = rand.Intn(N)/2 + N/8
 			}
 			state.nodes[i].HasTakoyaki = false
 			if i == 0 {
@@ -542,7 +562,8 @@ func solver(in Input) {
 				state.nodes[i].Point.X = state.nodes[i].parent.Point.X + state.nodes[i].length
 			}
 		}
-		state.calcRelatevePosition()
+		//log.Println(state.nodes[0].Point)
+		state.calcRelativePosition()
 		//for i := 0; i < V; i++ {
 		//	log.Printf("%d %d %+v\n", i, state.nodes[i].length, state.relatevePositions[i])
 		//}
@@ -560,6 +581,7 @@ func solver(in Input) {
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
 				log.Printf("finish turn=%d\n", i)
+				state.infoLength()
 				break
 			}
 			//if pre != state.remainTakoyaki {
@@ -659,6 +681,9 @@ func (b *BitArray) Unset(y, x int) {
 }
 
 func (b *BitArray) Get(y, x int) bool {
+	if y < 0 || y >= widthBits || x < 0 || x >= widthBits {
+		panic("out of range")
+	}
 	index := y*widthBits + x
 	return b[index/uint64Size]&(1<<(index%uint64Size)) != 0
 }
