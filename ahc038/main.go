@@ -416,7 +416,10 @@ func turnSolver(s *State) []byte {
 	action = append(action, V0Action[move]) // V0 の移動
 	// V1 ~
 	subAction := make([]byte, V-1)
+	takoAction := make([]byte, V)
+	takoAction[0] = '.'
 	for i := 1; i < V; i++ {
+		takoAction[i] = '.'
 		if s.nodes[i].isLeaf() {
 			center := s.nodes[i].parent.Point
 			var j int
@@ -440,10 +443,12 @@ func turnSolver(s *State) []byte {
 				}
 				// releaseできる
 				if s.nodes[i].HasTakoyaki && s.t.Get(nextPoint.Y, nextPoint.X) && !s.s.Get(nextPoint.Y, nextPoint.X) {
+					takoAction[i] = 'P'
 					break
 				}
 				// catchできる
 				if !s.nodes[i].HasTakoyaki && s.s.Get(nextPoint.Y, nextPoint.X) && !s.t.Get(nextPoint.Y, nextPoint.X) {
+					takoAction[i] = 'P'
 					break
 				}
 			}
@@ -477,16 +482,16 @@ func turnSolver(s *State) []byte {
 		}
 	}
 	action = append(action, subAction...)
+	subAction2 := make([]byte, V)
 	// たこ焼きをつかむor離す どちらもできるときはする
 	for i := 0; i < V; i++ {
+		subAction2[i] = '.'
 		// node is joint, V0もここ
 		if !s.nodes[i].isLeaf() {
-			action = append(action, '.')
 			continue
 		}
 		// node is out of field
 		if !inField(s.nodes[i].Point) {
-			action = append(action, '.')
 			continue
 		}
 		//node is leaf
@@ -496,13 +501,12 @@ func turnSolver(s *State) []byte {
 				// たこ焼きをつかむ
 				s.nodes[i].HasTakoyaki = true
 				s.s.Unset(s.nodes[i].Y, s.nodes[i].X)
-				action = append(action, 'P')
+				subAction2[i] = 'P'
 				s.takoyakiInRobot++
 				s.takoyakiOnField--
 				s.takoyakiPos = deleteItem(s.takoyakiPos, s.nodes[i].Point)
 			} else {
 				// なにもできない
-				action = append(action, '.')
 			}
 		} else {
 			if inField(s.nodes[i].Point) && s.t.Get(s.nodes[i].Y, s.nodes[i].X) && !s.s.Get(s.nodes[i].Y, s.nodes[i].X) {
@@ -510,15 +514,15 @@ func turnSolver(s *State) []byte {
 				s.nodes[i].HasTakoyaki = false
 				s.t.Unset(s.nodes[i].Y, s.nodes[i].X)
 				s.remainTakoyaki--
-				action = append(action, 'P')
+				subAction2[i] = 'P'
 				s.takoyakiInRobot--
 				s.targetPos = deleteItem(s.targetPos, s.nodes[i].Point)
 			} else {
 				// なにもできない
-				action = append(action, '.')
 			}
 		}
 	}
+	action = append(action, subAction2...)
 	//log.Println(len(action), string(action))
 	action = append(action, '\n')
 	//log.Println(string(action))
