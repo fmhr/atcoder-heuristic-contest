@@ -15,20 +15,20 @@ import (
 
 // rootの移動
 // var direction = []string{".", "U", "D", "L", "R"}
-var dy = []int{0, -1, 1, 0, 0}
-var dx = []int{0, 0, 0, -1, 1}
+var dy = []int{0, -1, 0, 1, 0}
+var dx = []int{0, 0, 1, 0, -1}
 
 const (
 	None = iota
 	Up
+	Right
 	Down
 	Left
-	Right
 )
 
-var DirectionDict []string = []string{"None", "Up", "Down", "Left", "Right"}
+var DirectionDict []string = []string{"None", "Up", "Right", "Down", "Left"}
 
-var V0Action = []byte{'.', 'U', 'D', 'L', 'R'}
+var V0Action = []byte{'.', 'U', 'R', 'D', 'L'}
 
 type Point struct {
 	Y, X int
@@ -243,7 +243,7 @@ func (s State) countMatchingTakoyakiTarget(p Point) (count int) {
 }
 
 // ロボットアームの指先が取りうる位置を計算する
-func (s *State) calcRelativePosition() {
+func (s *State) calcRelatevePosition() {
 	for i := 0; i < V; i++ {
 		if s.nodes[i].parent == nil { // root
 			s.relatevePositions[i] = append(s.relatevePositions[i], Point{0, 0})
@@ -563,7 +563,7 @@ func solver(in Input) {
 			}
 		}
 		//log.Println(state.nodes[0].Point)
-		state.calcRelativePosition()
+		state.calcRelatevePosition()
 		//for i := 0; i < V; i++ {
 		//	log.Printf("%d %d %+v\n", i, state.nodes[i].length, state.relatevePositions[i])
 		//}
