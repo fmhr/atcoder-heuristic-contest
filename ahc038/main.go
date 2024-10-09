@@ -176,12 +176,14 @@ func (s State) infoLength() {
 // closestTakoyaki はpに最も近いたこ焼きの座標を返す
 func (s State) closestTakoyaki(p Point) (t Point) {
 	minDist := 1000
-	for ti := range s.takoyakiPos {
-		i, j := s.takoyakiPos[ti].Y, s.takoyakiPos[ti].X
-		dist := abs(p.Y-i) + abs(p.X-j)
+	for _, ta := range s.takoyakiPos {
+		dist := abs(p.Y-ta.Y) + abs(p.X-ta.X)
 		if dist < minDist {
 			minDist = dist
-			t = Point{i, j}
+			t.Y, t.X = ta.Y, ta.X
+			if dist == 0 {
+				return
+			}
 		}
 	}
 	return t
@@ -190,12 +192,14 @@ func (s State) closestTakoyaki(p Point) (t Point) {
 // closestTakoyaki はpに最も近いたこ焼きの座標を返す
 func (s State) closestTarget(p Point) (t Point) {
 	minDist := 1000
-	for ti := range s.targetPos {
-		i, j := s.targetPos[ti].Y, s.targetPos[ti].X
-		dist := abs(p.Y-i) + abs(p.X-j)
+	for _, st := range s.targetPos {
+		dist := abs(p.Y-st.Y) + abs(p.X-st.X)
 		if dist < minDist {
 			minDist = dist
-			t = Point{i, j}
+			t.Y, t.X = st.Y, st.X
+			if dist == 0 {
+				return
+			}
 		}
 	}
 	return t
