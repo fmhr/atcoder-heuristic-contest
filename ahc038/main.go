@@ -563,7 +563,7 @@ func solver(in Input) {
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
 			if i != 0 {
-				state.nodes[i].length = rand.Intn(N)/2 + N/8
+				state.nodes[i].length = rand.Intn(N/2) + N/6
 			}
 			state.nodes[i].HasTakoyaki = false
 			if i == 0 {
