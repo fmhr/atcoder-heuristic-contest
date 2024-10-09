@@ -617,7 +617,11 @@ func solver(in Input) {
 			if i == 0 {
 				state.nodes[i].Point = state.startPos
 			} else {
-				state.nodes[i].parent = &state.nodes[0] // root
+				if i == 3 {
+					state.nodes[i].parent = &state.nodes[2]
+				} else {
+					state.nodes[i].parent = &state.nodes[0] // root
+				}
 				p := state.nodes[i].parent
 				p.children = append(p.children, &state.nodes[i])
 				state.nodes[i].Point.Y = state.nodes[i].parent.Point.Y
