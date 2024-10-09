@@ -213,7 +213,6 @@ func (s State) infoLength() {
 	for i := 0; i < V; i++ {
 		length[i] = s.nodes[i].length
 	}
-	//log.Println(length)
 }
 
 // closestTakoyaki はpに最も近いたこ焼きの座標を返す
