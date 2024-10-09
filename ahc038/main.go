@@ -417,6 +417,12 @@ func (s *State) RotateRobot(direction int, node *Node, center Point) {
 		s.RotateRobot(direction, node.children[i], center)
 	}
 	node.Point = node.Point.Rotate(center, direction)
+	switch direction {
+	case CW:
+		node.direction = (node.direction+1-1)%4 + 1
+	case CCW:
+		node.direction = (node.direction+3-1)%4 + 1
+	}
 }
 
 // 状態
@@ -464,89 +470,99 @@ func turnSolver(s *State) []byte {
 	subAction := make([]byte, V-1)
 	takoAction := make([]byte, V)
 	takoAction[0] = '.'
+	nodeLocked := make([]bool, V)
+	nodeLocked[0] = true
 	for i := 1; i < V; i++ {
 		takoAction[i] = '.'
 		if s.nodes[i].isLeaf() {
 			center := s.nodes[i].parent.Point
-			var j int
-			var cwOutField, ccwOutField bool
-			for j = 0; j < 4; j++ {
-				var nextPoint Point
+			pi := s.nodes[i].parent.index
+			if nodeLocked[pi] {
+				var j int
+				var cwOutField, ccwOutField bool
+				for j = 0; j < 4; j++ {
+					var nextPoint Point
+					if j == 3 {
+						// 180度回転
+						nextPoint = s.nodes[i].Point.Rotate(center, CW)
+						nextPoint = nextPoint.Rotate(center, CW)
+					} else {
+						nextPoint = s.nodes[i].Point.Rotate(center, j)
+					}
+					if !inField(nextPoint) {
+						if j == CW {
+							cwOutField = true
+						} else if j == CCW {
+							ccwOutField = true
+						}
+						continue
+					}
+
+					// catchできる
+					if !s.nodes[i].HasTakoyaki && s.s.Get(nextPoint.Y, nextPoint.X) && !s.t.Get(nextPoint.Y, nextPoint.X) {
+						if j != 3 {
+							takoAction[i] = 'P'
+							s.nodes[i].HasTakoyaki = true
+							//log.Println(s.s.Get(nextPoint.Y, nextPoint.X), s.t.Get(nextPoint.Y, nextPoint.X))
+							s.s.Unset(nextPoint.Y, nextPoint.X)
+							s.takoyakiInRobot++
+							s.takoyakiOnField--
+							s.takoyakiPos = deleteItem(s.takoyakiPos, nextPoint)
+						}
+						break
+					}
+					// releaseできる
+					if s.nodes[i].HasTakoyaki && s.t.Get(nextPoint.Y, nextPoint.X) && !s.s.Get(nextPoint.Y, nextPoint.X) {
+						if j != 3 {
+							takoAction[i] = 'P'
+							s.nodes[i].HasTakoyaki = false
+							s.t.Unset(nextPoint.Y, nextPoint.X)
+							s.remainTakoyaki--
+							s.takoyakiInRobot--
+							s.targetPos = deleteItem(s.targetPos, nextPoint)
+						}
+						break
+					}
+				}
 				if j == 3 {
 					// 180度回転
-					nextPoint = s.nodes[i].Point.Rotate(center, CW)
-					nextPoint = nextPoint.Rotate(center, CW)
-				} else {
-					nextPoint = s.nodes[i].Point.Rotate(center, j)
-				}
-				if !inField(nextPoint) {
-					if j == CW {
-						cwOutField = true
-					} else if j == CCW {
-						ccwOutField = true
+					if cwOutField {
+						j = CCW
+					} else {
+						j = CW
 					}
-					continue
 				}
+				if j == 4 {
+					// なにもない
+					if inField(s.nodes[i].Point) && !cwOutField && !ccwOutField {
+						j = 0
+					} else if cwOutField && !ccwOutField {
+						j = CCW
+					} else if !cwOutField && ccwOutField {
+						j = CW
+					} else {
+						j = 0
+					}
+				}
+				move = j // 0:None, 1:CW, 2:CCW
+				//center := s.nodes[i].parent.Point
+				s.RotateRobot(move, &s.nodes[i], center)
+				subAction[i-1] = VAction[move]
+				nodeLocked[i] = true
+			} else {
+				// 親の場所がロックされていない
 
-				// catchできる
-				if !s.nodes[i].HasTakoyaki && s.s.Get(nextPoint.Y, nextPoint.X) && !s.t.Get(nextPoint.Y, nextPoint.X) {
-					if j != 3 {
-						takoAction[i] = 'P'
-						s.nodes[i].HasTakoyaki = true
-						//log.Println(s.s.Get(nextPoint.Y, nextPoint.X), s.t.Get(nextPoint.Y, nextPoint.X))
-						s.s.Unset(nextPoint.Y, nextPoint.X)
-						s.takoyakiInRobot++
-						s.takoyakiOnField--
-						s.takoyakiPos = deleteItem(s.takoyakiPos, nextPoint)
-					}
-					break
-				}
-				// releaseできる
-				if s.nodes[i].HasTakoyaki && s.t.Get(nextPoint.Y, nextPoint.X) && !s.s.Get(nextPoint.Y, nextPoint.X) {
-					if j != 3 {
-						takoAction[i] = 'P'
-						s.nodes[i].HasTakoyaki = false
-						s.t.Unset(nextPoint.Y, nextPoint.X)
-						s.remainTakoyaki--
-						s.takoyakiInRobot--
-						s.targetPos = deleteItem(s.targetPos, nextPoint)
-					}
-					break
-				}
 			}
-			if j == 3 {
-				// 180度回転
-				if cwOutField {
-					j = CCW
-				} else {
-					j = CW
-				}
-			}
-			if j == 4 {
-				// なにもない
-				if inField(s.nodes[i].Point) && !cwOutField && !ccwOutField {
-					j = 0
-				} else if cwOutField && !ccwOutField {
-					j = CCW
-				} else if !cwOutField && ccwOutField {
-					j = CW
-				} else {
-					j = 0
-				}
-			}
-			move = j // 0:None, 1:CW, 2:CCW
-			//center := s.nodes[i].parent.Point
-			s.RotateRobot(move, &s.nodes[i], center)
-			subAction[i-1] = VAction[move]
 		} else {
 			// not leaf
-			subAction[i-1] = '.'
+			subAction[i-1] = 'X'
+			log.Println("not leaf", i, subAction[i])
 		}
 	}
 	action = append(action, subAction...)
 	action = append(action, takoAction...)
 	action = append(action, '\n')
-	//log.Println(string(action))
+	log.Print(string(action), len(action))
 	//log.Printf("%+v\n", s.nodes[0])
 	//log.Printf("%+v %+v %+v\n", s.nodes[1], s.s.Get(10, 13), s.t.Get(10, 13))
 	return action
@@ -626,6 +642,7 @@ func solver(in Input) {
 				p.children = append(p.children, &state.nodes[i])
 				state.nodes[i].Point.Y = state.nodes[i].parent.Point.Y
 				state.nodes[i].Point.X = state.nodes[i].parent.Point.X + state.nodes[i].length
+				state.nodes[i].direction = Right // 親から見て右に位置する
 			}
 		}
 		//log.Println(state.nodes[0].Point)
@@ -642,7 +659,7 @@ func solver(in Input) {
 		// シミュレーション
 		//pre := state.remainTakoyaki
 		//preTurn := 0
-		for i := 0; i < 500; i++ {
+		for i := 0; i < 50; i++ {
 			tout := turnSolver(&state)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
