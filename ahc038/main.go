@@ -120,6 +120,7 @@ type Node struct {
 	HasTakoyaki bool
 	parent      *Node
 	children    []*Node
+	direction   int
 }
 
 func (n Node) isLeaf() bool {
@@ -417,6 +418,7 @@ func turnSolver(s *State) []byte {
 		if s.nodes[i].isLeaf() {
 			center := s.nodes[i].parent.Point
 			var j int
+			var cwOutField, ccwOutField bool
 			for j = 0; j < 4; j++ {
 				var nextPoint Point
 				if j == 3 {
@@ -427,6 +429,11 @@ func turnSolver(s *State) []byte {
 					nextPoint = s.nodes[i].Point.Rotate(center, j)
 				}
 				if !inField(nextPoint) {
+					if j == 1 {
+						cwOutField = true
+					} else if j == 2 {
+						ccwOutField = true
+					}
 					continue
 				}
 				// releaseできる
@@ -440,15 +447,22 @@ func turnSolver(s *State) []byte {
 			}
 			if j == 3 {
 				// 180度回転
-				j = CW
+				if cwOutField {
+					j = CCW
+				} else {
+					j = CW
+				}
 			}
 			if j == 4 {
 				// なにもない
-				if inField(s.nodes[i].Point) {
+				if inField(s.nodes[i].Point) && !cwOutField && !ccwOutField {
+					j = 0
+				} else if cwOutField && !ccwOutField {
+					j = CCW
+				} else if !cwOutField && ccwOutField {
 					j = CW
 				} else {
-					// とりあえず、回した方がスコアが高い
-					j = CW
+					j = 0
 				}
 			}
 			move = j // 0:None, 1:CW, 2:CCW
