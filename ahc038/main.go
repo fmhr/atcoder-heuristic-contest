@@ -638,7 +638,7 @@ func solver(in Input) {
 		// シミュレーション
 		//pre := state.remainTakoyaki
 		//preTurn := 0
-		for i := 0; i < 50000; i++ {
+		for i := 0; i < 500; i++ {
 			tout := turnSolver(&state)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
@@ -657,6 +657,7 @@ func solver(in Input) {
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
 		}
+		break
 	}
 	fmt.Print(string(minOut))
 	log.Printf("iter=%d\n", iterations)
