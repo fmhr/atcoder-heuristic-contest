@@ -636,7 +636,7 @@ func turnSolver(s *State) []byte {
 			}
 		} else {
 			// not leaf
-
+			// なにもしない
 		}
 	}
 	action = append(action, subAction...)
