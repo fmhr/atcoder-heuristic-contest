@@ -403,7 +403,7 @@ func (s *State) MoveRobot(direction int, node *Node) {
 	node.X += dx[direction]
 }
 
-func (s *State) RotateRobot(direction int, node *Node, center Point) {
+func RotateRobot(direction int, node *Node, center Point) {
 	if node == nil {
 		log.Fatal("node is nil")
 	}
@@ -414,7 +414,34 @@ func (s *State) RotateRobot(direction int, node *Node, center Point) {
 		log.Fatal("invalid direction")
 	}
 	for i := 0; i < len(node.children); i++ {
-		s.RotateRobot(direction, node.children[i], center)
+		RotateRobot(direction, node.children[i], center)
+	}
+	node.Point = node.Point.Rotate(center, direction)
+	switch direction {
+	case CW:
+		node.direction = (node.direction+1-1)%4 + 1
+	case CCW:
+		node.direction = (node.direction+3-1)%4 + 1
+	}
+}
+
+func ReverseRobot(direction int, node *Node, center Point) {
+	if direction == CW {
+		direction = CCW
+	} else if direction == CCW {
+		direction = CW
+	}
+	if node == nil {
+		log.Fatal("node is nil")
+	}
+	if direction == None {
+		return
+	}
+	if direction != CW && direction != CCW {
+		log.Fatal("invalid direction")
+	}
+	for i := 0; i < len(node.children); i++ {
+		RotateRobot(direction, node.children[i], center)
 	}
 	node.Point = node.Point.Rotate(center, direction)
 	switch direction {
@@ -546,23 +573,75 @@ func turnSolver(s *State) []byte {
 				}
 				move = j // 0:None, 1:CW, 2:CCW
 				//center := s.nodes[i].parent.Point
-				s.RotateRobot(move, &s.nodes[i], center)
+				RotateRobot(move, &s.nodes[i], center)
 				subAction[i-1] = VAction[move]
 				nodeLocked[i] = true
 			} else {
 				// 親の場所がロックされていない
-
+				// 親を先に動かす
+				parent := s.nodes[i].parent
+				next := &s.nodes[i]
+				takoAction[i] = '.'
+				takoAction[parent.index] = '.'
+				subAction[i-1] = '.'
+				subAction[parent.index-1] = '.'
+				var pm, m int
+				for pm = 0; pm < 3; pm++ {
+					RotateRobot(pm, parent, parent.parent.Point)
+					for m = 0; m < 3; m++ {
+						RotateRobot(m, next, parent.Point)
+						if inField(next.Point) {
+							if !next.HasTakoyaki && s.s.Get(next.Y, next.X) {
+								takoAction[i] = 'P'
+								next.HasTakoyaki = true
+								s.s.Unset(next.Y, next.X)
+								s.takoyakiInRobot++
+								s.takoyakiOnField--
+								s.takoyakiPos = deleteItem(s.takoyakiPos, next.Point)
+								nodeLocked[i] = true
+								nodeLocked[parent.index] = true
+								subAction[i-1] = VAction[m]
+								subAction[parent.index-1] = VAction[pm]
+								//log.Println("catch", next.Point)
+							} else if next.HasTakoyaki && s.t.Get(next.Y, next.X) {
+								takoAction[i] = 'P'
+								next.HasTakoyaki = false
+								s.t.Unset(next.Y, next.X)
+								s.remainTakoyaki--
+								s.takoyakiInRobot--
+								s.targetPos = deleteItem(s.targetPos, next.Point)
+								nodeLocked[i] = true
+								nodeLocked[parent.index] = true
+								subAction[i-1] = VAction[m]
+								subAction[parent.index-1] = VAction[pm]
+								//log.Println("release", next.Point)
+							}
+						}
+						if nodeLocked[i] {
+							break
+						}
+						ReverseRobot(m, next, parent.Point)
+					}
+					if nodeLocked[parent.index] {
+						break
+					}
+					ReverseRobot(pm, parent, parent.parent.Point)
+				}
+				if !nodeLocked[i] && !nodeLocked[parent.index] {
+					subAction[i-1] = VAction[0]
+					subAction[parent.index-1] = VAction[0]
+				} else if nodeLocked[i] != nodeLocked[parent.index] {
+					panic("not locked")
+				}
 			}
 		} else {
 			// not leaf
-			subAction[i-1] = 'X'
-			log.Println("not leaf", i, subAction[i])
+
 		}
 	}
 	action = append(action, subAction...)
 	action = append(action, takoAction...)
 	action = append(action, '\n')
-	log.Print(string(action), len(action))
 	//log.Printf("%+v\n", s.nodes[0])
 	//log.Printf("%+v %+v %+v\n", s.nodes[1], s.s.Get(10, 13), s.t.Get(10, 13))
 	return action
@@ -617,6 +696,7 @@ func solver(in Input) {
 		////log.Println(state.takoyakiPos)
 
 		// 初期化
+		//state.startPos = Point{0, 0} // デバッグ用
 		state.startPos.Y = rand.Intn(N)
 		state.startPos.X = rand.Intn(N)
 		//state.startPos = meanPoints[iterations%2]
@@ -633,6 +713,9 @@ func solver(in Input) {
 			if i == 0 {
 				state.nodes[i].Point = state.startPos
 			} else {
+				if i == 2 || i == 3 {
+					state.nodes[i].length = state.nodes[i].length * 2 / 3
+				}
 				if i == 3 {
 					state.nodes[i].parent = &state.nodes[2]
 				} else {
@@ -645,6 +728,8 @@ func solver(in Input) {
 				state.nodes[i].direction = Right // 親から見て右に位置する
 			}
 		}
+		log.Printf("%+v\n", state.nodes[2])
+		log.Printf("%+v\n", state.nodes[3])
 		//log.Println(state.nodes[0].Point)
 		state.calcRelatevePosition()
 		//for i := 0; i < V; i++ {
@@ -659,7 +744,7 @@ func solver(in Input) {
 		// シミュレーション
 		//pre := state.remainTakoyaki
 		//preTurn := 0
-		for i := 0; i < 50; i++ {
+		for i := 0; i < 1000; i++ {
 			tout := turnSolver(&state)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
