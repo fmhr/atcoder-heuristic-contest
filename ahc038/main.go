@@ -500,10 +500,92 @@ func turnSolver(s *State) []byte {
 	nodeLocked := make([]bool, V)
 	nodeLocked[0] = true
 	for i := 1; i < V; i++ {
+		if s.nodes[i].parent == &s.nodes[0] {
+			nodes := make([]*Node, 0, 4)
+			sub := make([]*Node, 0, 4)
+			sub = append(sub, &s.nodes[i])
+			for len(sub) > 0 {
+				n := sub[0]
+				sub = sub[1:]
+				sub = append(sub, n.children...)
+				nodes = append(nodes, n)
+			}
+			// 今回操作するノードの確定
+			log.Println(nodes)
+			bestRotate := make([]int, len(nodes))
+			bestP := make([]byte, len(nodes))
+			bestTakoPoint := -1
+			bestInFieldCnt := -1
+			// 回転の組み合わせ
+			totalCombinations := 1
+			for j := 0; j < len(nodes); j++ {
+				totalCombinations *= 3
+			}
+			for j := 0; j < totalCombinations; j++ {
+				//subRotate := make([]byte, len(nodes))
+				subP := make([]byte, len(nodes))
+				comb := make([]int, len(nodes))
+				num := j
+				for k := 0; k < len(nodes); k++ {
+					comb[k] = num % 3
+					num /= 3
+				}
+				for k := 0; k < len(nodes); k++ {
+					RotateRobot(comb[k], nodes[k], nodes[k].parent.Point)
+				}
+				// ここで評価
+				takoPoint := 0
+				inFieldCnt := 0
+				for k := 0; k < len(nodes); k++ {
+					// 先端かつ、フィールド内
+					if nodes[k].isLeaf() && inField(nodes[k].Point) {
+						inFieldCnt++
+						if !nodes[k].HasTakoyaki && s.s.Get(nodes[k].Y, nodes[k].X) {
+							// GetTakoyaki
+							takoPoint++
+							subP[k] = 'P'
+						} else if nodes[k].HasTakoyaki && s.t.Get(nodes[k].Y, nodes[k].X) {
+							// ReleaseTakoyaki
+							takoPoint++
+							subP[k] = 'P'
+						}
+					}
+				}
+				log.Println(comb, takoPoint, inFieldCnt)
+				// Undo
+				for k := 0; k < len(nodes); k++ {
+					ReverseRobot(comb[k], nodes[k], nodes[k].parent.Point)
+				}
+				// Update
+				if takoPoint == bestTakoPoint {
+					if inFieldCnt > bestInFieldCnt {
+						bestTakoPoint = takoPoint
+						bestInFieldCnt = inFieldCnt
+						copy(bestRotate, comb)
+						copy(bestP, subP)
+					}
+				} else if takoPoint > bestTakoPoint {
+					bestTakoPoint = takoPoint
+					bestInFieldCnt = inFieldCnt
+					copy(bestRotate, comb)
+					copy(bestP, subP)
+				}
+			}
+			// Update best to true
+			for j := 0; j < len(nodes); j++ {
+				if bestP[j] == 0 {
+					bestP[j] = '.'
+				}
+			}
+			log.Println(bestTakoPoint, bestInFieldCnt)
+			log.Println(bestRotate, string(bestP))
+		}
+
 		takoAction[i] = '.'
 		if s.nodes[i].isLeaf() {
 			center := s.nodes[i].parent.Point
 			pi := s.nodes[i].parent.index
+			// 親がロックされている (単体で動かす)
 			if nodeLocked[pi] {
 				var j int
 				var cwOutField, ccwOutField bool
@@ -524,7 +606,6 @@ func turnSolver(s *State) []byte {
 						}
 						continue
 					}
-
 					// catchできる
 					if !s.nodes[i].HasTakoyaki && s.s.Get(nextPoint.Y, nextPoint.X) && !s.t.Get(nextPoint.Y, nextPoint.X) {
 						if j != 3 {
@@ -744,7 +825,7 @@ func solver(in Input) {
 		// シミュレーション
 		//pre := state.remainTakoyaki
 		//preTurn := 0
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < 30; i++ {
 			tout := turnSolver(&state)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
@@ -763,6 +844,7 @@ func solver(in Input) {
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
 		}
+		break // 1回だけ デバッグ
 	}
 	fmt.Print(string(minOut))
 	log.Printf("iter=%d\n", iterations)
