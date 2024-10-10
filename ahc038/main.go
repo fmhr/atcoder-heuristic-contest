@@ -728,8 +728,8 @@ func solver(in Input) {
 				state.nodes[i].direction = Right // 親から見て右に位置する
 			}
 		}
-		log.Printf("%+v\n", state.nodes[2])
-		log.Printf("%+v\n", state.nodes[3])
+		//log.Printf("%+v\n", state.nodes[2])
+		//log.Printf("%+v\n", state.nodes[3])
 		//log.Println(state.nodes[0].Point)
 		state.calcRelatevePosition()
 		//for i := 0; i < V; i++ {
@@ -763,7 +763,6 @@ func solver(in Input) {
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
 		}
-		break
 	}
 	fmt.Print(string(minOut))
 	log.Printf("iter=%d\n", iterations)
