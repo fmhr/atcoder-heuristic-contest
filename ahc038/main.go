@@ -259,6 +259,7 @@ func (s State) closestTakoyaki(p Point) (t Point) {
 
 // closestTakoyaki はpに最も近いたこ焼きの座標を返す
 func (s State) closestTarget(p Point) (t Point) {
+	log.Println("closestTarget", p)
 	minDist := 1000
 	for _, st := range s.targetPos {
 		dist := abs(p.Y-st.Y) + abs(p.X-st.X)
@@ -345,6 +346,7 @@ func (s State) closetTakoyakiRenge(v int) (direction, miniD int) {
 		var t Point
 		if s.nodes[v].HasTakoyaki {
 			t = s.closestTarget(p2)
+			log.Println(t)
 		} else {
 			t = s.closestTakoyaki(p2)
 		}
@@ -354,12 +356,14 @@ func (s State) closetTakoyakiRenge(v int) (direction, miniD int) {
 		root.Y += dy
 		root.X += dx
 		if !inField(root) {
+			log.Println("out of field")
 			continue
 		}
 		d := DistancePP(p2, t)
 		if d < miniD {
 			direction = DirectionPP(p2, t)
 			miniD = d
+			log.Println("miniD", miniD, "direction", direction)
 		}
 	}
 	return direction, miniD
@@ -392,7 +396,7 @@ func (s State) calcMoveDirection() (direction int) {
 			break
 		}
 	}
-	//log.Println(s.relatevePositions[1])
+	log.Printf("direction: %s, miniD: %d\n", DirectionDict[direction], miniD)
 	if miniD == 1000 {
 		return None
 	}
@@ -526,6 +530,7 @@ Reset:
 }
 
 func turnSolver(s *State) []byte {
+	log.Println(s.remainTakoyaki, s.takoyakiOnField, s.takoyakiInRobot)
 	action := make([]byte, 0, 2*V)
 	// V0の移動
 	//move := s.moveRandom()
@@ -577,6 +582,12 @@ func turnSolver(s *State) []byte {
 				for k := 0; k < len(nodes); k++ {
 					RotateRobot(comb[k], nodes[k], nodes[k].parent.Point)
 				}
+				if i == 1 {
+					log.Println(i, comb, nodes[0].HasTakoyaki, nodes[0].Point, inField(nodes[0].Point))
+					if inField(nodes[0].Point) {
+						log.Println(s.t.Get(nodes[0].Y, nodes[0].X))
+					}
+				}
 				// ここで評価
 				takoPoint := 0
 				inFieldCnt := 0
@@ -592,6 +603,7 @@ func turnSolver(s *State) []byte {
 							subP[k] = 'P'
 						} else if nodes[k].HasTakoyaki && s.t.Get(nodes[k].Y, nodes[k].X) {
 							// ReleaseTakoyaki
+							log.Println("release", nodes[k].Point)
 							s.t.Unset(nodes[k].Y, nodes[k].X)
 							targetUnsetLog = append(targetUnsetLog, nodes[k].Point)
 							takoPoint++
@@ -912,6 +924,7 @@ func solver(in Input) {
 			if minOut != nil && len(out) > len(minOut) {
 				break
 			}
+			log.Println(i, state.remainTakoyaki, string(tout[:V]), string(tout[V:len(tout)-1]))
 		}
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
