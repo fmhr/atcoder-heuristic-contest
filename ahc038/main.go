@@ -27,8 +27,6 @@ const (
 	Left
 )
 
-var reverseDirection = []int{None, Down, Left, Up, Right}
-
 var DirectionDict []string = []string{"None", "Up", "Right", "Down", "Left"}
 
 var moveAction = []byte{'.', 'U', 'R', 'D', 'L'}
@@ -132,29 +130,6 @@ type Node struct {
 
 func (n Node) isLeaf() bool {
 	return len(n.children) == 0
-}
-
-func (n Node) root() *Node {
-	if n.parent == nil {
-		return &n
-	}
-	return n.parent.root()
-}
-
-func viewField(f BitArray) {
-	var line [30][30]byte
-	for i := 0; i < N; i++ {
-		for j := 0; j < N; j++ {
-			if f.Get(i, j) {
-				line[i][j] = '1'
-			} else {
-				line[i][j] = '0'
-			}
-		}
-	}
-	for i := 0; i < N; i++ {
-		log.Println(string(line[i][:N]))
-	}
 }
 
 type State struct {
@@ -298,50 +273,6 @@ func (s State) closestTarget(p Point) (t Point) {
 		panic("no target")
 	}
 	return t
-}
-
-// countMatchingTakoyaki はpのx座標またはy座標が一致するたこ焼きの数を返す
-// 一致するたこ焼きがない場合、最小移動回数を返す
-func (s State) countMatchingTakoyaki(p Point) (count int) {
-	minMove := 0
-	for i := 0; i < N; i++ {
-		for j := 0; j < N; j++ {
-			if s.s.Get(i, j) && !s.t.Get(i, j) { // たこ焼きがあるがターゲットではない
-				if p.Y == i || p.X == j {
-					count++
-				} else {
-					m := min(abs(p.Y-i), abs(p.X-j)) // どちらかの座標が一致するまでの最小移動回数
-					minMove = min(minMove, m)
-				}
-			}
-		}
-	}
-	if count == 0 {
-		return minMove
-	}
-	return count
-}
-
-// countMatchingTakoyakiTarget はpのx座標またはy座標が一致するターゲットの数を返す
-// 一致するターゲットがない場合、最小移動回数を返す
-func (s State) countMatchingTakoyakiTarget(p Point) (count int) {
-	minMove := 0
-	for i := 0; i < N; i++ {
-		for j := 0; j < N; j++ {
-			if !s.s.Get(i, j) && s.t.Get(i, j) { // ターゲットかつたこ焼きがない
-				if p.Y == i || p.X == j {
-					count++
-				} else {
-					m := min(abs(p.Y-i), abs(p.X-j))
-					minMove = min(minMove, m)
-				}
-			}
-		}
-	}
-	if count == 0 {
-		return minMove
-	}
-	return count
 }
 
 // ロボットアームの指先が取りうる位置を計算する
