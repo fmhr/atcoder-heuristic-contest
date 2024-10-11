@@ -226,14 +226,18 @@ func (s State) infoLength() {
 func (s State) closestPoint(p Point, pp []Point) (t Point) {
 	minDist := 1000
 	log.Println("root", s.nodes[0].Point, "p", p, s.nodes[1].HasTakoyaki)
+	log.Println(pp)
 	for i := 0; i < len(pp); i++ {
 		root := s.nodes[0].Point
-		target := s.targetPos[i]
+		target := pp[i]
 		root.Y += target.Y - p.Y
 		root.X += target.X - p.X
+		log.Println(target)
 		if inField(root) {
+			log.Println(target)
 			dist := abs(p.Y-target.Y) + abs(p.X-target.X)
 			if dist < minDist {
+				log.Println(target)
 				minDist = dist
 				t.Y, t.X = target.Y, target.X
 				log.Println(i, "New closest target:", t, "root", root, "dis", dist) // 追加
@@ -276,13 +280,17 @@ func (s State) closetTakoyakiRenge(v int, target *Point) (direction, miniD int) 
 		// FLIPを使わない理由:
 		//  robot全体が動き続けることで、他のノードが行動できる可能性があがる(?)
 		n := &s.nodes[v]
+		log.Println(v, n.HasTakoyaki)
+		log.Println(s.takoyakiPos)
 		for i := 0; i < 4; i++ {
 			root := s.nodes[0].Point
 			RotateRobot(i, n, s.nodes[0].Point)
 			var t Point
 			if !n.HasTakoyaki {
+				log.Println("use takoyaki")
 				t = s.closestPoint(n.Point, s.takoyakiPos)
 			} else {
+				log.Println("use target")
 				t = s.closestPoint(n.Point, s.targetPos)
 			}
 			root.Y += t.Y - n.Point.Y
