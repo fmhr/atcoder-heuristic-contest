@@ -225,22 +225,16 @@ func (s State) infoLength() {
 
 func (s State) closestPoint(p Point, pp []Point) (t Point) {
 	minDist := 1000
-	log.Println("root", s.nodes[0].Point, "p", p, s.nodes[1].HasTakoyaki)
-	log.Println(pp)
 	for i := 0; i < len(pp); i++ {
 		root := s.nodes[0].Point
 		target := pp[i]
 		root.Y += target.Y - p.Y
 		root.X += target.X - p.X
-		log.Println(target)
 		if inField(root) {
-			log.Println(target)
 			dist := abs(p.Y-target.Y) + abs(p.X-target.X)
 			if dist < minDist {
-				log.Println(target)
 				minDist = dist
 				t.Y, t.X = target.Y, target.X
-				log.Println(i, "New closest target:", t, "root", root, "dis", dist) // 追加
 			}
 		}
 	}
@@ -280,8 +274,6 @@ func (s State) closetTakoyakiRenge(v int, target *Point) (direction, miniD int) 
 		// FLIPを使わない理由:
 		//  robot全体が動き続けることで、他のノードが行動できる可能性があがる(?)
 		n := &s.nodes[v]
-		log.Println(v, n.HasTakoyaki)
-		log.Println(s.takoyakiPos)
 		for i := 0; i < 4; i++ {
 			root := s.nodes[0].Point
 			RotateRobot(i, n, s.nodes[0].Point)
@@ -324,7 +316,6 @@ func (s State) closetTakoyakiRenge(v int, target *Point) (direction, miniD int) 
 // v1の位置から最も近い設定位置を最小にする
 // vはターゲットを探す指先
 func (s State) calcMoveDirection(target *Point) (direction, v int) {
-	log.Println("target", *target)
 	v = 1
 	// フィールドにたこ焼きがすでにない、たこ焼きを持っている指先がv1以外の時
 	if (s.takoyakiOnField == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() {
@@ -517,9 +508,6 @@ func turnSolver(s *State, target *Point) []byte {
 				for k := 0; k < len(nodes); k++ {
 					// 先端かつ、フィールド内
 					if nodes[k].isLeaf() && inField(nodes[k].Point) {
-						if i == 1 {
-							log.Println("i=1", nodes[k].Point, nodes[k].HasTakoyaki, s.s.Get(nodes[k].Y, nodes[k].X), s.t.Get(nodes[k].Y, nodes[k].X))
-						}
 						inFieldCnt++
 						if !nodes[k].HasTakoyaki && s.s.Get(nodes[k].Y, nodes[k].X) {
 							// GetTakoyaki
