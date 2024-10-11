@@ -462,18 +462,6 @@ func ReverseRobot(direction int, node *Node, center Point) {
 //  x,またはyの位置が一致しているたこ焼きの数
 //  １つも一致したいない場合、何回移動すれば一致するか
 
-func (s State) moveRandom() int {
-Reset:
-	move := rand.Intn(5)
-	v0Point := s.nodes[0].Point
-	v0Point.Y += dy[move]
-	v0Point.X += dx[move]
-	if v0Point.Y < 0 || v0Point.Y >= N || v0Point.X < 0 || v0Point.X >= N {
-		goto Reset
-	}
-	return move
-}
-
 func turnSolver(s *State, target *Point) []byte {
 	action := make([]byte, 0, 2*V)
 	// V0の移動
