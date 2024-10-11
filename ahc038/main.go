@@ -225,7 +225,7 @@ func (s State) infoLength() {
 
 func (s State) closestPoint(p Point, pp []Point) (t Point) {
 	minDist := 1000
-	log.Println("root", s.nodes[0].Point, "p", p)
+	log.Println("root", s.nodes[0].Point, "p", p, s.nodes[1].HasTakoyaki)
 	for i := 0; i < len(pp); i++ {
 		root := s.nodes[0].Point
 		target := s.targetPos[i]
