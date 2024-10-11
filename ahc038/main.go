@@ -165,6 +165,32 @@ type State struct {
 	targetPos         []Point
 }
 
+func (s *State) moveLeaf(node *Node, m byte) {
+	if !(m == 'P' || m == '.') {
+		panic("invalid move")
+	}
+	if node.isLeaf() {
+		if m == 'P' {
+			if !node.HasTakoyaki {
+				node.HasTakoyaki = true
+				s.s.Unset(node.Y, node.X)
+				s.takoyakiPos = deleteItem(s.takoyakiPos, node.Point)
+				s.takoyakiInRobot++
+				s.takoyakiOnField--
+			} else {
+				node.HasTakoyaki = false
+				s.t.Unset(node.Y, node.X)
+				s.targetPos = deleteItem(s.targetPos, node.Point)
+				s.takoyakiInRobot--
+				s.remainTakoyaki--
+			}
+		}
+	}
+	if !node.isLeaf() && m == 'P' {
+		panic("invalid move")
+	}
+}
+
 func (src State) Clone() (clone State) {
 	clone.startPos = src.startPos
 	clone.nodes = src.nodes
@@ -425,6 +451,19 @@ func RotateRobot(direction int, node *Node, center Point) {
 	}
 }
 
+func RotateRobot2(direction byte, node *Node, center Point) {
+	dir := 0
+	switch direction {
+	case 'R':
+		dir = CW
+	case 'L':
+		dir = CCW
+	case '.':
+		dir = None
+	}
+	RotateRobot(dir, node, center)
+}
+
 func ReverseRobot(direction int, node *Node, center Point) {
 	if direction == CW {
 		direction = CCW
@@ -504,6 +543,7 @@ func turnSolver(s *State) []byte {
 			nodes := make([]*Node, 0, 4)
 			sub := make([]*Node, 0, 4)
 			sub = append(sub, &s.nodes[i])
+
 			for len(sub) > 0 {
 				n := sub[0]
 				sub = sub[1:]
@@ -511,17 +551,21 @@ func turnSolver(s *State) []byte {
 				nodes = append(nodes, n)
 			}
 			// 今回操作するノードの確定
-			log.Println(nodes)
+			// log.Println(nodes)
 			bestRotate := make([]int, len(nodes))
 			bestP := make([]byte, len(nodes))
 			bestTakoPoint := -1
 			bestInFieldCnt := -1
+			bestUnsetTakoyaki := make([]Point, 0)
+			bestUnsetTarget := make([]Point, 0)
 			// 回転の組み合わせ
 			totalCombinations := 1
 			for j := 0; j < len(nodes); j++ {
 				totalCombinations *= 3
 			}
 			for j := 0; j < totalCombinations; j++ {
+				takoyakiUnsetLog := make([]Point, 0)
+				targetUnsetLog := make([]Point, 0)
 				//subRotate := make([]byte, len(nodes))
 				subP := make([]byte, len(nodes))
 				comb := make([]int, len(nodes))
@@ -542,33 +586,40 @@ func turnSolver(s *State) []byte {
 						inFieldCnt++
 						if !nodes[k].HasTakoyaki && s.s.Get(nodes[k].Y, nodes[k].X) {
 							// GetTakoyaki
+							s.s.Unset(nodes[k].Y, nodes[k].X)
+							takoyakiUnsetLog = append(takoyakiUnsetLog, nodes[k].Point)
 							takoPoint++
 							subP[k] = 'P'
 						} else if nodes[k].HasTakoyaki && s.t.Get(nodes[k].Y, nodes[k].X) {
 							// ReleaseTakoyaki
+							s.t.Unset(nodes[k].Y, nodes[k].X)
+							targetUnsetLog = append(targetUnsetLog, nodes[k].Point)
 							takoPoint++
 							subP[k] = 'P'
 						}
 					}
 				}
-				log.Println(comb, takoPoint, inFieldCnt)
+				//log.Println(comb, takoPoint, inFieldCnt)
 				// Undo
 				for k := 0; k < len(nodes); k++ {
 					ReverseRobot(comb[k], nodes[k], nodes[k].parent.Point)
 				}
+				for k := 0; k < len(takoyakiUnsetLog); k++ {
+					s.s.Set(takoyakiUnsetLog[k].Y, takoyakiUnsetLog[k].X)
+				}
+				for k := 0; k < len(targetUnsetLog); k++ {
+					s.t.Set(targetUnsetLog[k].Y, targetUnsetLog[k].X)
+				}
 				// Update
-				if takoPoint == bestTakoPoint {
-					if inFieldCnt > bestInFieldCnt {
-						bestTakoPoint = takoPoint
-						bestInFieldCnt = inFieldCnt
-						copy(bestRotate, comb)
-						copy(bestP, subP)
-					}
-				} else if takoPoint > bestTakoPoint {
+				if takoPoint > bestTakoPoint || (takoPoint == bestTakoPoint && inFieldCnt > bestInFieldCnt) {
 					bestTakoPoint = takoPoint
 					bestInFieldCnt = inFieldCnt
 					copy(bestRotate, comb)
 					copy(bestP, subP)
+					bestUnsetTakoyaki = make([]Point, len(takoyakiUnsetLog))
+					copy(bestUnsetTakoyaki, takoyakiUnsetLog)
+					bestUnsetTarget = make([]Point, len(targetUnsetLog))
+					copy(bestUnsetTarget, targetUnsetLog)
 				}
 			}
 			// Update best to true
@@ -577,149 +628,170 @@ func turnSolver(s *State) []byte {
 					bestP[j] = '.'
 				}
 			}
-			log.Println(bestTakoPoint, bestInFieldCnt)
-			log.Println(bestRotate, string(bestP))
-		}
-
-		takoAction[i] = '.'
-		if s.nodes[i].isLeaf() {
-			center := s.nodes[i].parent.Point
-			pi := s.nodes[i].parent.index
-			// 親がロックされている (単体で動かす)
-			if nodeLocked[pi] {
-				var j int
-				var cwOutField, ccwOutField bool
-				for j = 0; j < 4; j++ {
-					var nextPoint Point
-					if j == 3 {
-						// 180度回転
-						nextPoint = s.nodes[i].Point.Rotate(center, CW)
-						nextPoint = nextPoint.Rotate(center, CW)
-					} else {
-						nextPoint = s.nodes[i].Point.Rotate(center, j)
-					}
-					if !inField(nextPoint) {
-						if j == CW {
-							cwOutField = true
-						} else if j == CCW {
-							ccwOutField = true
-						}
-						continue
-					}
-					// catchできる
-					if !s.nodes[i].HasTakoyaki && s.s.Get(nextPoint.Y, nextPoint.X) && !s.t.Get(nextPoint.Y, nextPoint.X) {
-						if j != 3 {
-							takoAction[i] = 'P'
-							s.nodes[i].HasTakoyaki = true
-							//log.Println(s.s.Get(nextPoint.Y, nextPoint.X), s.t.Get(nextPoint.Y, nextPoint.X))
-							s.s.Unset(nextPoint.Y, nextPoint.X)
-							s.takoyakiInRobot++
-							s.takoyakiOnField--
-							s.takoyakiPos = deleteItem(s.takoyakiPos, nextPoint)
-						}
-						break
-					}
-					// releaseできる
-					if s.nodes[i].HasTakoyaki && s.t.Get(nextPoint.Y, nextPoint.X) && !s.s.Get(nextPoint.Y, nextPoint.X) {
-						if j != 3 {
-							takoAction[i] = 'P'
-							s.nodes[i].HasTakoyaki = false
-							s.t.Unset(nextPoint.Y, nextPoint.X)
-							s.remainTakoyaki--
-							s.takoyakiInRobot--
-							s.targetPos = deleteItem(s.targetPos, nextPoint)
-						}
-						break
-					}
-				}
-				if j == 3 {
-					// 180度回転
-					if cwOutField {
-						j = CCW
-					} else {
-						j = CW
-					}
-				}
-				if j == 4 {
-					// なにもない
-					if inField(s.nodes[i].Point) && !cwOutField && !ccwOutField {
-						j = 0
-					} else if cwOutField && !ccwOutField {
-						j = CCW
-					} else if !cwOutField && ccwOutField {
-						j = CW
-					} else {
-						j = 0
-					}
-				}
-				move = j // 0:None, 1:CW, 2:CCW
-				//center := s.nodes[i].parent.Point
-				RotateRobot(move, &s.nodes[i], center)
-				subAction[i-1] = VAction[move]
-				nodeLocked[i] = true
-			} else {
-				// 親の場所がロックされていない
-				// 親を先に動かす
-				parent := s.nodes[i].parent
-				next := &s.nodes[i]
-				takoAction[i] = '.'
-				takoAction[parent.index] = '.'
-				subAction[i-1] = '.'
-				subAction[parent.index-1] = '.'
-				var pm, m int
-				for pm = 0; pm < 3; pm++ {
-					RotateRobot(pm, parent, parent.parent.Point)
-					for m = 0; m < 3; m++ {
-						RotateRobot(m, next, parent.Point)
-						if inField(next.Point) {
-							if !next.HasTakoyaki && s.s.Get(next.Y, next.X) {
-								takoAction[i] = 'P'
-								next.HasTakoyaki = true
-								s.s.Unset(next.Y, next.X)
-								s.takoyakiInRobot++
-								s.takoyakiOnField--
-								s.takoyakiPos = deleteItem(s.takoyakiPos, next.Point)
-								nodeLocked[i] = true
-								nodeLocked[parent.index] = true
-								subAction[i-1] = VAction[m]
-								subAction[parent.index-1] = VAction[pm]
-								//log.Println("catch", next.Point)
-							} else if next.HasTakoyaki && s.t.Get(next.Y, next.X) {
-								takoAction[i] = 'P'
-								next.HasTakoyaki = false
-								s.t.Unset(next.Y, next.X)
-								s.remainTakoyaki--
-								s.takoyakiInRobot--
-								s.targetPos = deleteItem(s.targetPos, next.Point)
-								nodeLocked[i] = true
-								nodeLocked[parent.index] = true
-								subAction[i-1] = VAction[m]
-								subAction[parent.index-1] = VAction[pm]
-								//log.Println("release", next.Point)
-							}
-						}
-						if nodeLocked[i] {
-							break
-						}
-						ReverseRobot(m, next, parent.Point)
-					}
-					if nodeLocked[parent.index] {
-						break
-					}
-					ReverseRobot(pm, parent, parent.parent.Point)
-				}
-				if !nodeLocked[i] && !nodeLocked[parent.index] {
-					subAction[i-1] = VAction[0]
-					subAction[parent.index-1] = VAction[0]
-				} else if nodeLocked[i] != nodeLocked[parent.index] {
-					panic("not locked")
-				}
+			//log.Println(bestTakoPoint, bestInFieldCnt)
+			//log.Println(bestRotate, string(bestP))
+			for j := 0; j < len(nodes); j++ {
+				subAction[nodes[j].index-1] = VAction[bestRotate[j]]
+				takoAction[nodes[j].index] = bestP[j]
 			}
-		} else {
-			// not leaf
-			// なにもしない
+			for j := 0; j < len(bestUnsetTakoyaki); j++ {
+				s.takoyakiPos = deleteItem(s.takoyakiPos, bestUnsetTakoyaki[j])
+				s.s.Unset(bestUnsetTakoyaki[j].Y, bestUnsetTakoyaki[j].X)
+			}
+			for j := 0; j < len(bestUnsetTarget); j++ {
+				s.targetPos = deleteItem(s.targetPos, bestUnsetTarget[j])
+				s.t.Unset(bestUnsetTarget[j].Y, bestUnsetTarget[j].X)
+			}
 		}
 	}
+	// 適応
+	// V0の移動は適応済み
+	for j := 0; j < V-1; j++ {
+		RotateRobot2(subAction[j], &s.nodes[j+1], s.nodes[j+1].parent.Point)
+	}
+	for j := 0; j < V; j++ {
+		//log.Println(j, takoAction[j], string(takoAction[j]))
+		s.moveLeaf(&s.nodes[j], takoAction[j])
+	}
+
+	//takoAction[i] = '.'
+	//if s.nodes[i].isLeaf() {
+	//center := s.nodes[i].parent.Point
+	//pi := s.nodes[i].parent.index
+	//// 親がロックされている (単体で動かす)
+	//if nodeLocked[pi] {
+	//var j int
+	//var cwOutField, ccwOutField bool
+	//for j = 0; j < 4; j++ {
+	//var nextPoint Point
+	//if j == 3 {
+	//// 180度回転
+	//nextPoint = s.nodes[i].Point.Rotate(center, CW)
+	//nextPoint = nextPoint.Rotate(center, CW)
+	//} else {
+	//nextPoint = s.nodes[i].Point.Rotate(center, j)
+	//}
+	//if !inField(nextPoint) {
+	//if j == CW {
+	//cwOutField = true
+	//} else if j == CCW {
+	//ccwOutField = true
+	//}
+	//continue
+	//}
+	//// catchできる
+	//if !s.nodes[i].HasTakoyaki && s.s.Get(nextPoint.Y, nextPoint.X) && !s.t.Get(nextPoint.Y, nextPoint.X) {
+	//if j != 3 {
+	//takoAction[i] = 'P'
+	//s.nodes[i].HasTakoyaki = true
+	////log.Println(s.s.Get(nextPoint.Y, nextPoint.X), s.t.Get(nextPoint.Y, nextPoint.X))
+	//s.s.Unset(nextPoint.Y, nextPoint.X)
+	//s.takoyakiInRobot++
+	//s.takoyakiOnField--
+	//s.takoyakiPos = deleteItem(s.takoyakiPos, nextPoint)
+	//}
+	//break
+	//}
+	//// releaseできる
+	//if s.nodes[i].HasTakoyaki && s.t.Get(nextPoint.Y, nextPoint.X) && !s.s.Get(nextPoint.Y, nextPoint.X) {
+	//if j != 3 {
+	//takoAction[i] = 'P'
+	//s.nodes[i].HasTakoyaki = false
+	//s.t.Unset(nextPoint.Y, nextPoint.X)
+	//s.remainTakoyaki--
+	//s.takoyakiInRobot--
+	//s.targetPos = deleteItem(s.targetPos, nextPoint)
+	//}
+	//break
+	//}
+	//}
+	//if j == 3 {
+	//// 180度回転
+	//if cwOutField {
+	//j = CCW
+	//} else {
+	//j = CW
+	//}
+	//}
+	//if j == 4 {
+	//// なにもない
+	//if inField(s.nodes[i].Point) && !cwOutField && !ccwOutField {
+	//j = 0
+	//} else if cwOutField && !ccwOutField {
+	//j = CCW
+	//} else if !cwOutField && ccwOutField {
+	//j = CW
+	//} else {
+	//j = 0
+	//}
+	//}
+	//move = j // 0:None, 1:CW, 2:CCW
+	////center := s.nodes[i].parent.Point
+	//RotateRobot(move, &s.nodes[i], center)
+	//subAction[i-1] = VAction[move]
+	//nodeLocked[i] = true
+	//} else {
+	//// 親の場所がロックされていない
+	//// 親を先に動かす
+	//parent := s.nodes[i].parent
+	//next := &s.nodes[i]
+	//takoAction[i] = '.'
+	//takoAction[parent.index] = '.'
+	//subAction[i-1] = '.'
+	//subAction[parent.index-1] = '.'
+	//var pm, m int
+	//for pm = 0; pm < 3; pm++ {
+	//RotateRobot(pm, parent, parent.parent.Point)
+	//for m = 0; m < 3; m++ {
+	//RotateRobot(m, next, parent.Point)
+	//if inField(next.Point) {
+	//if !next.HasTakoyaki && s.s.Get(next.Y, next.X) {
+	//takoAction[i] = 'P'
+	//next.HasTakoyaki = true
+	//s.s.Unset(next.Y, next.X)
+	//s.takoyakiInRobot++
+	//s.takoyakiOnField--
+	//s.takoyakiPos = deleteItem(s.takoyakiPos, next.Point)
+	//nodeLocked[i] = true
+	//nodeLocked[parent.index] = true
+	//subAction[i-1] = VAction[m]
+	//subAction[parent.index-1] = VAction[pm]
+	////log.Println("catch", next.Point)
+	//} else if next.HasTakoyaki && s.t.Get(next.Y, next.X) {
+	//takoAction[i] = 'P'
+	//next.HasTakoyaki = false
+	//s.t.Unset(next.Y, next.X)
+	//s.remainTakoyaki--
+	//s.takoyakiInRobot--
+	//s.targetPos = deleteItem(s.targetPos, next.Point)
+	//nodeLocked[i] = true
+	//nodeLocked[parent.index] = true
+	//subAction[i-1] = VAction[m]
+	//subAction[parent.index-1] = VAction[pm]
+	////log.Println("release", next.Point)
+	//}
+	//}
+	//if nodeLocked[i] {
+	//break
+	//}
+	//ReverseRobot(m, next, parent.Point)
+	//}
+	//if nodeLocked[parent.index] {
+	//break
+	//}
+	//ReverseRobot(pm, parent, parent.parent.Point)
+	//}
+	//if !nodeLocked[i] && !nodeLocked[parent.index] {
+	//subAction[i-1] = VAction[0]
+	//subAction[parent.index-1] = VAction[0]
+	//} else if nodeLocked[i] != nodeLocked[parent.index] {
+	//panic("not locked")
+	//}
+	//}
+	//} else {
+	//// not leaf
+	//// なにもしない
+	//}
 	action = append(action, subAction...)
 	action = append(action, takoAction...)
 	action = append(action, '\n')
