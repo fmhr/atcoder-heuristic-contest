@@ -45,9 +45,9 @@ func chooseRotation(n, x int) int {
 	rightStep := (x - n + 4) % 4
 	leftStep := (n - x + 4) % 4
 	if rightStep <= leftStep {
-		return rightStep
+		return CW
 	}
-	return -leftStep
+	return CCW
 }
 
 type Point struct {
@@ -106,32 +106,31 @@ const (
 	CW   = 1 // "clockwise" は時計回り "R"
 	CCW  = 2 // "counterclockwise" は反時計回り "L"
 	FLIP = 3 // "flip" は180度回転 "RR", "LL"
-	P    = 4 // grabs or releases a takoyaki "P"
 )
 
 var rotationOptions = []byte{'.', 'R', 'L'}
-var actionOptions = []byte{'.', '?', '?', '?', 'P'}
+var actionOptions = []byte{'.', 'P'}
 
-// rotate は中心を中心にdirection方向に回転する
-func (p Point) Rotate(center Point, direction int) (np Point) {
-	if direction == FLIP {
+// rotate は中心を中心にrotation方向に回転する
+func (p Point) Rotate(center Point, rotation int) (np Point) {
+	if rotation == FLIP {
 		p = p.Rotate(center, CW)
 		return p.Rotate(center, CW)
 	}
-	if direction == None {
+	if rotation == None {
 		return p
 	}
 	translatedX := p.X - center.X
 	translatedY := p.Y - center.Y
 	var rotatedX, rotatedY int
-	if direction == CW {
+	if rotation == CW {
 		rotatedX = -translatedY
 		rotatedY = translatedX
-	} else if direction == CCW {
+	} else if rotation == CCW {
 		rotatedX = translatedY
 		rotatedY = -translatedX
 	} else {
-		panic("invalid direction in rotate(0, 1, 2) but got " + fmt.Sprint(direction))
+		panic("invalid direction in rotate(0, 1, 2) but got " + fmt.Sprint(rotation))
 	}
 	np.X = center.X + rotatedX
 	np.Y = center.Y + rotatedY
@@ -145,7 +144,7 @@ type Node struct {
 	HasTakoyaki bool
 	parent      *Node
 	children    []*Node
-	direction   int
+	direction   int // 1:Up, 2:Right, 3:Down, 4:Left
 }
 
 func (n Node) isLeaf() bool {
@@ -280,48 +279,50 @@ func (s *State) calcRelatevePosition() {
 	}
 }
 
-func (s State) closetTakoyakiRenge(v int, target *Point) (move, miniD, dir int) {
+func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Target) {
 	if !inField(s.nodes[0].Point) {
 		log.Fatal("root is out of field", s.nodes[0].Point)
 	}
-	nextPos := s.nodes[v].Point // 回転後の位置 これをもとに移動方向を決める
+	log.Printf("target:%+v\n", target)
 	// targetが範囲外（初期化)または、たこ焼きも目的地もない場合、次のターゲットを探す
 	if !inField(s.nodes[v].Point) || !(s.s.Get(target.Y, target.X) || s.t.Get(target.Y, target.X)) {
-		miniD = 1000
+		length = 1000
 		// FLIPを使わない理由:
 		//  robot全体が動き続けることで、他のノードが行動できる可能性があがる(?)
 		n := &s.nodes[v]
+		// i, 0:None, 1:CW, 2:CCW, 3:FLIP
 		for i := 0; i < 4; i++ {
 			root := s.nodes[0].Point
 			RotateRobot(i, n, s.nodes[0].Point)
-			var t Point
+			var closest Point
 			if !n.HasTakoyaki {
-				t = s.closestPoint(n.Point, s.takoyakiPos)
+				closest = s.closestPoint(n.Point, s.takoyakiPos)
 			} else {
-				t = s.closestPoint(n.Point, s.targetPos)
+				closest = s.closestPoint(n.Point, s.targetPos)
 			}
-			root.Y += t.Y - n.Point.Y
-			root.X += t.X - n.Point.X
+			root.Y += closest.Y - n.Point.Y
+			root.X += closest.X - n.Point.X
 			if inField(root) {
-				dis := DistancePP(n.Point, t)
+				dis := DistancePP(n.Point, closest)
 				if i == 3 {
 					dis++
 				}
-				if dis < miniD {
-					miniD = dis
-					*target = t
-					nextPos = s.nodes[v].Point
-					dir = i
+				if dis < length {
+					length = dis
+					target2.Point = closest
+					target2.rootPos = root
+					target2.armIndex = v
+					target2.armDirection = n.direction
 				}
 			}
 			ReverseRobot(i, n, s.nodes[0].Point)
 		}
-		log.Println("target update:", *target)
-		log.Println("node[0]", s.nodes[0].Point, "node[v]", s.nodes[v].Point, "nextPos", nextPos, "target", *target)
+		log.Printf("target update:%+v\n", target2)
 	} else {
-		log.Println("target keep:", *target)
+		log.Println("target keep:", target)
+		length = DistancePP(s.nodes[0].Point, target.rootPos)
+		target2 = target
 	}
-	move = DirectionPP(nextPos, *target)
 	return
 }
 
@@ -332,7 +333,7 @@ func (s State) closetTakoyakiRenge(v int, target *Point) (move, miniD, dir int) 
 // v1の位置から最も近い設定位置を最小にする
 // vはターゲットを探す指先
 // moveは移動方向, vは次の指先, dirはvの目標方向
-func (s State) calcMoveDirection(target *Point) (move, v3, dir int) {
+func (s State) calcMoveDirection(target *Target) {
 	v := 1
 	// フィールドにたこ焼きがすでにない、たこ焼きを持っている指先がv1以外の時
 	if (s.takoyakiOnField == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() {
@@ -341,15 +342,16 @@ func (s State) calcMoveDirection(target *Point) (move, v3, dir int) {
 		}
 	}
 	miniD := 1000
-	v2 := v + 1 // TODO ここをVまでのばせるように高速化する
+	v2 := v + 1 // TODO ここをVまでのばせるように高速化する どのアームが最適かを考える
 	v2 = min(v2, V)
 	for v < v2 {
-		move2, length2, dir2 := s.closetTakoyakiRenge(v, target)
-		if miniD > length2 {
-			miniD = length2
-			move = move2
-			dir = dir2
-			v3 = v
+		length, newTarget := s.closetTakoyakiRenge(v, *target)
+		if length < miniD {
+			miniD = length
+			target.Point = newTarget.Point
+			target.rootPos = newTarget.rootPos
+			target.armIndex = newTarget.armIndex
+			target.armDirection = newTarget.armDirection
 		}
 		v++
 		if miniD == 0 {
@@ -359,7 +361,7 @@ func (s State) calcMoveDirection(target *Point) (move, v3, dir int) {
 	if miniD == 1000 {
 		panic("no target")
 	}
-	return move, v3, dir
+	return
 }
 
 func (s State) firstOutput() []byte {
@@ -392,20 +394,20 @@ func (s *State) MoveRobot(direction int, node *Node) {
 	node.X += dx[direction]
 }
 
-// RotateRobot はcenterを中心にdirection方向にnodeを回転する
-func RotateRobot(direction int, node *Node, center Point) {
+// RotateRobot はcenterを中心にrotation方向にnodeを回転する
+func RotateRobot(rotation int, node *Node, center Point) {
 	if node == nil {
 		log.Fatal("node is nil")
 	}
-	if direction == None {
+	if rotation == None {
 		return
 	}
 	for i := 0; i < len(node.children); i++ {
 		//RotateRobot(direction, node.children[i], center)
-		node.children[i].Point = node.children[i].Point.Rotate(center, direction)
+		node.children[i].Point = node.children[i].Point.Rotate(center, rotation)
 	}
-	node.Point = node.Point.Rotate(center, direction)
-	switch direction {
+	node.Point = node.Point.Rotate(center, rotation)
+	switch rotation {
 	case CW:
 		node.direction = (node.direction+1-1)%4 + 1
 	case CCW:
@@ -464,23 +466,19 @@ func ReverseRobot(direction int, node *Node, center Point) {
 //  x,またはyの位置が一致しているたこ焼きの数
 //  １つも一致したいない場合、何回移動すれば一致するか
 
-func turnSolver(s *State, target *Point) []byte {
+func turnSolver(s *State, target *Target) []byte {
 	action := make([]byte, 0, 2*V)
 	// V0の移動
-	move, v, tDir := s.calcMoveDirection(target)
+	s.calcMoveDirection(target)
+	move := DirectionPP(s.nodes[0].Point, target.rootPos)
 	// nodeがもつdirectionは1,2,3,4
-	tDir = chooseRotation(s.nodes[1].direction-1, tDir)
-	if tDir > 0 {
-		tDir = CW
-	} else if tDir < 0 {
-		tDir = CCW
-	}
+	vRotation := chooseRotation(s.nodes[1].direction-1, target.armDirection)
 	s.MoveRobot(move, &s.nodes[0])
 	if !inField(s.nodes[0].Point) {
 		log.Println("root:", s.nodes[0].Point, "[0]:", s.nodes[1].Point, "target:", *target)
 		log.Fatal("root is out of field", s.nodes[0].Point, move)
 	}
-
+	log.Printf("target:%+v\n", *target)
 	action = append(action, moveOptions[move]) // V0 の移動
 	// V1 ~
 	subAction := make([]byte, V-1)
@@ -524,8 +522,8 @@ func turnSolver(s *State, target *Point) []byte {
 					comb[k] = num % 3
 					num /= 3
 				}
-				if i == v {
-					comb[0] = tDir
+				if i == target.armIndex {
+					comb[0] = vRotation
 				}
 				// ここで回転
 				for k := 0; k < len(nodes); k++ {
@@ -577,7 +575,7 @@ func turnSolver(s *State, target *Point) []byte {
 					bestUnsetTarget = make([]Point, len(targetUnsetLog))
 					copy(bestUnsetTarget, targetUnsetLog)
 				}
-				if i == v {
+				if i == target.armIndex {
 					break
 				}
 			}
@@ -613,7 +611,15 @@ func turnSolver(s *State, target *Point) []byte {
 	action = append(action, subAction...)
 	action = append(action, takoAction...)
 	action = append(action, '\n')
+	log.Println("target:", *target)
 	return action
+}
+
+type Target struct {
+	Point
+	rootPos      Point
+	armIndex     int
+	armDirection int
 }
 
 func solver(in Input) {
@@ -700,8 +706,12 @@ func solver(in Input) {
 		// 初期出力
 		out := state.firstOutput()
 		// シミュレーション
-		target := &Point{-1, -1}
+		target := &Target{
+			Point:        Point{-1, -1},
+			armDirection: -1,
+		}
 		for i := 0; i < 100; i++ {
+			log.Printf("target:%+v\n", *target)
 			tout := turnSolver(&state, target)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
@@ -712,7 +722,7 @@ func solver(in Input) {
 			if minOut != nil && len(out) > len(minOut) {
 				break
 			}
-			log.Println(i, state.remainTakoyaki, string(tout[:V]), string(tout[V:len(tout)-1]), target, DistancePP(state.nodes[1].Point, *target))
+			log.Println(i, state.remainTakoyaki, string(tout[:V]), string(tout[V:len(tout)-1]), target, DistancePP(state.nodes[1].Point, target.Point))
 		}
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
