@@ -15,6 +15,14 @@ import (
 	"time"
 )
 
+// move
+// root (all fo robot) up, right, down, left, none
+// arms rotate cw, none, ccw, flip
+
+// actions
+// root noleaf  alway none
+// leaf  grip or release
+
 // rootの移動
 var dy = []int{0, -1, 0, 1, 0}
 var dx = []int{0, 0, 1, 0, -1}
@@ -29,7 +37,7 @@ const (
 
 var DirectionDict []string = []string{"None", "Up", "Right", "Down", "Left"}
 
-var moveAction = []byte{'.', 'U', 'R', 'D', 'L'}
+var moveOptions = []byte{'.', 'U', 'R', 'D', 'L'}
 
 // chooseRotation n(現在の向き)からx(目標の向き)に回転する方向を返す 1, 2:右回り, -1:左回り, 0:回転なし
 // 右回り優先
@@ -46,6 +54,7 @@ type Point struct {
 	Y, X int
 }
 
+// meanPoints はpsの平均座標を返す
 func meanPoints(ps []Point) Point {
 	var sumY, sumX int
 	for i := range ps {
@@ -100,8 +109,8 @@ const (
 	P    = 4 // grabs or releases a takoyaki "P"
 )
 
-var VAction = []byte{'.', 'R', 'L'}
-var VAction2 = []byte{'.', '?', '?', '?', 'P'}
+var rotationOptions = []byte{'.', 'R', 'L'}
+var actionOptions = []byte{'.', '?', '?', '?', 'P'}
 
 // rotate は中心を中心にdirection方向に回転する
 func (p Point) Rotate(center Point, direction int) (np Point) {
@@ -472,7 +481,7 @@ func turnSolver(s *State, target *Point) []byte {
 		log.Fatal("root is out of field", s.nodes[0].Point, move)
 	}
 
-	action = append(action, moveAction[move]) // V0 の移動
+	action = append(action, moveOptions[move]) // V0 の移動
 	// V1 ~
 	subAction := make([]byte, V-1)
 	takoAction := make([]byte, V)
@@ -579,7 +588,7 @@ func turnSolver(s *State, target *Point) []byte {
 				}
 			}
 			for j := 0; j < len(nodes); j++ {
-				subAction[nodes[j].index-1] = VAction[bestRotate[j]]
+				subAction[nodes[j].index-1] = rotationOptions[bestRotate[j]]
 				takoAction[nodes[j].index] = bestP[j]
 			}
 			for j := 0; j < len(bestUnsetTakoyaki); j++ {
