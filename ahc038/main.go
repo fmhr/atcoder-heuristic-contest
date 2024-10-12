@@ -285,7 +285,8 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 		log.Fatal("root is out of field", s.nodes[0].Point)
 	}
 	// targetが範囲外（初期化)または、たこ焼きも目的地もない場合、次のターゲットを探す
-	if !inField(s.nodes[v].Point) || !(s.s.Get(target.Y, target.X) || s.t.Get(target.Y, target.X)) {
+	//	log.Printf("target:%+v\n", target)
+	if !inField(s.nodes[v].Point) || !inField(target.Point) || !(s.s.Get(target.Y, target.X) || s.t.Get(target.Y, target.X)) {
 		length = 1000
 		// FLIPを使わない理由:
 		//  robot全体が動き続けることで、他のノードが行動できる可能性があがる(?)
@@ -705,7 +706,7 @@ func solver(in Input) {
 			Point:        Point{-1, -1},
 			armDirection: -1,
 		}
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 1000; i++ {
 			tout := turnSolver(&state, target)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
@@ -721,7 +722,7 @@ func solver(in Input) {
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
 		}
-		break // 1回だけ デバッグ
+		//break // 1回だけ デバッグ
 	}
 	fmt.Print(string(minOut))
 	log.Printf("iter=%d\n", iterations)
