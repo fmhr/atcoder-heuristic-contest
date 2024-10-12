@@ -109,7 +109,8 @@ const (
 )
 
 var rotationOptions = []byte{'.', 'R', 'L'}
-var actionOptions = []byte{'.', 'P'}
+
+//var actionOptions = []byte{'.', 'P'}
 
 // rotate は中心を中心にrotation方向に回転する
 func (p Point) Rotate(center Point, rotation int) (np Point) {
@@ -316,9 +317,7 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 			}
 			ReverseRobot(i, n, s.nodes[0].Point)
 		}
-		log.Printf("target update:%+v\n", target2)
 	} else {
-		log.Println("target keep:", target)
 		length = DistancePP(s.nodes[0].Point, target.rootPos)
 		target2 = target
 	}
@@ -360,7 +359,6 @@ func (s State) calcMoveDirection(target *Target) {
 	if miniD == 1000 {
 		panic("no target")
 	}
-	return
 }
 
 func (s State) firstOutput() []byte {
@@ -540,14 +538,14 @@ func turnSolver(s *State, target *Target) []byte {
 							takoyakiUnsetLog = append(takoyakiUnsetLog, nodes[k].Point)
 							takoPoint++
 							subP[k] = 'P'
-							log.Println("GetTakoyaki", nodes[k].index, nodes[k].Point)
+							//log.Println("GetTakoyaki", nodes[k].index, nodes[k].Point)
 						} else if nodes[k].HasTakoyaki && s.t.Get(nodes[k].Y, nodes[k].X) {
 							// ReleaseTakoyaki
 							s.t.Unset(nodes[k].Y, nodes[k].X)
 							targetUnsetLog = append(targetUnsetLog, nodes[k].Point)
 							takoPoint++
 							subP[k] = 'P'
-							log.Println("ReleaseTakoyaki", nodes[k].index, nodes[k].Point)
+							//log.Println("ReleaseTakoyaki", nodes[k].index, nodes[k].Point)
 						}
 					}
 				}
@@ -718,7 +716,7 @@ func solver(in Input) {
 			if minOut != nil && len(out) > len(minOut) {
 				break
 			}
-			log.Println(i, state.remainTakoyaki, string(tout[:V]), string(tout[V:len(tout)-1]), target, DistancePP(state.nodes[1].Point, target.Point))
+			//log.Println(i, state.remainTakoyaki, string(tout[:V]), string(tout[V:len(tout)-1]), target, DistancePP(state.nodes[1].Point, target.Point))
 		}
 		if minOut == nil || len(out) < len(minOut) {
 			minOut = out
