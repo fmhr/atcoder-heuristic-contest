@@ -234,6 +234,7 @@ func (s State) infoLength() {
 	}
 }
 
+// closestPoint pから最も近いppを探す、ただし、rootが範囲外になる場合を除く
 func (s State) closestPoint(p Point, pp []Point) (t Point) {
 	minDist := 1000
 	for i := 0; i < len(pp); i++ {
@@ -248,9 +249,6 @@ func (s State) closestPoint(p Point, pp []Point) (t Point) {
 				t.Y, t.X = target.Y, target.X
 			}
 		}
-	}
-	if minDist == 1000 {
-		panic("no target")
 	}
 	return
 }
@@ -325,8 +323,8 @@ func (s State) closetTakoyakiRenge(v int, target *Point) (move, miniD, dir int) 
 // v1の位置から最も近い設定位置を最小にする
 // vはターゲットを探す指先
 // moveは移動方向, vは次の指先, dirはvの目標方向
-func (s State) calcMoveDirection(target *Point) (move, v, dir int) {
-	v = 1
+func (s State) calcMoveDirection(target *Point) (move, v3, dir int) {
+	v := 1
 	// フィールドにたこ焼きがすでにない、たこ焼きを持っている指先がv1以外の時
 	if (s.takoyakiOnField == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() {
 		for !s.nodes[v].HasTakoyaki {
@@ -342,6 +340,7 @@ func (s State) calcMoveDirection(target *Point) (move, v, dir int) {
 			miniD = length2
 			move = move2
 			dir = dir2
+			v3 = v
 		}
 		v++
 		if miniD == 0 {
@@ -351,7 +350,7 @@ func (s State) calcMoveDirection(target *Point) (move, v, dir int) {
 	if miniD == 1000 {
 		panic("no target")
 	}
-	return move, v, dir
+	return move, v3, dir
 }
 
 func (s State) firstOutput() []byte {
@@ -460,8 +459,13 @@ func turnSolver(s *State, target *Point) []byte {
 	action := make([]byte, 0, 2*V)
 	// V0の移動
 	move, v, tDir := s.calcMoveDirection(target)
-	_ = v
-	_ = tDir
+	// nodeがもつdirectionは1,2,3,4
+	tDir = chooseRotation(s.nodes[1].direction-1, tDir)
+	if tDir > 0 {
+		tDir = CW
+	} else if tDir < 0 {
+		tDir = CCW
+	}
 	s.MoveRobot(move, &s.nodes[0])
 	if !inField(s.nodes[0].Point) {
 		log.Println("root:", s.nodes[0].Point, "[0]:", s.nodes[1].Point, "target:", *target)
@@ -511,6 +515,10 @@ func turnSolver(s *State, target *Point) []byte {
 					comb[k] = num % 3
 					num /= 3
 				}
+				if i == v {
+					comb[0] = tDir
+				}
+				// ここで回転
 				for k := 0; k < len(nodes); k++ {
 					RotateRobot(comb[k], nodes[k], nodes[k].parent.Point)
 				}
@@ -559,6 +567,9 @@ func turnSolver(s *State, target *Point) []byte {
 					copy(bestUnsetTakoyaki, takoyakiUnsetLog)
 					bestUnsetTarget = make([]Point, len(targetUnsetLog))
 					copy(bestUnsetTarget, targetUnsetLog)
+				}
+				if i == v {
+					break
 				}
 			}
 			// Update best to true
@@ -681,7 +692,7 @@ func solver(in Input) {
 		out := state.firstOutput()
 		// シミュレーション
 		target := &Point{-1, -1}
-		for i := 0; i < 50; i++ {
+		for i := 0; i < 100; i++ {
 			tout := turnSolver(&state, target)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
