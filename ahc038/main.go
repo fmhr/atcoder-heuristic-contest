@@ -283,7 +283,6 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 	if !inField(s.nodes[0].Point) {
 		log.Fatal("root is out of field", s.nodes[0].Point)
 	}
-	log.Printf("target:%+v\n", target)
 	// targetが範囲外（初期化)または、たこ焼きも目的地もない場合、次のターゲットを探す
 	if !inField(s.nodes[v].Point) || !(s.s.Get(target.Y, target.X) || s.t.Get(target.Y, target.X)) {
 		length = 1000
@@ -709,7 +708,6 @@ func solver(in Input) {
 			armDirection: -1,
 		}
 		for i := 0; i < 100; i++ {
-			log.Printf("target:%+v\n", *target)
 			tout := turnSolver(&state, target)
 			out = append(out, tout...)
 			if state.remainTakoyaki == 0 {
