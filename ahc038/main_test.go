@@ -9,12 +9,12 @@ func TestRotate(t *testing.T) {
 	center := Point{0, 0}
 
 	// 時計回り
-	p.Rotate(center, CW)
+	p = p.Rotate(center, CW)
 	if p.Y != 1 || p.X != 0 {
 		t.Fatalf("rotete error, expected(1, 0), got(%d, %d)", p.Y, p.X)
 	}
 	// 反時計回り
-	p.Rotate(center, CCW)
+	p = p.Rotate(center, CCW)
 	if p.Y != 0 || p.X != 1 {
 		t.Fatalf("rotete error, expected(0, 1), got(%d, %d)", p.Y, p.X)
 	}

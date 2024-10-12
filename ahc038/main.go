@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"math/bits"
 	"math/rand"
 	"os"
@@ -36,6 +35,7 @@ const (
 )
 
 var DirectionDict []string = []string{"None", "Up", "Right", "Down", "Left"}
+var DirectionRiverse []int = []int{None, Down, Left, Up, Right}
 
 var moveOptions = []byte{'.', 'U', 'R', 'D', 'L'}
 
@@ -150,6 +150,7 @@ type Node struct {
 	parent      *Node
 	children    []*Node
 	direction   int // 1:Up, 2:Right, 3:Down, 4:Left
+	countP      int
 }
 
 func (n Node) isLeaf() bool {
@@ -339,7 +340,7 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 func (s State) calcMoveDirection(target *Target) {
 	v := 1
 	// フィールドにたこ焼きがすでにない、たこ焼きを持っている指先がv1以外の時
-	if (s.takoyaki[onFiled] == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() {
+	if (s.takoyaki[onFiled] == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() || s.nodes[v].parent.index != 0 {
 		for !s.nodes[v].HasTakoyaki {
 			v++
 		}
@@ -554,7 +555,6 @@ func turnSolver(s *State, target *Target) []byte {
 						}
 					}
 				}
-				//log.Println(comb, takoPoint, inFieldCnt)
 				// Undo
 				for k := 0; k < len(nodes); k++ {
 					ReverseRobot(comb[k], nodes[k], nodes[k].parent.Point)
@@ -617,6 +617,9 @@ func turnSolver(s *State, target *Target) []byte {
 	}
 	for j := 0; j < V; j++ {
 		s.moveLeaf(&s.nodes[j], takoAction[j])
+		if takoAction[j] == 'P' {
+			s.nodes[j].countP++
+		}
 	}
 
 	action = append(action, subAction...)
@@ -674,20 +677,11 @@ func solver(in Input) {
 				}
 			}
 		}
-		//viewField(state.s)
-		//log.Println("----")
-		//viewField(state.t)
-		////log.Println(state.takoyakiPos)
 
 		// 初期化
 		//state.startPos = Point{0, 0} // デバッグ用
 		state.startPos.Y = rand.Intn(N)
 		state.startPos.X = rand.Intn(N)
-		//state.startPos = meanPoints[iterations%2]
-		//state.startPos.Y += rand.Intn(10) - 5
-		//state.startPos.X += rand.Intn(10) - 5
-		//state.startPos.Y = min(max(0, state.startPos.Y), N-1)
-		//state.startPos.X = min(max(0, state.startPos.X), N-1)
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
 			if i != 0 {
@@ -700,7 +694,7 @@ func solver(in Input) {
 				if i == 2 || i == 3 {
 					state.nodes[i].length = state.nodes[i].length * 2 / 3
 				}
-				if i == 3 {
+				if i == 3 || i == 4 {
 					state.nodes[i].parent = &state.nodes[2]
 				} else {
 					state.nodes[i].parent = &state.nodes[0] // root
@@ -734,15 +728,20 @@ func solver(in Input) {
 			//log.Println(i, state.remainTakoyaki, string(tout[:V]), string(tout[V:len(tout)-1]), target, DistancePP(state.nodes[1].Point, target.Point))
 		}
 		if minOut == nil || len(out) < len(minOut) {
+			ps := make([]int, V)
+			for i := 0; i < V; i++ {
+				ps[i] = state.nodes[i].countP
+			}
+			log.Println("countP", ps)
 			minOut = out
 		}
+
 		//break // 1回だけ デバッグ
 	}
 	fmt.Print(string(minOut))
 	log.Printf("iter=%d\n", iterations)
 	turn := len(strings.Split(string(minOut), "\n")) - V - 1 - 1
 	log.Printf("turn=%d\n", turn)
-	log.Printf("per=%f\n", float64(turn)*math.Sqrt(float64(V))/float64(trueM))
 }
 
 var N, M, V int
