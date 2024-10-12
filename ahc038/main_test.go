@@ -55,24 +55,24 @@ func TestStateMove(t *testing.T) {
 
 func TestChooseRotation(t *testing.T) {
 	testCases := []struct {
-		n      int
-		x      int
+		now    int
+		target int
 		expend int
 	}{
-		{0, 1, 1},
-		{1, 0, -1},
-		{2, 3, 1},
-		{0, 3, -1},
-		{3, 0, 1},
-		{1, 1, 0},
-		{2, 2, 0},
-		{0, 2, 2},
-		{1, 3, 2},
+		{1, 1, None},
+		{1, 4, CCW},
+		{2, 3, CW},
+		{1, 3, CW},
+		{3, 0, CW},
+		{2, 1, CCW},
+		{2, 2, None},
+		{0, 2, CW},
+		{1, 3, CW},
 	}
-	for _, tc := range testCases {
-		result := chooseRotation(tc.n, tc.x)
+	for i, tc := range testCases {
+		result := chooseRotation(tc.now, tc.target)
 		if result != tc.expend {
-			t.Fatalf("ChooseRotation error, expected %d, got %d", tc.expend, result)
+			t.Fatalf("case: %d ChooseRotation error, expected %d, got %d", i, tc.expend, result)
 		}
 	}
 }

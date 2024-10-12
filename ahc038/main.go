@@ -41,7 +41,11 @@ var moveOptions = []byte{'.', 'U', 'R', 'D', 'L'}
 
 // chooseRotation n(現在の向き)からx(目標の向き)に回転する方向を返す 1, 2:右回り, -1:左回り, 0:回転なし
 // 右回り優先
+// n,xはdirection 1, 2, 3, 4
 func chooseRotation(n, x int) int {
+	if n == x {
+		return None
+	}
 	rightStep := (x - n + 4) % 4
 	leftStep := (n - x + 4) % 4
 	if rightStep <= leftStep {
@@ -157,13 +161,17 @@ type State struct {
 	nodes             [15]Node
 	s                 BitArray
 	t                 BitArray
-	remainTakoyaki    int
-	takoyakiOnField   int
-	takoyakiInRobot   int
+	takoyaki          [3]int
 	relatevePositions [15][]Point // この値をrootからの相対位置
 	takoyakiPos       []Point
 	targetPos         []Point
 }
+
+const (
+	onFiled   = 0
+	onRobot   = 1
+	completed = 2
+)
 
 func (s *State) moveLeaf(node *Node, m byte) {
 	if !(m == 'P' || m == '.') {
@@ -176,15 +184,15 @@ func (s *State) moveLeaf(node *Node, m byte) {
 				node.HasTakoyaki = true
 				s.s.Unset(node.Y, node.X)
 				s.takoyakiPos = deleteItem(s.takoyakiPos, node.Point)
-				s.takoyakiInRobot++
-				s.takoyakiOnField--
+				s.takoyaki[onFiled]--
+				s.takoyaki[onRobot]++
 			} else {
 				// Put
 				node.HasTakoyaki = false
 				s.t.Unset(node.Y, node.X)
 				s.targetPos = deleteItem(s.targetPos, node.Point)
-				s.takoyakiInRobot--
-				s.remainTakoyaki--
+				s.takoyaki[onRobot]--
+				s.takoyaki[completed]++
 			}
 		}
 	}
@@ -198,9 +206,7 @@ func (src State) Clone() (clone State) {
 	clone.nodes = src.nodes
 	clone.s = src.s
 	clone.t = src.t
-	clone.remainTakoyaki = src.remainTakoyaki
-	clone.takoyakiOnField = src.takoyakiOnField
-	clone.takoyakiInRobot = src.takoyakiInRobot
+	clone.takoyaki = src.takoyaki
 
 	clone.relatevePositions = [15][]Point{}
 	for i, ps := range src.relatevePositions {
@@ -226,9 +232,7 @@ func (s *State) ResetState() {
 	}
 	s.s.Reset()
 	s.t.Reset()
-	s.remainTakoyaki = 0
-	s.takoyakiOnField = 0
-	s.takoyakiInRobot = 0
+	s.takoyaki = [3]int{}
 	for i := 0; i < 15; i++ {
 		s.relatevePositions[i] = nil
 	}
@@ -335,7 +339,7 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 func (s State) calcMoveDirection(target *Target) {
 	v := 1
 	// フィールドにたこ焼きがすでにない、たこ焼きを持っている指先がv1以外の時
-	if (s.takoyakiOnField == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() {
+	if (s.takoyaki[onFiled] == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() {
 		for !s.nodes[v].HasTakoyaki {
 			v++
 		}
@@ -562,7 +566,17 @@ func turnSolver(s *State, target *Target) []byte {
 					s.t.Set(targetUnsetLog[k].Y, targetUnsetLog[k].X)
 				}
 				// Update
-				if takoPoint > bestTakoPoint || (takoPoint == bestTakoPoint && inFieldCnt > bestInFieldCnt) {
+				var update bool
+				if takoPoint > bestTakoPoint {
+					update = true
+				} else if takoPoint == bestTakoPoint && inFieldCnt > bestInFieldCnt {
+					update = true
+				} else if takoPoint == bestTakoPoint && inFieldCnt == bestInFieldCnt {
+					if rand.Intn(3) == 0 {
+						update = true
+					}
+				}
+				if update {
 					bestTakoPoint = takoPoint
 					bestInFieldCnt = inFieldCnt
 					copy(bestRotate, comb)
@@ -647,13 +661,13 @@ func solver(in Input) {
 		for i := 0; i < in.N; i++ {
 			for j := 0; j < in.N; j++ {
 				if in.s[i][j] == '1' && in.t[i][j] == '1' {
+					state.takoyaki[completed]++
 					continue
 				} else if in.s[i][j] == '1' { // 1: たこ焼きあり
 					state.s.Set(i, j)
 					state.takoyakiPos = append(state.takoyakiPos, Point{i, j})
-					state.remainTakoyaki++
-					state.takoyakiOnField++
 					cnt++
+					state.takoyaki[onFiled]++
 				} else if in.t[i][j] == '1' {
 					state.t.Set(i, j)
 					state.targetPos = append(state.targetPos, Point{i, j})
@@ -709,7 +723,7 @@ func solver(in Input) {
 		for i := 0; i < 1000; i++ {
 			tout := turnSolver(&state, target)
 			out = append(out, tout...)
-			if state.remainTakoyaki == 0 {
+			if state.takoyaki[completed] == M {
 				log.Printf("finish turn=%d\n", i)
 				state.infoLength()
 				break
