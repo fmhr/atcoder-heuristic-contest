@@ -76,3 +76,30 @@ func TestChooseRotation(t *testing.T) {
 		}
 	}
 }
+
+func TestRotateRobot(t *testing.T) {
+	r := Node{
+		Point: Point{Y: 0, X: 0},
+	}
+	n := Node{
+		Point:     Point{Y: 0, X: 1},
+		direction: 2,
+		parent:    &r,
+		length:    1,
+	}
+	r.children = append(r.children, &n)
+	RotateRobot(CW, &n, r.Point)
+	RotateRobot(CW, &n, r.Point)
+	RotateRobot(CW, &n, r.Point)
+	RotateRobot(CW, &n, r.Point)
+	if n.direction != 2 {
+		t.Fatalf("RotateRobot error, expected 2, got %d", n.direction)
+	}
+	RotateRobot(CCW, &n, r.Point)
+	RotateRobot(CCW, &n, r.Point)
+	RotateRobot(CCW, &n, r.Point)
+	RotateRobot(CCW, &n, r.Point)
+	if n.direction != 2 {
+		t.Fatalf("RotateRobot error, expected 2, got %d", n.direction)
+	}
+}

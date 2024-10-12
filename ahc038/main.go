@@ -409,12 +409,13 @@ func RotateRobot(rotation int, node *Node, center Point) {
 	node.Point = node.Point.Rotate(center, rotation)
 	switch rotation {
 	case CW:
-		node.direction = (node.direction+1-1)%4 + 1
+		node.direction = (node.direction-1+1)%4 + 1
 	case CCW:
-		node.direction = (node.direction+3-1)%4 + 1
+		node.direction = (node.direction-1+3)%4 + 1
 	case FLIP:
-		node.direction = (node.direction+1-1)%4 + 1
-		node.direction = (node.direction+1-1)%4 + 1
+		node.direction = (node.direction-1+2)%4 + 1
+	default:
+		log.Fatal("invalid rotation")
 	}
 }
 
@@ -472,13 +473,12 @@ func turnSolver(s *State, target *Target) []byte {
 	s.calcMoveDirection(target)
 	move := DirectionPP(s.nodes[0].Point, target.rootPos)
 	// nodeがもつdirectionは1,2,3,4
-	vRotation := chooseRotation(s.nodes[1].direction-1, target.armDirection)
+	vRotation := chooseRotation(s.nodes[1].direction, target.armDirection)
 	s.MoveRobot(move, &s.nodes[0])
 	if !inField(s.nodes[0].Point) {
 		log.Println("root:", s.nodes[0].Point, "[0]:", s.nodes[1].Point, "target:", *target)
 		log.Fatal("root is out of field", s.nodes[0].Point, move)
 	}
-	log.Printf("target:%+v\n", *target)
 	action = append(action, moveOptions[move]) // V0 の移動
 	// V1 ~
 	subAction := make([]byte, V-1)
@@ -486,7 +486,6 @@ func turnSolver(s *State, target *Target) []byte {
 	takoAction[0] = '.'
 	nodeLocked := make([]bool, V)
 	nodeLocked[0] = true
-	log.Printf("%+v %+v\n", s.nodes[0].Point, s.nodes[1])
 	for i := 1; i < V; i++ {
 		if s.nodes[i].parent == &s.nodes[0] {
 			nodes := make([]*Node, 0, 4)
@@ -611,7 +610,6 @@ func turnSolver(s *State, target *Target) []byte {
 	action = append(action, subAction...)
 	action = append(action, takoAction...)
 	action = append(action, '\n')
-	log.Println("target:", *target)
 	return action
 }
 
