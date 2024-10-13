@@ -166,6 +166,39 @@ func pathToRoot(n *Node) (path []*Node) {
 	return
 }
 
+// 初期状態のStateを最小限の情報で生成する
+type InitialData struct {
+	startPos    Point
+	length      [15]int
+	parentIndex [15]int
+}
+
+func NewInitialData() (data InitialData) {
+	data = InitialData{}
+	data.startPos = Point{rand.Intn(N), rand.Intn(N)}
+	for i := 0; i < V; i++ {
+		if i == 0 {
+			data.length[i] = 0
+		}
+		data.length[i] = rand.Intn(N/2) + 1
+	}
+	for i := 0; i < V; i++ {
+		switch i {
+		case 0:
+			data.parentIndex[i] = -1
+		case 1, 2, 3, 6, 10:
+			data.parentIndex[i] = 0
+		case 4, 5:
+			data.parentIndex[i] = 3
+		case 7, 8, 9:
+			data.parentIndex[i] = 6
+		case 11, 12, 13, 14:
+			data.parentIndex[i] = 10
+		}
+	}
+	return
+}
+
 type State struct {
 	startPos          Point
 	nodes             [15]*Node
@@ -209,7 +242,7 @@ func NewState(in Input) (state State) {
 		}
 	}
 	// 初期化
-	//state.startPos = Point{0, 0} // デバッグ用
+	state.startPos = Point{0, 0} // デバッグ用
 	state.startPos.Y = rand.Intn(N)
 	state.startPos.X = rand.Intn(N)
 
@@ -237,8 +270,26 @@ func NewState(in Input) (state State) {
 			state.nodes[i].direction = Right // 親から見て右に位置する
 		}
 	}
-
+	//state.SetInitialData(NewInitialData())
 	return state
+}
+
+func (s *State) SetInitialData(data InitialData) {
+	s.startPos = data.startPos
+	for i := 0; i < V; i++ {
+		s.nodes[i].length = data.length[i]
+		s.nodes[i].index = i
+		if i == 0 {
+			s.nodes[i].Point = s.startPos
+		}
+		if data.parentIndex[i] != -1 {
+			s.nodes[i].parent = s.nodes[data.parentIndex[i]]
+			s.nodes[data.parentIndex[i]].children = append(s.nodes[data.parentIndex[i]].children, s.nodes[i])
+			s.nodes[i].Point.Y = s.nodes[i].parent.Point.Y
+			s.nodes[i].Point.X = s.nodes[i].parent.Point.X + s.nodes[i].length
+			s.nodes[i].direction = Right
+		}
+	}
 }
 
 func (s *State) moveLeaf(node *Node, m byte) {
