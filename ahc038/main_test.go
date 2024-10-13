@@ -130,3 +130,32 @@ func TestFindMthCombinatind(t *testing.T) {
 		t.Logf("result: %v", result)
 	}
 }
+
+func TestPathToRoot(t *testing.T) {
+	var s State
+	s.nodes[0].Point = Point{Y: 1, X: 1}
+	s.nodes[0].index = 0
+	// node0 -> node1
+	s.nodes[1].Point = Point{Y: 1, X: 2}
+	s.nodes[1].index = 1
+	s.nodes[1].parent = &s.nodes[0]
+	s.nodes[0].children = append(s.nodes[0].children, &s.nodes[1])
+	// node1 -> node2
+	s.nodes[2].Point = Point{Y: 2, X: 5}
+	s.nodes[2].index = 2
+	s.nodes[2].parent = &s.nodes[1]
+	s.nodes[1].children = append(s.nodes[1].children, &s.nodes[2])
+	// node0 -> node3
+	s.nodes[3].Point = Point{Y: 3, X: 5}
+	s.nodes[3].index = 3
+	s.nodes[3].parent = &s.nodes[0]
+	s.nodes[0].children = append(s.nodes[0].children, &s.nodes[3])
+
+	path := pathToRoot(&s.nodes[2])
+	expected := []int{2, 1, 0}
+	for i, v := range path {
+		if v.index != expected[i] {
+			t.Fatalf("PathToRoot error, expected %v, got %v", expected, path)
+		}
+	}
+}

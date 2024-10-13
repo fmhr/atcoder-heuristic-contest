@@ -157,6 +157,15 @@ func (n Node) isLeaf() bool {
 	return len(n.children) == 0
 }
 
+func pathToRoot(n *Node) (path []*Node) {
+	path = append(path, n)
+	for n.parent.index != 0 {
+		path = append(path, n.parent)
+		n = n.parent
+	}
+	return
+}
+
 type State struct {
 	startPos          Point
 	nodes             [15]Node
@@ -294,43 +303,46 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 	//	log.Printf("target:%+v\n", target)
 	if !inField(s.nodes[v].Point) || !inField(target.Point) || !(s.s.Get(target.Y, target.X) || s.t.Get(target.Y, target.X)) {
 		length = 1000
-		// TODO
-		n := &s.nodes[v]
+		// n := &s.nodes[v]
 		// i, 0:None, 1:CW, 2:CCW, 3:FLIP
-		log.Println(s.relatevePositions[v])
-		for i := 0; i < 4; i++ {
+		log.Printf("node[v]:%+v\n", s.nodes[v])
+		for d, m := range s.relatevePositions[v] {
 			var dist int
 			root := s.nodes[0].Point
-			RotateRobot(i, n, s.nodes[0].Point)
-			log.Printf("i:%d %+v\n", i, n)
-			log.Printf("relateve:%d %d\n", s.relatevePositions[v][i].Y-s.nodes[0].Point.Y, s.relatevePositions[v][i].X-s.nodes[0].Point.X)
+			//log.Printf("i:%d %+v\n", i, n)
+			//log.Printf("relateve:%d %d\n", s.relatevePositions[v][i].Y+s.nodes[0].Point.Y, s.relatevePositions[v][i].X+s.nodes[0].Point.X)
+			m.Y += s.nodes[0].Point.Y
+			m.X += s.nodes[0].Point.X
 			var closest Point
-			if !n.HasTakoyaki {
-				closest, dist = s.closestPoint(n.Point, s.takoyakiPos)
+			if !s.nodes[v].HasTakoyaki {
+				log.Println("root", root, "v", s.nodes[v].Point, "m", m)
+				log.Println("takoyaki", s.takoyakiPos)
+				closest, dist = s.closestPoint(m, s.takoyakiPos)
 			} else {
-				closest, dist = s.closestPoint(n.Point, s.targetPos)
+				closest, dist = s.closestPoint(m, s.targetPos)
 			}
+			log.Println(closest, dist)
 			if dist == 1000 {
-				ReverseRobot(i, n, s.nodes[0].Point)
 				continue
 			}
-			root.Y += closest.Y - n.Point.Y
-			root.X += closest.X - n.Point.X
+			root.Y += closest.Y - m.Y
+			root.X += closest.X - m.X
 			if inField(root) {
-				dis := DistancePP(n.Point, closest)
-				if i == 3 {
+				dis := DistancePP(m, closest)
+				// FLIP
+				if s.nodes[v].Y == m.Y || s.nodes[v].X == m.X {
 					dis++
 				}
 				if dis < length {
+					dir := findMthCombinatin([]int{1, 2, 3, 4}, len(s.relatevePositions[v]), d)
 					// update
 					length = dis
 					target2.Point = closest
 					target2.rootPos = root
 					target2.armIndex = v
-					target2.armDirection = n.direction
+					target2.armDirections = dir
 				}
 			}
-			ReverseRobot(i, n, s.nodes[0].Point)
 		}
 		log.Printf("target new:%+v length:%d\n", target2, length)
 	} else {
@@ -350,30 +362,38 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 // moveは移動方向, vは次の指先, dirはvの目標方向
 func (s State) calcMoveDirection(target *Target) {
 	v := 1
+RETRY:
 	// フィールドにたこ焼きがすでにない、たこ焼きを持っている指先がv1以外の時
-	for (s.takoyaki[onFiled] == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() || s.nodes[v].parent.index != 0 {
+	for (s.takoyaki[onFiled] == 0 && !s.nodes[v].HasTakoyaki) || !s.nodes[v].isLeaf() {
 		v++
 		if v >= len(s.nodes) {
-			log.Println("v:", v)
 			log.Printf("v:%d %+v\n", v, s.takoyaki)
-			log.Printf("%+v\n", s.nodes[3].HasTakoyaki)
+			log.Printf("%+v\n", s.takoyaki)
 			panic("no valid node found")
 		}
 	}
 	miniD := 1000
-	log.Println("v:", v)
+	//log.Println("v:", v)
 	length, newTarget := s.closetTakoyakiRenge(v, *target)
 	if length < miniD {
 		miniD = length
 		target.Point = newTarget.Point
 		target.rootPos = newTarget.rootPos
 		target.armIndex = newTarget.armIndex
-		target.armDirection = newTarget.armDirection
+		target.armDirections = newTarget.armDirections
 	}
 	if miniD == 1000 {
+		log.Printf("target:%+v\n", *target)
 		log.Printf("v:%d %+v\n", v, s.takoyaki)
-		log.Printf("%+v\n", s.nodes[v].isLeaf())
-		panic("no target")
+		// アームが長すぎてどこからも取れない場合がある
+		// このとき、アームがたこ焼きを持っている場合、適当な場所におくしかない todo
+		if s.nodes[v].HasTakoyaki {
+
+			panic("no valid target found")
+		}
+		v++
+		goto RETRY
+		//panic("no valid target found")
 	}
 }
 
@@ -486,7 +506,23 @@ func turnSolver(s *State, target *Target) []byte {
 	s.calcMoveDirection(target)
 	move := DirectionPP(s.nodes[0].Point, target.rootPos)
 	// nodeがもつdirectionは1,2,3,4
-	vRotation := chooseRotation(s.nodes[target.armIndex].direction, target.armDirection)
+	// targetをつかむためのarmから、rootまでのpathを取得
+	// vpathのNodeはここのvrotationで固定する
+	vpath := pathToRoot(&s.nodes[target.armIndex])
+	// path上のarmがどう動くべきかを決める
+	vrotation := make([]int, len(vpath))
+	for i := 0; i < len(vpath); i++ {
+		vrotation[i] = chooseRotation(s.nodes[vpath[i].index].direction, target.armDirections[i])
+	}
+	var lockedNode [15]bool
+	var lockedNodeRotation [15]int
+	for i := 0; i < len(vpath); i++ {
+		lockedNode[vpath[i].index] = true
+		lockedNodeRotation[vpath[i].index] = vrotation[i]
+	}
+	//log.Println("vpath:", vpath)
+	//log.Println("vrotation:", vrotation)
+	//log.Println("lockedNodeRotation:", lockedNodeRotation)
 	s.MoveRobot(move, &s.nodes[0])
 	if !inField(s.nodes[0].Point) {
 		log.Println("root:", s.nodes[0].Point, "[0]:", s.nodes[1].Point, "target:", *target)
@@ -534,8 +570,10 @@ func turnSolver(s *State, target *Target) []byte {
 					comb[k] = num % 3
 					num /= 3
 				}
-				if i == target.armIndex {
-					comb[0] = vRotation
+				for k := 0; k < len(nodes); k++ {
+					if lockedNode[nodes[k].index] {
+						comb[k] = lockedNodeRotation[nodes[k].index]
+					}
 				}
 				// ここで回転
 				for k := 0; k < len(nodes); k++ {
@@ -631,12 +669,12 @@ func turnSolver(s *State, target *Target) []byte {
 			s.nodes[j].countP++
 		}
 	}
-	log.Printf("target:%+v\n", *target)
-	log.Printf("v:%d\n", target.armIndex)
-	log.Printf("node[v]:%+v\n", s.nodes[target.armIndex])
-	log.Printf("node[v] action:%+v %+v\n", string(subAction[target.armIndex-1]), string(takoAction[target.armIndex]))
-	log.Printf("node[v] parent.index:%d\n", s.nodes[target.armIndex].parent.index)
-	log.Printf("root:%+v\n", s.nodes[0].Point)
+	//log.Printf("target:%+v\n", *target)
+	//log.Printf("v:%d\n", target.armIndex)
+	//log.Printf("node[v]:%+v\n", s.nodes[target.armIndex])
+	//log.Printf("node[v] action:%+v %+v\n", string(subAction[target.armIndex-1]), string(takoAction[target.armIndex]))
+	//log.Printf("node[v] parent.index:%d\n", s.nodes[target.armIndex].parent.index)
+	//log.Printf("root:%+v\n", s.nodes[0].Point)
 
 	action = append(action, subAction...)
 	action = append(action, takoAction...)
@@ -646,9 +684,16 @@ func turnSolver(s *State, target *Target) []byte {
 
 type Target struct {
 	Point
-	rootPos      Point
-	armIndex     int
-	armDirection int
+	rootPos       Point
+	armIndex      int
+	armDirections []int
+}
+
+func (t *Target) reset() {
+	t.Point = Point{-1, -1}
+	t.rootPos = Point{-1, -1}
+	t.armIndex = -1
+	t.armDirections = nil
 }
 
 func solver(in Input) {
@@ -671,6 +716,7 @@ func solver(in Input) {
 	iterations := 0
 	var minOut []byte
 	for elapsed := time.Since(startTime); elapsed < timeLimit; elapsed = time.Since(startTime) {
+		//for {
 		iterations++
 		//	if iterations == 2000 {
 		//		break
@@ -701,7 +747,7 @@ func solver(in Input) {
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
 			if i != 0 {
-				state.nodes[i].length = rand.Intn(N/2) + N/6
+				state.nodes[i].length = rand.Intn(N / 2)
 			}
 			state.nodes[i].HasTakoyaki = false
 			if i == 0 {
@@ -730,8 +776,8 @@ func solver(in Input) {
 		out := state.firstOutput()
 		// シミュレーション
 		target := &Target{
-			Point:        Point{-1, -1},
-			armDirection: -1,
+			Point:         Point{-1, -1},
+			armDirections: []int{-1},
 		}
 		for i := 0; i < 1000; i++ {
 			tout := turnSolver(&state, target)
@@ -756,8 +802,7 @@ func solver(in Input) {
 			log.Println("countP", ps)
 			minOut = out
 		}
-
-		break // 1回だけ デバッグ
+		//break // 1回だけ デバッグ
 	}
 	fmt.Print(string(minOut))
 	log.Printf("iter=%d\n", iterations)
