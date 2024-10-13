@@ -168,7 +168,7 @@ func pathToRoot(n *Node) (path []*Node) {
 
 type State struct {
 	startPos          Point
-	nodes             [15]Node
+	nodes             [15]*Node
 	s                 BitArray
 	t                 BitArray
 	takoyaki          [3]int
@@ -185,7 +185,7 @@ const (
 
 func NewState(in Input) (state State) {
 	for i := 0; i < 15; i++ {
-		state.nodes[i].index = -1
+		state.nodes[i] = &Node{index: -1}
 	}
 	for i := 0; i < in.N; i++ {
 		for j := 0; j < in.N; j++ {
@@ -206,6 +206,31 @@ func NewState(in Input) (state State) {
 	//state.startPos = Point{0, 0} // デバッグ用
 	state.startPos.Y = rand.Intn(N)
 	state.startPos.X = rand.Intn(N)
+
+	for i := 0; i < V; i++ {
+		state.nodes[i].index = i
+		if i == 0 {
+			// root node
+			state.nodes[i].Point = state.startPos
+		} else {
+			// lengthの上書き
+			state.nodes[i].length = rand.Intn(N/2) + rand.Intn(N/6) + 1
+			// i=3をi=2につなげる
+			if i == 2 || i == 3 {
+				state.nodes[i].length = state.nodes[i].length * 2 / 3
+			}
+			if i == 3 {
+				state.nodes[i].parent = state.nodes[2]
+			} else {
+				state.nodes[i].parent = state.nodes[0] // root
+			}
+			p := state.nodes[i].parent
+			p.children = append(p.children, state.nodes[i])
+			state.nodes[i].Point.Y = state.nodes[i].parent.Point.Y
+			state.nodes[i].Point.X = state.nodes[i].parent.Point.X + state.nodes[i].length
+			state.nodes[i].direction = Right // 親から見て右に位置する
+		}
+	}
 
 	return state
 }
@@ -265,7 +290,7 @@ func (src State) Clone() (clone State) {
 func (s *State) ResetState() {
 	s.startPos = Point{0, 0}
 	for i := 0; i < 15; i++ {
-		s.nodes[i] = Node{}
+		s.nodes[i] = &Node{}
 	}
 	s.s.Reset()
 	s.t.Reset()
@@ -540,7 +565,7 @@ func turnSolver(s *State, target *Target) []byte {
 	// nodeがもつdirectionは1,2,3,4
 	// targetをつかむためのarmから、rootまでのpathを取得
 	// vpathのNodeはここのvrotationで固定する
-	vpath := pathToRoot(&s.nodes[target.armIndex])
+	vpath := pathToRoot(s.nodes[target.armIndex])
 	// path上のarmがどう動くべきかを決める
 	vrotation := make([]int, len(vpath))
 	for i := 0; i < len(vpath); i++ {
@@ -555,7 +580,7 @@ func turnSolver(s *State, target *Target) []byte {
 	//log.Println("vpath:", vpath)
 	//log.Println("vrotation:", vrotation)
 	//log.Println("lockedNodeRotation:", lockedNodeRotation)
-	s.MoveRobot(move, &s.nodes[0])
+	s.MoveRobot(move, s.nodes[0])
 	if !inField(s.nodes[0].Point) {
 		log.Println("root:", s.nodes[0].Point, "[0]:", s.nodes[1].Point, "target:", *target)
 		log.Fatal("root is out of field", s.nodes[0].Point, move)
@@ -568,10 +593,10 @@ func turnSolver(s *State, target *Target) []byte {
 	nodeLocked := make([]bool, V)
 	nodeLocked[0] = true
 	for i := 1; i < V; i++ {
-		if s.nodes[i].parent == &s.nodes[0] {
+		if s.nodes[i].parent == s.nodes[0] {
 			nodes := make([]*Node, 0, 4)
 			sub := make([]*Node, 0, 4)
-			sub = append(sub, &s.nodes[i])
+			sub = append(sub, s.nodes[i])
 			for len(sub) > 0 {
 				n := sub[0]
 				sub = sub[1:]
@@ -693,10 +718,10 @@ func turnSolver(s *State, target *Target) []byte {
 	// 適応
 	// V0の移動は適応済み
 	for j := 0; j < V-1; j++ {
-		RotateRobot2(subAction[j], &s.nodes[j+1], s.nodes[j+1].parent.Point)
+		RotateRobot2(subAction[j], s.nodes[j+1], s.nodes[j+1].parent.Point)
 	}
 	for j := 0; j < V; j++ {
-		s.moveLeaf(&s.nodes[j], takoAction[j])
+		s.moveLeaf(s.nodes[j], takoAction[j])
 		if takoAction[j] == 'P' {
 			s.nodes[j].countP++
 		}
@@ -747,31 +772,6 @@ func solver(in Input) {
 		//		break
 		//	}
 		state := NewState(in)
-
-		for i := 0; i < V; i++ {
-			state.nodes[i].index = i
-			if i == 0 {
-				// root node
-				state.nodes[i].Point = state.startPos
-			} else {
-				// lengthの上書き
-				state.nodes[i].length = rand.Intn(N/2) + rand.Intn(N/6) + 1
-				// i=3をi=2につなげる
-				if i == 2 || i == 3 {
-					state.nodes[i].length = state.nodes[i].length * 2 / 3
-				}
-				if i == 3 {
-					state.nodes[i].parent = &state.nodes[2]
-				} else {
-					state.nodes[i].parent = &state.nodes[0] // root
-				}
-				p := state.nodes[i].parent
-				p.children = append(p.children, &state.nodes[i])
-				state.nodes[i].Point.Y = state.nodes[i].parent.Point.Y
-				state.nodes[i].Point.X = state.nodes[i].parent.Point.X + state.nodes[i].length
-				state.nodes[i].direction = Right // 親から見て右に位置する
-			}
-		}
 		state.calcRelatevePosition()
 		// 初期出力
 		out := state.firstOutput()
