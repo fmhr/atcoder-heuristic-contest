@@ -305,7 +305,7 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 		length = 1000
 		// n := &s.nodes[v]
 		// i, 0:None, 1:CW, 2:CCW, 3:FLIP
-		log.Printf("node[v]:%+v\n", s.nodes[v])
+		//log.Printf("node[v]:%+v\n", s.nodes[v])
 		for d, m := range s.relatevePositions[v] {
 			var dist int
 			root := s.nodes[0].Point
@@ -315,13 +315,12 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 			m.X += s.nodes[0].Point.X
 			var closest Point
 			if !s.nodes[v].HasTakoyaki {
-				log.Println("root", root, "v", s.nodes[v].Point, "m", m)
-				log.Println("takoyaki", s.takoyakiPos)
+				//log.Println("root", root, "v", s.nodes[v].Point, "m", m)
+				//log.Println("takoyaki", s.takoyakiPos)
 				closest, dist = s.closestPoint(m, s.takoyakiPos)
 			} else {
 				closest, dist = s.closestPoint(m, s.targetPos)
 			}
-			log.Println(closest, dist)
 			if dist == 1000 {
 				continue
 			}
@@ -344,7 +343,7 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 				}
 			}
 		}
-		log.Printf("target new:%+v length:%d\n", target2, length)
+		//log.Printf("target new:%+v length:%d\n", target2, length)
 	} else {
 		length = DistancePP(s.nodes[0].Point, target.rootPos)
 		target2 = target
@@ -369,6 +368,9 @@ RETRY:
 		if v >= len(s.nodes) {
 			log.Printf("v:%d %+v\n", v, s.takoyaki)
 			log.Printf("%+v\n", s.takoyaki)
+			for i := 0; i < V; i++ {
+				log.Printf("%d %+v\n", i, s.nodes[i])
+			}
 			panic("no valid node found")
 		}
 	}
@@ -394,9 +396,10 @@ RETRY:
 			target.armDirections = []int{}
 			target.armDirections = append(target.armDirections, s.nodes[v].direction)
 			//panic("no valid target found")
+		} else {
+			v++
+			goto RETRY
 		}
-		v++
-		goto RETRY
 		//panic("no valid target found")
 	}
 }
@@ -756,6 +759,7 @@ func solver(in Input) {
 			state.nodes[i].HasTakoyaki = false
 			if i == 0 {
 				state.nodes[i].Point = state.startPos
+				state.nodes[i].length = rand.Intn(N/3) + 1
 			} else {
 				// lengthの上書き
 				if i == 2 || i == 3 {
@@ -967,11 +971,4 @@ func findMthCombinatin(options []int, length, m int) []int {
 		m /= n
 	}
 	return result
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
