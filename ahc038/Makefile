@@ -39,7 +39,7 @@ test:
 SEED ?= 0
 
 # NUMを4桁にゼロパディングするための変数
-PADDING_NUM := $(shell printf "%04d" $(NUM))
+PADDING_NUM := $(shell printf "%04d" $(SEED))
 
 # Goのプログラムを実行してCPUプロファイルを作成し、結果を出力
 run_go:

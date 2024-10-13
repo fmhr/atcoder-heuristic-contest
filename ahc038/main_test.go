@@ -68,6 +68,7 @@ func TestChooseRotation(t *testing.T) {
 		{2, 2, None},
 		{0, 2, CW},
 		{1, 3, CW},
+		{3, 4, CW},
 	}
 	for i, tc := range testCases {
 		result := chooseRotation(tc.now, tc.target)
