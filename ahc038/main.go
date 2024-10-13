@@ -214,14 +214,13 @@ func NewState(in Input) (state State) {
 			state.nodes[i].Point = state.startPos
 		} else {
 			// lengthの上書き
-			state.nodes[i].length = rand.Intn(N/2) + rand.Intn(N/6) + 1
-			if V > 5 && (i == 4 || i == 5) {
+			state.nodes[i].length = rand.Intn(N/2) + 1
+			if i == 4 || i == 5 {
 				state.nodes[i].parent = state.nodes[3]
-			} else if V > 9 && (i == 7 || i == 8 || i == 9) {
+			} else if i == 7 || i == 8 || i == 9 {
 				state.nodes[i].parent = state.nodes[6]
-			} else if V > 13 && (i == 11 || i == 12 || i == 13) {
+			} else if i > 10 {
 				state.nodes[i].parent = state.nodes[10]
-
 			} else {
 				state.nodes[i].parent = state.nodes[0] // root
 			}
@@ -777,12 +776,15 @@ func solver(in Input) {
 		}
 		if minOut == nil || len(out) < len(minOut) {
 			ps := make([]int, V)
+			length := make([]int, V)
 			for i := 0; i < V; i++ {
 				ps[i] = state.nodes[i].countP
+				length[i] = state.nodes[i].length
 			}
 			for i := 0; i < V; i++ {
 				ps[i] = ps[i] / 2
 			}
+			log.Println("length", length)
 			log.Println("countP", ps)
 			minOut = out
 		}
