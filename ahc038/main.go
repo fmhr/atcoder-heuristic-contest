@@ -696,13 +696,6 @@ type Target struct {
 	armDirections []int
 }
 
-func (t *Target) reset() {
-	t.Point = Point{-1, -1}
-	t.rootPos = Point{-1, -1}
-	t.armIndex = -1
-	t.armDirections = nil
-}
-
 func solver(in Input) {
 	takoyakiPos := make([]Point, 0, 45)
 	targetPos := make([]Point, 0, 45)
@@ -753,22 +746,18 @@ func solver(in Input) {
 		state.startPos.X = rand.Intn(N)
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
-			if i != 0 {
-				state.nodes[i].length = rand.Intn(N/2) + rand.Intn(N/6) + 1
-			}
-			state.nodes[i].HasTakoyaki = false
 			if i == 0 {
+				// root node
 				state.nodes[i].Point = state.startPos
-				state.nodes[i].length = rand.Intn(N/3) + 1
 			} else {
 				// lengthの上書き
+				state.nodes[i].length = rand.Intn(N/2) + rand.Intn(N/6) + 1
+				// i=3をi=2につなげる
 				if i == 2 || i == 3 {
 					state.nodes[i].length = state.nodes[i].length * 2 / 3
 				}
 				if i == 3 {
 					state.nodes[i].parent = &state.nodes[2]
-					//} else if i == 4 {
-					//state.nodes[i].parent = &state.nodes[3]
 				} else {
 					state.nodes[i].parent = &state.nodes[0] // root
 				}
@@ -950,13 +939,6 @@ func abs(a int) int {
 		return -a
 	}
 	return a
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // findMthCombinatin はm番目の組み合わせが、optionsの中でどれかを復元して返す
