@@ -183,6 +183,33 @@ const (
 	completed = 2
 )
 
+func NewState(in Input) (state State) {
+	for i := 0; i < 15; i++ {
+		state.nodes[i].index = -1
+	}
+	for i := 0; i < in.N; i++ {
+		for j := 0; j < in.N; j++ {
+			if in.s[i][j] == '1' && in.t[i][j] == '1' {
+				state.takoyaki[completed]++
+				continue
+			} else if in.s[i][j] == '1' { // 1: たこ焼きあり
+				state.s.Set(i, j)
+				state.takoyakiPos = append(state.takoyakiPos, Point{i, j})
+				state.takoyaki[onFiled]++
+			} else if in.t[i][j] == '1' {
+				state.t.Set(i, j)
+				state.targetPos = append(state.targetPos, Point{i, j})
+			}
+		}
+	}
+	// 初期化
+	//state.startPos = Point{0, 0} // デバッグ用
+	state.startPos.Y = rand.Intn(N)
+	state.startPos.X = rand.Intn(N)
+
+	return state
+}
+
 func (s *State) moveLeaf(node *Node, m byte) {
 	if !(m == 'P' || m == '.') {
 		panic("invalid move")
@@ -415,9 +442,7 @@ func (s State) firstOutput() []byte {
 }
 
 func newState() (s State) {
-	for i := 0; i < 15; i++ {
-		s.nodes[i].index = -1
-	}
+
 	return
 }
 
@@ -721,29 +746,8 @@ func solver(in Input) {
 		//	if iterations == 2000 {
 		//		break
 		//	}
-		state := newState()
-		cnt := 0
-		for i := 0; i < in.N; i++ {
-			for j := 0; j < in.N; j++ {
-				if in.s[i][j] == '1' && in.t[i][j] == '1' {
-					state.takoyaki[completed]++
-					continue
-				} else if in.s[i][j] == '1' { // 1: たこ焼きあり
-					state.s.Set(i, j)
-					state.takoyakiPos = append(state.takoyakiPos, Point{i, j})
-					cnt++
-					state.takoyaki[onFiled]++
-				} else if in.t[i][j] == '1' {
-					state.t.Set(i, j)
-					state.targetPos = append(state.targetPos, Point{i, j})
-				}
-			}
-		}
+		state := NewState(in)
 
-		// 初期化
-		//state.startPos = Point{0, 0} // デバッグ用
-		state.startPos.Y = rand.Intn(N)
-		state.startPos.X = rand.Intn(N)
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
 			if i == 0 {
