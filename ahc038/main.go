@@ -388,8 +388,12 @@ RETRY:
 		// アームが長すぎてどこからも取れない場合がある
 		// このとき、アームがたこ焼きを持っている場合、適当な場所におくしかない todo
 		if s.nodes[v].HasTakoyaki {
-
-			panic("no valid target found")
+			target.Point = s.nodes[v].Point
+			target.rootPos = s.nodes[0].Point
+			target.armIndex = v
+			target.armDirections = []int{}
+			target.armDirections = append(target.armDirections, s.nodes[v].direction)
+			//panic("no valid target found")
 		}
 		v++
 		goto RETRY
@@ -747,7 +751,7 @@ func solver(in Input) {
 		for i := 0; i < V; i++ {
 			state.nodes[i].index = i
 			if i != 0 {
-				state.nodes[i].length = rand.Intn(N / 2)
+				state.nodes[i].length = rand.Intn(N/2) + rand.Intn(N/6) + 1
 			}
 			state.nodes[i].HasTakoyaki = false
 			if i == 0 {
@@ -963,4 +967,11 @@ func findMthCombinatin(options []int, length, m int) []int {
 		m /= n
 	}
 	return result
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
