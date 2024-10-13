@@ -215,11 +215,11 @@ func NewState(in Input) (state State) {
 		} else {
 			// lengthの上書き
 			state.nodes[i].length = rand.Intn(N/2) + rand.Intn(N/6) + 1
-			if i == 4 || i == 5 {
+			if V > 5 && (i == 4 || i == 5) {
 				state.nodes[i].parent = state.nodes[3]
-			} else if i == 7 || i == 8 || i == 9 {
+			} else if V > 9 && (i == 7 || i == 8 || i == 9) {
 				state.nodes[i].parent = state.nodes[6]
-			} else if i == 11 || i == 12 || i == 13 {
+			} else if V > 13 && (i == 11 || i == 12 || i == 13) {
 				state.nodes[i].parent = state.nodes[10]
 
 			} else {
