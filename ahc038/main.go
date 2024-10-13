@@ -215,12 +215,13 @@ func NewState(in Input) (state State) {
 		} else {
 			// lengthの上書き
 			state.nodes[i].length = rand.Intn(N/2) + rand.Intn(N/6) + 1
-			// i=3をi=2につなげる
-			if i == 2 || i == 3 {
-				state.nodes[i].length = state.nodes[i].length * 2 / 3
-			}
-			if i == 3 {
-				state.nodes[i].parent = state.nodes[2]
+			if i == 4 || i == 5 {
+				state.nodes[i].parent = state.nodes[3]
+			} else if i == 7 || i == 8 || i == 9 {
+				state.nodes[i].parent = state.nodes[6]
+			} else if i == 11 || i == 12 || i == 13 {
+				state.nodes[i].parent = state.nodes[10]
+
 			} else {
 				state.nodes[i].parent = state.nodes[0] // root
 			}
@@ -534,24 +535,6 @@ func ReverseRobot(direction int, node *Node, center Point) {
 	// FLIPの場合はそのまま１80度回転
 	RotateRobot(direction, node, center)
 }
-
-// 状態
-// フィールドにたこ焼きがある
-//   たこ焼きを持っている
-//    持っているたこ焼きを置きにいく
-//      この時持っているロボットがi=1とは限らない
-//   たこ焼きを持っていない
-//    たこ焼きを取りに行く
-//       どのアームで撮りに行くのが最適かわからない
-// フィールドにたこ焼きがない
-//   たこ焼きを持っている
-//     たこ焼きを置きに行く
-//   たこ焼きを持っていない
-//     終了
-
-// 状態評価
-//  アームが４方向すべべての方向にあるとして考える？
-//  どうすれば、たこ焼きを最短で取りに行けるか？
 
 // rootの位置に評価をつける
 //  x,またはyの位置が一致しているたこ焼きの数
