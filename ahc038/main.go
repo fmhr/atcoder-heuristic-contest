@@ -303,6 +303,7 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 			root := s.nodes[0].Point
 			RotateRobot(i, n, s.nodes[0].Point)
 			log.Printf("i:%d %+v\n", i, n)
+			log.Printf("relateve:%d %d\n", s.relatevePositions[v][i].Y-s.nodes[0].Point.Y, s.relatevePositions[v][i].X-s.nodes[0].Point.X)
 			var closest Point
 			if !n.HasTakoyaki {
 				closest, dist = s.closestPoint(n.Point, s.takoyakiPos)
