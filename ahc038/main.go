@@ -268,6 +268,7 @@ func (s State) closestPoint(p Point, pp []Point) (t Point, minDist int) {
 }
 
 // ロボットアームの指先が取りうる位置を計算する
+// parentは先に計算されている必要がある
 func (s *State) calcRelatevePosition() {
 	for i := 0; i < V; i++ {
 		if s.nodes[i].parent == nil { // root
@@ -293,14 +294,15 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 	//	log.Printf("target:%+v\n", target)
 	if !inField(s.nodes[v].Point) || !inField(target.Point) || !(s.s.Get(target.Y, target.X) || s.t.Get(target.Y, target.X)) {
 		length = 1000
-		// FLIPを使わない理由:
-		//  robot全体が動き続けることで、他のノードが行動できる可能性があがる(?)
+		// TODO
 		n := &s.nodes[v]
 		// i, 0:None, 1:CW, 2:CCW, 3:FLIP
+		log.Println(s.relatevePositions[v])
 		for i := 0; i < 4; i++ {
 			var dist int
 			root := s.nodes[0].Point
 			RotateRobot(i, n, s.nodes[0].Point)
+			log.Printf("i:%d %+v\n", i, n)
 			var closest Point
 			if !n.HasTakoyaki {
 				closest, dist = s.closestPoint(n.Point, s.takoyakiPos)
@@ -319,6 +321,7 @@ func (s State) closetTakoyakiRenge(v int, target Target) (length int, target2 Ta
 					dis++
 				}
 				if dis < length {
+					// update
 					length = dis
 					target2.Point = closest
 					target2.rootPos = root
@@ -900,4 +903,18 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// findMthCombinatin はm番目の組み合わせが、optionsの中でどれかを復元して返す
+// options = [1,2.3.4]
+func findMthCombinatin(options []int, length, m int) []int {
+	n := len(options)
+	var result []int
+
+	for i := 0; i < length; i++ {
+		index := m % n
+		result = append(result, options[index])
+		m /= n
+	}
+	return result
 }

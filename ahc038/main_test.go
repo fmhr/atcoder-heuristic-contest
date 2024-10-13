@@ -104,3 +104,29 @@ func TestRotateRobot(t *testing.T) {
 		t.Fatalf("RotateRobot error, expected 2, got %d", n.direction)
 	}
 }
+
+func TestCalcRelatevePosition(t *testing.T) {
+	var s State
+	r := Node{
+		Point: Point{Y: 0, X: 0},
+	}
+	n := Node{
+		Point:     Point{Y: 0, X: 1},
+		direction: 2,
+		parent:    &r,
+		length:    1,
+	}
+	s.nodes[0] = r
+	s.nodes[1] = n
+	r.children = append(r.children, &n)
+	s.calcRelatevePosition()
+}
+
+func TestFindMthCombinatind(t *testing.T) {
+	op := []int{1, 2, 3, 4}
+	length := 3
+	for i := 0; i < 20; i++ {
+		result := findMthCombinatin(op, length, i)
+		t.Logf("result: %v", result)
+	}
+}
