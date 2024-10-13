@@ -21,20 +21,20 @@ func TestRotate(t *testing.T) {
 }
 
 func TestStateMove(t *testing.T) {
-	var s State
+	s := NewRowState()
 	s.nodes[0].Point = Point{Y: 1, X: 1}
 	// node0 -> node1
 	s.nodes[1].Point = Point{Y: 1, X: 2}
-	s.nodes[1].parent = &s.nodes[0]
-	s.nodes[0].children = append(s.nodes[0].children, &s.nodes[1])
+	s.nodes[1].parent = s.nodes[0]
+	s.nodes[0].children = append(s.nodes[0].children, s.nodes[1])
 	// node1 -> node2
 	s.nodes[2].Point = Point{Y: 2, X: 5}
-	s.nodes[2].parent = &s.nodes[1]
-	s.nodes[1].children = append(s.nodes[1].children, &s.nodes[2])
+	s.nodes[2].parent = s.nodes[1]
+	s.nodes[1].children = append(s.nodes[1].children, s.nodes[2])
 	// node0 -> node3
 	s.nodes[3].Point = Point{Y: 3, X: 5}
-	s.nodes[3].parent = &s.nodes[0]
-	s.nodes[0].children = append(s.nodes[0].children, &s.nodes[3])
+	s.nodes[3].parent = s.nodes[0]
+	s.nodes[0].children = append(s.nodes[0].children, s.nodes[3])
 
 	expected := [4]Point{
 		{Y: 0, X: 2},
@@ -44,8 +44,8 @@ func TestStateMove(t *testing.T) {
 	}
 
 	// move
-	s.MoveRobot(Up, &s.nodes[0])
-	s.MoveRobot(Right, &s.nodes[0])
+	s.MoveRobot(Up, s.nodes[0])
+	s.MoveRobot(Right, s.nodes[0])
 	for i := 0; i < 4; i++ {
 		if s.nodes[i].Y != expected[i].Y || s.nodes[i].X != expected[i].X {
 			t.Fatalf("move error, expected(%d, %d), got(%d, %d)", expected[i].Y, expected[i].X, s.nodes[i].Y, s.nodes[i].X)
@@ -116,8 +116,8 @@ func TestCalcRelatevePosition(t *testing.T) {
 		parent:    &r,
 		length:    1,
 	}
-	s.nodes[0] = r
-	s.nodes[1] = n
+	s.nodes[0] = &r
+	s.nodes[1] = &n
 	r.children = append(r.children, &n)
 	s.calcRelatevePosition()
 }
@@ -132,26 +132,26 @@ func TestFindMthCombinatind(t *testing.T) {
 }
 
 func TestPathToRoot(t *testing.T) {
-	var s State
+	s := NewRowState()
 	s.nodes[0].Point = Point{Y: 1, X: 1}
 	s.nodes[0].index = 0
 	// node0 -> node1
 	s.nodes[1].Point = Point{Y: 1, X: 2}
 	s.nodes[1].index = 1
-	s.nodes[1].parent = &s.nodes[0]
-	s.nodes[0].children = append(s.nodes[0].children, &s.nodes[1])
+	s.nodes[1].parent = s.nodes[0]
+	s.nodes[0].children = append(s.nodes[0].children, s.nodes[1])
 	// node1 -> node2
 	s.nodes[2].Point = Point{Y: 2, X: 5}
 	s.nodes[2].index = 2
-	s.nodes[2].parent = &s.nodes[1]
-	s.nodes[1].children = append(s.nodes[1].children, &s.nodes[2])
+	s.nodes[2].parent = s.nodes[1]
+	s.nodes[1].children = append(s.nodes[1].children, s.nodes[2])
 	// node0 -> node3
 	s.nodes[3].Point = Point{Y: 3, X: 5}
 	s.nodes[3].index = 3
-	s.nodes[3].parent = &s.nodes[0]
-	s.nodes[0].children = append(s.nodes[0].children, &s.nodes[3])
+	s.nodes[3].parent = s.nodes[0]
+	s.nodes[0].children = append(s.nodes[0].children, s.nodes[3])
 
-	path := pathToRoot(&s.nodes[2])
+	path := pathToRoot(s.nodes[2])
 	expected := []int{2, 1, 0}
 	for i, v := range path {
 		if v.index != expected[i] {

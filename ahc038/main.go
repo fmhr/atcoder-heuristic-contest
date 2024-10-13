@@ -183,10 +183,16 @@ const (
 	completed = 2
 )
 
-func NewState(in Input) (state State) {
+func NewRowState() (state State) {
+	state = State{}
 	for i := 0; i < 15; i++ {
 		state.nodes[i] = &Node{index: -1}
 	}
+	return
+}
+
+func NewState(in Input) (state State) {
+	state = NewRowState()
 	for i := 0; i < in.N; i++ {
 		for j := 0; j < in.N; j++ {
 			if in.s[i][j] == '1' && in.t[i][j] == '1' {
@@ -464,11 +470,6 @@ func (s State) firstOutput() []byte {
 	}
 	out.WriteString(fmt.Sprintf("%d %d\n", s.nodes[0].Point.Y, s.nodes[0].Point.X))
 	return out.Bytes()
-}
-
-func newState() (s State) {
-
-	return
 }
 
 // MoveRobot はdirection方向にnodeを移動する
