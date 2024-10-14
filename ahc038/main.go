@@ -241,6 +241,10 @@ func NewState(in Input) (state State) {
 			}
 		}
 	}
+	return state
+}
+
+func (state *State) SetRandom() {
 	// 初期化
 	state.startPos = Point{0, 0} // デバッグ用
 	state.startPos.Y = rand.Intn(N)
@@ -271,7 +275,7 @@ func NewState(in Input) (state State) {
 		}
 	}
 	//state.SetInitialData(NewInitialData())
-	return state
+	//return state
 }
 
 func (s *State) SetInitialData(data InitialData) {
@@ -806,6 +810,7 @@ func solver(in Input) {
 		//		break
 		//	}
 		state := NewState(in)
+		state.SetRandom()
 		state.calcRelatevePosition()
 		// 初期出力
 		out := state.firstOutput()
@@ -846,6 +851,17 @@ func solver(in Input) {
 	log.Printf("iter=%d\n", iterations)
 	turn := len(strings.Split(string(minOut), "\n")) - V - 1 - 1
 	log.Printf("turn=%d\n", turn)
+}
+
+// ------------------------------------------------------------------
+// solver2
+// 1つの
+func solver2(in Input) {
+	s := NewState(in)
+	s.nodes[1].parent = s.nodes[0]
+	s.nodes[1].length = 1
+	s.nodes[1].Point = Point{0, 1}
+	s.nodes[1].direction = Right
 }
 
 var N, M, V int
