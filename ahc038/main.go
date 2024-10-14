@@ -244,11 +244,17 @@ func NewState(in Input) (state State) {
 	return state
 }
 
-func (state *State) SetRandom() {
+func (state *State) SetRandom(in Input, meanPoint Point) {
 	// 初期化
-	state.startPos = Point{0, 0} // デバッグ用
+	//state.startPos = Point{0, 0} // デバッグ用
 	state.startPos.Y = rand.Intn(N)
 	state.startPos.X = rand.Intn(N)
+	//	state.startPos = meanPoint
+	//state.startPos.Y = state.startPos.Y + (rand.Intn(N/4) - N/8)
+	//state.startPos.X = state.startPos.X + (rand.Intn(N/4) - N/8)
+	//state.startPos.Y = maxInt(0, minInt(N-1, state.startPos.Y))
+	//state.startPos.X = maxInt(0, minInt(N-1, state.startPos.X))
+	//log.Println(meanPoint, state.startPos)
 
 	for i := 0; i < V; i++ {
 		state.nodes[i].index = i
@@ -785,6 +791,8 @@ type Target struct {
 }
 
 func solver(in Input) {
+	iterations := 0
+	var minOut []byte
 	takoyakiPos := make([]Point, 0, 45)
 	targetPos := make([]Point, 0, 45)
 	for i := 0; i < in.N; i++ {
@@ -799,10 +807,12 @@ func solver(in Input) {
 	}
 	takoyakiMean := meanPoints(takoyakiPos)
 	targetMean := meanPoints(targetPos)
-	var meanPoints [2]Point = [2]Point{{takoyakiMean.Y, targetMean.X}, {takoyakiMean.Y, targetMean.X}}
-	_ = meanPoints
-	iterations := 0
-	var minOut []byte
+	//var meanPoints [2]Point = [2]Point{{takoyakiMean.Y, targetMean.X}, {takoyakiMean.Y, targetMean.X}}
+	//_ = meanPoints
+	meanPoint := Point{}
+	meanPoint.Y = (takoyakiMean.Y + targetMean.Y) / 2
+	meanPoint.X = (takoyakiMean.X + targetMean.X) / 2
+
 	for elapsed := time.Since(startTime); elapsed < timeLimit; elapsed = time.Since(startTime) {
 		//for {
 		iterations++
@@ -810,7 +820,7 @@ func solver(in Input) {
 		//		break
 		//	}
 		state := NewState(in)
-		state.SetRandom()
+		state.SetRandom(in, meanPoint)
 		state.calcRelatevePosition()
 		// 初期出力
 		out := state.firstOutput()
@@ -1010,4 +1020,18 @@ func findMthCombinatin(options []int, length, m int) []int {
 		m /= n
 	}
 	return result
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
