@@ -247,13 +247,13 @@ func NewState(in Input) (state State) {
 func (state *State) SetRandom(in Input, meanPoint Point) {
 	// 初期化
 	//state.startPos = Point{0, 0} // デバッグ用
-	state.startPos.Y = rand.Intn(N)
-	state.startPos.X = rand.Intn(N)
-	//	state.startPos = meanPoint
-	//state.startPos.Y = state.startPos.Y + (rand.Intn(N/4) - N/8)
-	//state.startPos.X = state.startPos.X + (rand.Intn(N/4) - N/8)
-	//state.startPos.Y = maxInt(0, minInt(N-1, state.startPos.Y))
-	//state.startPos.X = maxInt(0, minInt(N-1, state.startPos.X))
+	//state.startPos.Y = rand.Intn(N)
+	//state.startPos.X = rand.Intn(N)
+	state.startPos = Point{N / 2, N / 2}
+	state.startPos.Y = state.startPos.Y + (rand.Intn(N/2) - N/4)
+	state.startPos.X = state.startPos.X + (rand.Intn(N/2) - N/4)
+	state.startPos.Y = maxInt(0, minInt(N-1, state.startPos.Y))
+	state.startPos.X = maxInt(0, minInt(N-1, state.startPos.X))
 	//log.Println(meanPoint, state.startPos)
 
 	for i := 0; i < V; i++ {
