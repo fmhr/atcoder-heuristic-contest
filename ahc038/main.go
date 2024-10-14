@@ -255,7 +255,6 @@ func (state *State) SetRandom(in Input, meanPoint Point) {
 	state.startPos.Y = maxInt(0, minInt(N-1, state.startPos.Y))
 	state.startPos.X = maxInt(0, minInt(N-1, state.startPos.X))
 	//log.Println(meanPoint, state.startPos)
-
 	for i := 0; i < V; i++ {
 		state.nodes[i].index = i
 		if i == 0 {
