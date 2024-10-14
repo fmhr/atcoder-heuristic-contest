@@ -18,6 +18,7 @@ main
 # 出力ファイル
 out/
 out.txt
+vis.html
 
 
 # AtCoder tools

@@ -21,7 +21,7 @@ script:
 	go run script/main.go
 
 seed:
-	seq 0 3000 > seed3000.txt
+	seq 0 5000 > seed.txt
 
 
 # https://pkg.go.dev/runtime/pprof main関数をここからとる
