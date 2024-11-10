@@ -84,11 +84,11 @@ func solve(in Input) {
 	bestPolygon.Copy(polygon)
 	// やきなますぞー
 	for loop := 0; loop < 1000; loop++ {
-		switter := rand.Intn(2)
+		switter := rand.Intn(4)
 		switch switter {
 		case 0:
 			// 全体を移動させる
-			direct := rand.Intn(4)
+			direct := rand.Intn(3)
 			distance := rand.Intn(1000)
 			for i := 0; i < len(polygon); i++ {
 				polygon[i].X += dx[direct] * distance
@@ -105,31 +105,75 @@ func solve(in Input) {
 			nextIndex := (index + 1) % len(polygon)
 			next := polygon[nextIndex]
 			if target.X == prev.X && target.Y != prev.Y && target.X != next.X && target.Y == next.Y {
-				maxX := max(prev.X, max(next.X, target.X))
-				minX := min(prev.X, min(next.X, target.X))
-				maxY := max(prev.Y, max(next.Y, target.Y))
-				minY := min(prev.Y, min(next.Y, target.Y))
+				maxX := maxInt(prev.X, maxInt(next.X, target.X))
+				minX := minInt(prev.X, minInt(next.X, target.X))
+				maxY := maxInt(prev.Y, maxInt(next.Y, target.Y))
+				minY := minInt(prev.Y, minInt(next.Y, target.Y))
 				if maxX-minX < 2 || maxY-minY < 2 {
 					continue
 				}
-				newX := rand.Intn(int(maxX-minX)-2) + minX + 1
-				newY := rand.Intn(int(maxY-minY)-2) + minY + 1
+				newX := rand.Intn(int(maxX-minX)-1) + minX + 1
+				newY := rand.Intn(int(maxY-minY)-1) + minY + 1
 				polygon[index] = Point{X: newX, Y: newY}
 				polygon[prevIndex].X = newX
 				polygon[nextIndex].Y = newY
 			}
+			if target.X != prev.X && target.Y == prev.Y && target.X == next.X && target.Y != next.Y {
+				maxX := maxInt(prev.X, maxInt(next.X, target.X))
+				minX := minInt(prev.X, minInt(next.X, target.X))
+				maxY := maxInt(prev.Y, maxInt(next.Y, target.Y))
+				minY := minInt(prev.Y, minInt(next.Y, target.Y))
+				if maxX-minX < 2 || maxY-minY < 2 {
+					continue
+				}
+				newX := rand.Intn(int(maxX-minX)-1) + minX + 1
+				newY := rand.Intn(int(maxY-minY)-1) + minY + 1
+				polygon[index] = Point{X: newX, Y: newY}
+				polygon[prevIndex].Y = newY
+				polygon[nextIndex].X = newX
+			}
+		case 2:
+			// １辺を移動させる
+			index1 := rand.Intn(len(polygon))
+			index2 := (index1 + 1) % len(polygon)
+			target1 := &polygon[index1]
+			target2 := &polygon[index2]
+			if target1.X == target2.X {
+				target1.X += rand.Intn(1000) - 500
+				target2.X = target1.X
+			}
+			if target1.Y == target2.Y {
+				target1.Y += rand.Intn(1000) - 500
+				target2.Y = target1.Y
+			}
+		case 3:
+			// 凸を追加する
+			index := rand.Intn(len(polygon))
+			target := polygon[index]
+			next := polygon[(index+1)%len(polygon)]
+			var newPoint Point
+			if target.X == next.X {
+				newPoint = Point{X: target.X, Y: target.Y + next.Y/2}
+			} else {
+				newPoint = Point{X: target.X + next.X/2, Y: target.Y}
+			}
+			newPoint2 := Point{X: newPoint.X, Y: newPoint.Y}
+			polygon = append(polygon[:index+1], append([]Point{newPoint}, polygon[index+1:]...)...)
+			polygon = append(polygon[:index+1], append([]Point{newPoint2}, polygon[index+1:]...)...)
 		}
+
 		score := claceScore(polygon, in)
 		if score > bestScore {
 			bestScore = score
 			bestPolygon.Copy(polygon)
 			log.Println("update score", score)
+			bestPolygon.output()
 		} else {
 			polygon.Copy(bestPolygon)
 		}
 	}
-
 	bestPolygon.output()
+	log.Println("isSelfIntersectingCount", isSelfIntersectingCount)
 }
 
 type Point struct {
@@ -300,15 +344,19 @@ func isIntersecting(p1, q1, p2, q2 Point) bool {
 	return d1*d2 < 0 && d3*d4 < 0
 }
 
+var isSelfIntersectingCount [2]int
+
 // 多角形の自己交差を検出する関数
 func isSelfIntersecting(polygon Polygon) bool {
 	n := len(polygon)
 	for i := 0; i < n-1; i++ {
 		for j := i + 2; j < n; j++ {
 			if isIntersecting(polygon[i], polygon[i+1], polygon[j%n], polygon[((j%n)+1%n)%n]) {
+				isSelfIntersectingCount[1]++
 				return true
 			}
 		}
 	}
+	isSelfIntersectingCount[0]++
 	return false
 }
