@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func isInsice(point Point, plygon []Point) bool {
+func isIndide(point Point, plygon []Point) bool {
 	intersections := 0
 	j := len(plygon) - 1
 	for i := 0; i < len(plygon); i++ {
@@ -28,24 +28,36 @@ func isInsice(point Point, plygon []Point) bool {
 func countPointsInside(polygon []Point, points [N]Point) int {
 	count := 0
 	for _, point := range points {
-		if isInsice(point, polygon) {
+		if isIndide(point, polygon) {
 			count++
 		}
 	}
-	log.Println("count", count)
 	return count
 }
 
-func claceScore(ans Ans, in Input) int {
+func claceScore(ans Polygon, in Input) int {
+	for _, p := range ans {
+		if p.X < 0 || p.X > 100000 || p.Y < 0 || p.Y > 100000 {
+			return -1000000000
+		}
+	}
+	if isSelfIntersecting(ans) {
+		return -1000000000
+	}
 	score := 1
 	score += countPointsInside(ans, in.mackerels)
 	score -= countPointsInside(ans, in.sardines)
 	return score
 }
 
-type Ans []Point
+type Polygon []Point
 
-func (a Ans) output() {
+func (p *Polygon) Copy(src Polygon) {
+	*p = make(Polygon, len(src))
+	copy(*p, src)
+}
+
+func (a Polygon) output() {
 	fmt.Println(len(a))
 	for _, p := range a {
 		fmt.Println(p.X, p.Y)
@@ -53,24 +65,75 @@ func (a Ans) output() {
 }
 
 func solve(in Input) {
-	var ans Ans
-	ans = append(ans, Point{X: 76431, Y: 45731})
-	ans = append(ans, Point{X: 83820, Y: 45731})
-	ans = append(ans, Point{X: 83820, Y: 87777})
-	ans = append(ans, Point{X: 70545, Y: 87777})
-	ans = append(ans, Point{X: 70545, Y: 33678})
-	ans = append(ans, Point{X: 53022, Y: 33678})
-	ans = append(ans, Point{X: 53022, Y: 44745})
-	ans = append(ans, Point{X: 16230, Y: 44745})
-	ans = append(ans, Point{X: 16230, Y: 25693})
-	ans = append(ans, Point{X: 76431, Y: 25693})
-	ans.output()
-	score := claceScore(ans, in)
-	log.Println("score", score)
+	var polygon Polygon
+	polygon = append(polygon, Point{X: 76431, Y: 45731})
+	polygon = append(polygon, Point{X: 83820, Y: 45731})
+	polygon = append(polygon, Point{X: 83820, Y: 87777})
+	polygon = append(polygon, Point{X: 70545, Y: 87777})
+	polygon = append(polygon, Point{X: 70545, Y: 33678})
+	polygon = append(polygon, Point{X: 53022, Y: 33678})
+	polygon = append(polygon, Point{X: 53022, Y: 44745})
+	polygon = append(polygon, Point{X: 16230, Y: 44745})
+	polygon = append(polygon, Point{X: 16230, Y: 25693})
+	polygon = append(polygon, Point{X: 76431, Y: 25693})
+	score := claceScore(polygon, in)
+
+	bestScore := score
+	log.Println(score)
+	var bestPolygon Polygon
+	bestPolygon.Copy(polygon)
+	// やきなますぞー
+	for loop := 0; loop < 1000; loop++ {
+		switter := rand.Intn(2)
+		switch switter {
+		case 0:
+			// 全体を移動させる
+			direct := rand.Intn(4)
+			distance := rand.Intn(1000)
+			for i := 0; i < len(polygon); i++ {
+				polygon[i].X += dx[direct] * distance
+				polygon[i].Y += dy[direct] * distance
+			}
+
+		case 1:
+			// 一点を移動させる
+			// 頂点を選ぶ
+			index := rand.Intn(len(polygon))
+			target := polygon[index]
+			prevIndex := (index - 1 + len(polygon)) % len(polygon)
+			prev := polygon[prevIndex]
+			nextIndex := (index + 1) % len(polygon)
+			next := polygon[nextIndex]
+			if target.X == prev.X && target.Y != prev.Y && target.X != next.X && target.Y == next.Y {
+				maxX := max(prev.X, max(next.X, target.X))
+				minX := min(prev.X, min(next.X, target.X))
+				maxY := max(prev.Y, max(next.Y, target.Y))
+				minY := min(prev.Y, min(next.Y, target.Y))
+				if maxX-minX < 2 || maxY-minY < 2 {
+					continue
+				}
+				newX := rand.Intn(int(maxX-minX)-2) + minX + 1
+				newY := rand.Intn(int(maxY-minY)-2) + minY + 1
+				polygon[index] = Point{X: newX, Y: newY}
+				polygon[prevIndex].X = newX
+				polygon[nextIndex].Y = newY
+			}
+		}
+		score := claceScore(polygon, in)
+		if score > bestScore {
+			bestScore = score
+			bestPolygon.Copy(polygon)
+			log.Println("update score", score)
+		} else {
+			polygon.Copy(bestPolygon)
+		}
+	}
+
+	bestPolygon.output()
 }
 
 type Point struct {
-	X, Y uint
+	X, Y int
 }
 
 type Input struct {
@@ -128,6 +191,10 @@ func main() {
 
 // ------------------------------------------------------------------
 // util
+
+var dx = []int{1, 0, -1, 0}
+var dy = []int{0, 1, 0, -1}
+
 // bitArrayを管理するためのセット
 const uint64Size = 64
 const widthBits = 30
@@ -216,4 +283,32 @@ func minInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// 線分同士が交差するか判定する関数
+func isIntersecting(p1, q1, p2, q2 Point) bool {
+	// 線分 p1q1 と p2q2 の方向ベクトルを計算
+
+	// 交差判定 (詳細な説明は後述)
+	// 方向ベクトルの外積を計算
+	d1 := (q2.X-p2.X)*(p1.Y-p2.Y) - (q2.Y-p2.Y)*(p1.X-p2.X)
+	d2 := (q2.X-p2.X)*(q1.Y-p2.Y) - (q2.Y-p2.Y)*(q1.X-p2.X)
+	d3 := (q1.X-p1.X)*(p2.Y-p1.Y) - (q1.Y-p1.Y)*(p2.X-p1.X)
+	d4 := (q1.X-p1.X)*(q2.Y-p1.Y) - (q1.Y-p1.Y)*(q2.X-p1.X)
+
+	// 交差判定
+	return d1*d2 < 0 && d3*d4 < 0
+}
+
+// 多角形の自己交差を検出する関数
+func isSelfIntersecting(polygon Polygon) bool {
+	n := len(polygon)
+	for i := 0; i < n-1; i++ {
+		for j := i + 2; j < n; j++ {
+			if isIntersecting(polygon[i], polygon[i+1], polygon[j%n], polygon[((j%n)+1%n)%n]) {
+				return true
+			}
+		}
+	}
+	return false
 }
