@@ -224,7 +224,8 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	rand.Seed(1)
+	//rand.Seed(1)
+	rand.Seed(time.Now().UnixNano())
 	startTime = time.Now()
 	in := input()
 	solve(in)
