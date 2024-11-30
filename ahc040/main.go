@@ -28,20 +28,32 @@ func input() Input {
 
 // queryを使わずに解く
 func simSolver(in Input) {
-	state := NewState(in)
-	for i := 0; i < in.N; i++ {
-		cmd := Cmd{p: i, r: false, d: 'U', b: -1}
-		if rand.Intn(2) == 1 {
-			cmd.r = true
+	best_score := math.MaxInt64
+	best_cmds := make([]Cmd, in.N)
+	for k := 0; k < 100000; k++ {
+		state := NewState(in)
+		cmds := make([]Cmd, in.N)
+		for i := 0; i < in.N; i++ {
+			cmd := Cmd{p: i, r: false, d: 'U', b: -1}
+			if rand.Intn(2) == 1 {
+				cmd.r = true
+			}
+			if rand.Intn(2) == 1 {
+				cmd.d = 'L'
+			}
+			if i > 0 {
+				cmd.b = rand.Intn(i) - 1
+			}
+			state.do(in, cmd, i)
+			cmds[i] = cmd
 		}
-		if rand.Intn(2) == 1 {
-			cmd.d = 'L'
+		if state.score < best_score {
+			best_score = state.score
+			copy(best_cmds, cmds)
+			log.Println(k, "best_score", best_score)
 		}
-		if i > 0 {
-			cmd.b = rand.Intn(i) - 1
-		}
-		state.do(in, cmd, i)
 	}
+	log.Printf("best_score=%d\n", best_score)
 }
 
 func solver(in Input) {
@@ -78,12 +90,13 @@ func solver(in Input) {
 	log.Println("bestScore", bestScore)
 	fmt.Println(in.N)
 	for i := 0; i < in.N; i++ {
-		log.Println(bestAnses[i].String())
+		//log.Println(bestAnses[i].String())
 		fmt.Println(bestAnses[i].String())
 	}
 	state := NewState(in)
 	state.query(in, bestAnses)
 	log.Printf("score=%d\n", state.score)
+	simSolver(in)
 }
 
 type Cmd struct {
