@@ -27,10 +27,10 @@ func input() Input {
 }
 
 // queryを使わずに解く
-func simSolver(in Input) {
+func simSolver(in Input) (int, []Cmd) {
 	best_score := math.MaxInt64
 	best_cmds := make([]Cmd, in.N)
-	for k := 0; k < 100000; k++ {
+	for k := 0; k < 10000; k++ {
 		state := NewState(in)
 		cmds := make([]Cmd, in.N)
 		for i := 0; i < in.N; i++ {
@@ -54,6 +54,11 @@ func simSolver(in Input) {
 		}
 	}
 	log.Printf("best_score=%d\n", best_score)
+	cmds := cmdGenerate(4)
+	for i, cmd := range cmds {
+		log.Println(i, ":", cmd.String())
+	}
+	return best_score, best_cmds
 }
 
 func solver(in Input) {
@@ -88,6 +93,12 @@ func solver(in Input) {
 		}
 	}
 	log.Println("bestScore", bestScore)
+
+	bs, bc := simSolver(in)
+	if bs < bestScore {
+		bestScore = bs
+		bestAnses = bc
+	}
 	fmt.Println(in.N)
 	for i := 0; i < in.N; i++ {
 		//log.Println(bestAnses[i].String())
@@ -96,7 +107,6 @@ func solver(in Input) {
 	state := NewState(in)
 	state.query(in, bestAnses)
 	log.Printf("score=%d\n", state.score)
-	simSolver(in)
 }
 
 type Cmd struct {
@@ -112,6 +122,18 @@ func (c Cmd) String() string {
 		r = 1
 	}
 	return fmt.Sprintf("%d %d %s %d", c.p, r, string(c.d), c.b)
+}
+
+func cmdGenerate(n int) []Cmd {
+	cmds := make([]Cmd, 0)
+	for r := 0; r < 2; r++ {
+		for d := 0; d < 2; d++ {
+			for b := -1; b < n; b++ {
+				cmds = append(cmds, Cmd{p: n, r: r == 1, d: "UL"[d], b: b})
+			}
+		}
+	}
+	return cmds
 }
 
 type Pos struct {
