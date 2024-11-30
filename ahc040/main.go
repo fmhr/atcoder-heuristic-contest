@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"time"
 )
 
 type Input struct {
@@ -21,7 +22,26 @@ func input() Input {
 		fmt.Scan(&w[i], &h[i])
 		log.Println(i, w[i], h[i])
 	}
+	log.Printf("n=%d, t=%d, sgm=%d\n", n, t, sgm)
 	return Input{n, t, sgm, w, h}
+}
+
+// queryを使わずに解く
+func simSolver(in Input) {
+	state := NewState(in)
+	for i := 0; i < in.N; i++ {
+		cmd := Cmd{p: i, r: false, d: 'U', b: -1}
+		if rand.Intn(2) == 1 {
+			cmd.r = true
+		}
+		if rand.Intn(2) == 1 {
+			cmd.d = 'L'
+		}
+		if i > 0 {
+			cmd.b = rand.Intn(i) - 1
+		}
+		state.do(in, cmd, i)
+	}
 }
 
 func solver(in Input) {
@@ -63,6 +83,7 @@ func solver(in Input) {
 	}
 	state := NewState(in)
 	state.query(in, bestAnses)
+	log.Printf("score=%d\n", state.score)
 }
 
 type Cmd struct {
@@ -86,6 +107,15 @@ type Pos struct {
 	t              int
 }
 
+func (p *Pos) reset() {
+	p.x1 = -1
+	p.x2 = -1
+	p.y1 = -1
+	p.y2 = -1
+	p.r = false
+	p.t = -1
+}
+
 type State struct {
 	turn           int
 	pos            []Pos
@@ -106,7 +136,7 @@ func NewState(in Input) State {
 	}
 	s.W = 0
 	s.H = 0
-	s.W2 = 0
+	s.W2 = 0 // undo用
 	s.H2 = 0
 	s.score_t = 0
 	s.score = 0
@@ -114,57 +144,73 @@ func NewState(in Input) State {
 	return s
 }
 
+func (s *State) undo(c Cmd) {
+	s.pos[c.p].reset()
+	s.W = s.W2
+	s.H = s.H2
+	s.score = s.W + s.H
+}
+
+func (s *State) do(in Input, c Cmd, t int) {
+	// cmdのチェック
+	if s.pos[c.p].t >= 0 {
+		panic("already used")
+	} else if c.b >= 0 && s.pos[c.b].t < 0 {
+		panic("not used")
+	}
+	w, h := in.w[c.p], in.h[c.p]
+	if c.r {
+		w, h = h, w // 90度回転
+	}
+	if c.d == 'U' {
+		x1 := 0 // 基準になるx座標
+		if c.b >= 0 {
+			x1 = s.pos[c.b].x2
+		}
+		x2 := x1 + w
+		y1 := 0
+		for _, q := range s.pos {
+			if q.t >= 0 && max(x1, q.x1) < min(x2, q.x2) {
+				y1 = max(y1, q.y2)
+			}
+		}
+		y2 := y1 + h
+		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, t}
+	} else {
+		y1 := 0 // 基準になるy座標
+		if c.b >= 0 {
+			y1 = s.pos[c.b].y2
+		}
+		y2 := y1 + h
+		x1 := 0
+		for _, q := range s.pos {
+			if q.t >= 0 && max(y1, q.y1) < min(y2, q.y2) {
+				x1 = max(x1, q.x2)
+			}
+		}
+		x2 := x1 + w
+		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, t}
+	}
+	s.W2 = s.W
+	s.H2 = s.H
+	s.W = max(s.W, s.pos[c.p].x2)
+	s.H = max(s.H, s.pos[c.p].y2)
+	s.score = s.W + s.H
+}
+
 func (s *State) query(in Input, cmd []Cmd) {
 	for t, c := range cmd {
-		// cmdのチェック
-		if s.pos[c.p].t >= 0 {
-			panic("already used")
-		} else if c.b >= 0 && s.pos[c.b].t < 0 {
-			panic("not used")
-		}
-		w, h := in.w[c.p], in.h[c.p]
-		if c.r {
-			w, h = h, w // 90度回転
-		}
-		if c.d == 'U' {
-			x1 := 0 // 基準になるx座標
-			if c.b >= 0 {
-				x1 = s.pos[c.b].x2
-			}
-			x2 := x1 + w
-			y1 := 0
-			for _, q := range s.pos {
-				if q.t >= 0 && max(x1, q.x1) < min(x2, q.x2) {
-					y1 = max(y1, q.y2)
-				}
-			}
-			y2 := y1 + h
-			s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, t}
-		} else {
-			y1 := 0 // 基準になるy座標
-			if c.b >= 0 {
-				y1 = s.pos[c.b].y2
-			}
-			y2 := y1 + h
-			x1 := 0
-			for _, q := range s.pos {
-				if q.t >= 0 && max(y1, q.y1) < min(y2, q.y2) {
-					x1 = max(x1, q.x2)
-				}
-			}
-			x2 := x1 + w
-			s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, t}
-		}
-		s.W = max(s.W, s.pos[c.p].x2)
-		s.H = max(s.H, s.pos[c.p].y2)
+		s.do(in, c, t)
 	}
-	s.score = s.W + s.H
 }
 
 func main() {
 	log.SetFlags(log.Lshortfile)
+	startTIme := time.Now()
 	in := input()
 	solver(in)
+	elap := time.Since(startTIme)
+	log.Printf("time_ms=%d ms\n", elap.Milliseconds())
 }
 
 // util
