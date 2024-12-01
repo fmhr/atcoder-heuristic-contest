@@ -34,27 +34,33 @@ type CmdWithScore struct {
 
 const beamWidth = 10
 
-func BeamSearch(in Input) {
+func BeamSearch(in Input) State {
 	states := make([]State, 0)
 	states = append(states, NewState(in))
 	subStates := make([]State, 0)
 	for t := 0; t < in.N; t++ {
 		for w := 0; w < min(len(states), beamWidth); w++ {
-			state := states[w]
-			states = states[:w]
 			cmds := cmdGenerate(t)
-			log.Println(state.pos[0].t)
 			for _, cmd := range cmds {
-				now := state.Clone()
+				now := states[w].Clone()
 				now.do(in, cmd, t)
+				now.cmds = append(now.cmds, cmd)
 				subStates = append(subStates, now)
 			}
 		}
 		sort.Slice(subStates, func(i, j int) bool {
-			return subStates[i].score > subStates[j].score
+			return subStates[i].score < subStates[j].score
 		})
-		break
+		states = subStates[:min(len(subStates), beamWidth)]
+		subStates = make([]State, 0)
 	}
+
+	for i := 0; i < len(states[0].cmds); i++ {
+		log.Println(states[0].cmds[i].String())
+	}
+	log.Printf("beam_score=%d\n", states[0].score)
+	log.Println("w", states[0].W, "h", states[0].H)
+	return states[0]
 }
 
 // queryを使わずに解く
@@ -84,15 +90,13 @@ func simSolver(in Input) (int, []Cmd) {
 			log.Println(k, "best_score", best_score)
 		}
 	}
-	log.Printf("best_score=%d\n", best_score)
 	return best_score, best_cmds
 }
 
 func solver(in Input) {
 	var measured_w, measured_h int
-	bestAnses := make([]Cmd, in.N)
 	var bestScore int = math.MaxInt64
-	for t := 0; t < in.T-1; t++ {
+	for t := 0; t < in.T-2; t++ {
 		fmt.Println(in.N)
 		anses := make([]Cmd, in.N)
 		for i := 0; i < in.N; i++ {
@@ -115,26 +119,27 @@ func solver(in Input) {
 		fmt.Scan(&measured_w, &measured_h)
 		if measured_w+measured_h < bestScore {
 			bestScore = measured_w + measured_h
-			bestAnses = anses
 			log.Println(t, measured_w+measured_h)
 		}
 	}
 	log.Println("bestScore", bestScore)
 
 	bs, bc := simSolver(in)
-	if bs < bestScore {
-		bestScore = bs
-		bestAnses = bc
-	}
 	fmt.Println(in.N)
-	for i := 0; i < in.N; i++ {
-		//log.Println(bestAnses[i].String())
-		fmt.Println(bestAnses[i].String())
+	for i := 0; i < len(bc); i++ {
+		fmt.Println(bc[i].String())
 	}
-	state := NewState(in)
-	state.query(in, bestAnses)
-	log.Printf("score=%d\n", state.score)
-	BeamSearch(in)
+	fmt.Scan(&measured_w, &measured_h)
+	log.Printf("sim_score=%d sim_result=%d\n", bs, measured_w+measured_h)
+	//BeamSearch(in)
+	beam_best := BeamSearch(in)
+	fmt.Println(len(beam_best.cmds))
+	for i := 0; i < len(beam_best.cmds); i++ {
+		//log.Println(bestAnses[i].String())
+		fmt.Println(beam_best.cmds[i].String())
+	}
+	fmt.Scan(&measured_w, &measured_h)
+	log.Printf("beam_result=%d\n", measured_w+measured_h)
 }
 
 type Cmd struct {
@@ -162,9 +167,6 @@ func cmdGenerate(n int) []Cmd {
 			}
 		}
 	}
-	for i, cmd := range cmds {
-		log.Println(i, ":", cmd.String())
-	}
 	return cmds
 }
 
@@ -189,10 +191,13 @@ type State struct {
 	W, H           int
 	W2, H2         int // 更新前 undo用
 	score_t, score int
+	cmds           []Cmd
 }
 
 func (s State) Clone() State {
 	t := s
+	t.cmds = make([]Cmd, len(s.cmds))
+	copy(t.cmds, s.cmds)
 	return t
 }
 
@@ -208,6 +213,7 @@ func NewState(in Input) State {
 	s.H2 = 0
 	s.score_t = 0
 	s.score = 0
+	s.cmds = make([]Cmd, 0, in.N)
 	return s
 }
 
