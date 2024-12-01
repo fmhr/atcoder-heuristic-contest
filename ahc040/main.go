@@ -276,6 +276,15 @@ func (s *State) query(in Input, cmd []Cmd) {
 	}
 }
 
+func checkEstimate(in Input) {
+	log.Println("check estimate")
+	trueSize := make([][2]int, in.N)
+	for i := 0; i < in.N; i++ {
+		fmt.Scan(&trueSize[i][0], &trueSize[i][1])
+		log.Println("trueSize", i, trueSize[i])
+	}
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	startTIme := time.Now()
@@ -283,6 +292,7 @@ func main() {
 	solver(in)
 	elap := time.Since(startTIme)
 	log.Printf("time_ms=%d ms\n", elap.Milliseconds())
+	checkEstimate(in)
 }
 
 // util
