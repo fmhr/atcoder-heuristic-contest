@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"sort"
 	"time"
 )
 
@@ -20,10 +21,40 @@ func input() Input {
 	h := make([]int, n)
 	for i := 0; i < n; i++ {
 		fmt.Scan(&w[i], &h[i])
-		log.Println(i, w[i], h[i])
+		//log.Println(i, w[i], h[i])
 	}
 	log.Printf("n=%d, t=%d, sgm=%d\n", n, t, sgm)
 	return Input{n, t, sgm, w, h}
+}
+
+type CmdWithScore struct {
+	cmd   Cmd
+	score int
+}
+
+const beamWidth = 10
+
+func BeamSearch(in Input) {
+	states := make([]State, 0)
+	states = append(states, NewState(in))
+	subStates := make([]State, 0)
+	for t := 0; t < in.N; t++ {
+		for w := 0; w < min(len(states), beamWidth); w++ {
+			state := states[w]
+			states = states[:w]
+			cmds := cmdGenerate(t)
+			log.Println(state.pos[0].t)
+			for _, cmd := range cmds {
+				now := state.Clone()
+				now.do(in, cmd, t)
+				subStates = append(subStates, now)
+			}
+		}
+		sort.Slice(subStates, func(i, j int) bool {
+			return subStates[i].score > subStates[j].score
+		})
+		break
+	}
 }
 
 // queryを使わずに解く
@@ -54,10 +85,6 @@ func simSolver(in Input) (int, []Cmd) {
 		}
 	}
 	log.Printf("best_score=%d\n", best_score)
-	cmds := cmdGenerate(4)
-	for i, cmd := range cmds {
-		log.Println(i, ":", cmd.String())
-	}
 	return best_score, best_cmds
 }
 
@@ -107,6 +134,7 @@ func solver(in Input) {
 	state := NewState(in)
 	state.query(in, bestAnses)
 	log.Printf("score=%d\n", state.score)
+	BeamSearch(in)
 }
 
 type Cmd struct {
@@ -124,6 +152,7 @@ func (c Cmd) String() string {
 	return fmt.Sprintf("%d %d %s %d", c.p, r, string(c.d), c.b)
 }
 
+// n: 追加する長方形
 func cmdGenerate(n int) []Cmd {
 	cmds := make([]Cmd, 0)
 	for r := 0; r < 2; r++ {
@@ -132,6 +161,9 @@ func cmdGenerate(n int) []Cmd {
 				cmds = append(cmds, Cmd{p: n, r: r == 1, d: "UL"[d], b: b})
 			}
 		}
+	}
+	for i, cmd := range cmds {
+		log.Println(i, ":", cmd.String())
 	}
 	return cmds
 }
@@ -153,29 +185,29 @@ func (p *Pos) reset() {
 
 type State struct {
 	turn           int
-	pos            []Pos
-	W              int
-	H              int
-	W2             int
-	H2             int
+	pos            [100]Pos
+	W, H           int
+	W2, H2         int // 更新前 undo用
 	score_t, score int
-	comment        string
+}
+
+func (s State) Clone() State {
+	t := s
+	return t
 }
 
 func NewState(in Input) State {
 	s := State{}
 	s.turn = 0
-	s.pos = make([]Pos, in.N)
-	for i := 0; i < in.N; i++ {
-		s.pos[i] = Pos{-1, -1, -1, -1, false, -1}
+	for i := 0; i < 100; i++ {
+		s.pos[i].reset()
 	}
 	s.W = 0
 	s.H = 0
-	s.W2 = 0 // undo用
+	s.W2 = 0
 	s.H2 = 0
 	s.score_t = 0
 	s.score = 0
-	s.comment = ""
 	return s
 }
 
@@ -189,8 +221,12 @@ func (s *State) undo(c Cmd) {
 func (s *State) do(in Input, c Cmd, t int) {
 	// cmdのチェック
 	if s.pos[c.p].t >= 0 {
+		log.Println("c.p:", c.p, s.pos[c.p].t)
+		log.Println("c:", c, s.pos[c.p].t)
 		panic("already used")
 	} else if c.b >= 0 && s.pos[c.b].t < 0 {
+		log.Println(c.String())
+		log.Printf("b=%d, t=%d\n", c.b, s.pos[c.b].t)
 		panic("not used")
 	}
 	w, h := in.w[c.p], in.h[c.p]
