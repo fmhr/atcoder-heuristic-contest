@@ -54,12 +54,7 @@ func BeamSearch(in Input) State {
 		states = subStates[:min(len(subStates), beamWidth)]
 		subStates = make([]State, 0)
 	}
-
-	for i := 0; i < len(states[0].cmds); i++ {
-		log.Println(states[0].cmds[i].String())
-	}
 	log.Printf("beam_score=%d\n", states[0].score)
-	log.Println("w", states[0].W, "h", states[0].H)
 	return states[0]
 }
 
@@ -124,6 +119,7 @@ func solver(in Input) {
 	}
 	log.Println("bestScore", bestScore)
 
+	// シミュレーションで解く
 	bs, bc := simSolver(in)
 	fmt.Println(in.N)
 	for i := 0; i < len(bc); i++ {
@@ -131,11 +127,10 @@ func solver(in Input) {
 	}
 	fmt.Scan(&measured_w, &measured_h)
 	log.Printf("sim_score=%d sim_result=%d\n", bs, measured_w+measured_h)
-	//BeamSearch(in)
+	// beam search
 	beam_best := BeamSearch(in)
 	fmt.Println(len(beam_best.cmds))
 	for i := 0; i < len(beam_best.cmds); i++ {
-		//log.Println(bestAnses[i].String())
 		fmt.Println(beam_best.cmds[i].String())
 	}
 	fmt.Scan(&measured_w, &measured_h)
