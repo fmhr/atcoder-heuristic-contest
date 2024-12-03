@@ -278,11 +278,23 @@ func (s *State) query(in Input, cmd []Cmd) {
 
 func checkEstimate(in Input) {
 	log.Println("check estimate")
+	estimate := make([][2]int, in.N)
+	for i := 0; i < in.N; i++ {
+		estimate[i][0] = in.w[i]
+		estimate[i][1] = in.h[i]
+	}
 	trueSize := make([][2]int, in.N)
+	sumErr := 0
+	sumErrp := 0.0
 	for i := 0; i < in.N; i++ {
 		fmt.Scan(&trueSize[i][0], &trueSize[i][1])
-		log.Println("trueSize", i, trueSize[i])
+		log.Printf("%dw, true:%v, estimate:%v, errp=%.4f%%\n", i, trueSize[i][0], estimate[i][0], float64(absInt(trueSize[i][0]-estimate[i][0]))/float64(trueSize[i][0]))
+		log.Printf("%dh, true:%v, estimate:%v, errp=%.4f%%\n", i, trueSize[i][1], estimate[i][1], float64(absInt(trueSize[i][1]-estimate[i][1]))/float64(trueSize[i][1]))
+		sumErrp += float64(absInt(trueSize[i][0]-estimate[i][0]))/float64(trueSize[i][0]) + float64(absInt(trueSize[i][1]-estimate[i][1]))/float64(trueSize[i][1])
+		sumErr += absInt(trueSize[i][0]-estimate[i][0]) + absInt(trueSize[i][1]-estimate[i][1])
 	}
+	log.Printf("sumErr:%.4f%% avgErr:%.4f%%\n", sumErrp, (sumErrp / float64(in.N*2)))
+	log.Printf("sumErr:%d avgErr:%.4f\n", sumErr, float64(sumErr)/float64(in.N*2))
 }
 
 func main() {
@@ -307,4 +319,11 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func absInt(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
 }
