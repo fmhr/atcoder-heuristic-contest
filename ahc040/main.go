@@ -89,36 +89,8 @@ func simSolver(in Input) (int, []Cmd) {
 }
 
 func solver(in Input) {
+	queryCnt := 0
 	var measured_w, measured_h int
-	var bestScore int = math.MaxInt64
-	for t := 0; t < in.T-2; t++ {
-		fmt.Println(in.N)
-		anses := make([]Cmd, in.N)
-		for i := 0; i < in.N; i++ {
-			var cmd Cmd
-			cmd.p = i // 長方形の番号
-			if 1 == rand.Intn(2) {
-				cmd.r = true
-			}
-			cmd.d = 'U' // U：下から上に配置 L:右から左に配置
-			if rand.Intn(2) == 0 {
-				cmd.d = 'L'
-			}
-			cmd.b = -1
-			if i > 0 {
-				cmd.b = rand.Intn(i) - 1
-			}
-			anses[i] = cmd
-			fmt.Println(cmd.String())
-		}
-		fmt.Scan(&measured_w, &measured_h)
-		if measured_w+measured_h < bestScore {
-			bestScore = measured_w + measured_h
-			log.Println(t, measured_w+measured_h)
-		}
-	}
-	log.Println("bestScore", bestScore)
-
 	// シミュレーションで解く
 	bs, bc := simSolver(in)
 	fmt.Println(in.N)
@@ -126,6 +98,7 @@ func solver(in Input) {
 		fmt.Println(bc[i].String())
 	}
 	fmt.Scan(&measured_w, &measured_h)
+	queryCnt++
 	log.Printf("sim_score=%d sim_result=%d\n", bs, measured_w+measured_h)
 	// beam search
 	beam_best := BeamSearch(in)
@@ -134,7 +107,14 @@ func solver(in Input) {
 		fmt.Println(beam_best.cmds[i].String())
 	}
 	fmt.Scan(&measured_w, &measured_h)
+	queryCnt++
 	log.Printf("beam_result=%d\n", measured_w+measured_h)
+	log.Printf("queryCnt:%d /in.T:%d\n", queryCnt, in.T)
+	for queryCnt < in.T {
+		fmt.Println(0)
+		fmt.Scan(&measured_w, &measured_h)
+		queryCnt++
+	}
 }
 
 type Cmd struct {
@@ -414,7 +394,7 @@ func estimater(in Input) ([][2]float64, [][2]float64) {
 			}
 		}
 	}
-	log.Println(sigma)
+	//log.Println(sigma)
 	stds := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
 		for wh := 0; wh < 2; wh++ {
@@ -432,10 +412,10 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	startTIme := time.Now()
 	in := input()
-	est, stds := estimater(in)
+	//est, stds := estimater(in)
+	//checkEstimate(in, est, stds)
+	solver(in)
 	elap := time.Since(startTIme)
-	checkEstimate(in, est, stds)
-	//solver(in)
 	log.Printf("time_ms=%d ms\n", elap.Milliseconds())
 }
 
