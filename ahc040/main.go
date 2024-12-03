@@ -58,48 +58,9 @@ func BeamSearch(in Input) State {
 	return states[0]
 }
 
-// queryを使わずに解く
-func simSolver(in Input) (int, []Cmd) {
-	best_score := math.MaxInt64
-	best_cmds := make([]Cmd, in.N)
-	for k := 0; k < 10000; k++ {
-		state := NewState(in)
-		cmds := make([]Cmd, in.N)
-		for i := 0; i < in.N; i++ {
-			cmd := Cmd{p: i, r: false, d: 'U', b: -1}
-			if rand.Intn(2) == 1 {
-				cmd.r = true
-			}
-			if rand.Intn(2) == 1 {
-				cmd.d = 'L'
-			}
-			if i > 0 {
-				cmd.b = rand.Intn(i) - 1
-			}
-			state.do(in, cmd, i)
-			cmds[i] = cmd
-		}
-		if state.score < best_score {
-			best_score = state.score
-			copy(best_cmds, cmds)
-			log.Println(k, "best_score", best_score)
-		}
-	}
-	return best_score, best_cmds
-}
-
 func solver(in Input) {
 	queryCnt := 0
 	var measured_w, measured_h int
-	// シミュレーションで解く
-	bs, bc := simSolver(in)
-	fmt.Println(in.N)
-	for i := 0; i < len(bc); i++ {
-		fmt.Println(bc[i].String())
-	}
-	fmt.Scan(&measured_w, &measured_h)
-	queryCnt++
-	log.Printf("sim_score=%d sim_result=%d\n", bs, measured_w+measured_h)
 	// beam search
 	beam_best := BeamSearch(in)
 	fmt.Println(len(beam_best.cmds))
