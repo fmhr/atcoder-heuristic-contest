@@ -110,6 +110,7 @@ func solver(in Input) {
 	queryCnt++
 	log.Printf("beam_result=%d\n", measured_w+measured_h)
 	log.Printf("queryCnt:%d /in.T:%d\n", queryCnt, in.T)
+	log.Printf("rest querySize:%d\n", in.T-queryCnt)
 	for queryCnt < in.T {
 		fmt.Println(0)
 		fmt.Scan(&measured_w, &measured_h)
