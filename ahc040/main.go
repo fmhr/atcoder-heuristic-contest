@@ -315,9 +315,9 @@ func estimater(in Input) {
 	var results [][2]float64
 	for t := 0; t < in.T; t++ {
 		// なんこの長方形を使うか
-		m := rand.Intn(20) + 5
+		m := in.N/2 + 1
 		ns := selectRandom(in.N, m)
-		log.Println(ns)
+		//log.Println(ns)
 		put := make([]byte, in.N)
 		for i := 0; i < in.N; i++ {
 			put[i] = '.'
@@ -326,7 +326,7 @@ func estimater(in Input) {
 			// それぞれの長方形をw, hのどちらかに配置する
 			put[i] = "UL"[rand.Intn(2)]
 		}
-		log.Println(string(put))
+		//log.Println(string(put))
 		fmt.Println(len(ns))
 		for i := 0; i < in.N; i++ {
 			if put[i] != '.' {
@@ -349,50 +349,48 @@ func estimater(in Input) {
 	}
 	for k, p := range puts {
 		// k回目の測定結果
+		first := true // 一番最初の長方形は、両方測定される
 		for i, d := range p {
 			// 0だけは常に両方測定される
-			if d == 'U' || i == 0 {
+			if d == '.' {
+				continue
+			}
+			if d == 'L' || first {
 				estise[i].mesuredCnt[0]++
 				estise[i].mesureSum[0] += results[k][0]
-				party := slicesIndex(p, 'U') // 一緒に測定された長方形の番号
+				party := slicesIndex(p, 'L') // 一緒に測定された長方形の番号
 				for _, j := range party {
 					estise[i].partyCnt[0][j]++
 				}
 			}
-			// 0だけは常に両方測定されるのでelse if はつかわない
-			if d == 'L' || i == 0 {
+			if d == 'U' || first {
 				estise[i].mesuredCnt[1]++
 				estise[i].mesureSum[1] += results[k][1]
-				party := slicesIndex(p, 'L')
+				party := slicesIndex(p, 'U')
 				for _, j := range party {
 					estise[i].partyCnt[1][j]++
 				}
 			}
+			first = false
 		}
 	}
-	log.Println(estise[0].partyCnt[1])
-	// 0だけは常に両方測定される
-	estise[0].mesuredCnt[0] = len(puts)
-	estise[0].mesuredCnt[1] = len(puts)
 	for i := 0; i < in.N; i++ {
-		estise[i].partyCnt[0][0] = len(puts) // 0だけは常に両方測定される
-		estise[i].partyCnt[1][0] = len(puts)
 		estise[i].partyCnt[0][i] = 0 // 自分自身は加算しない 更新するので
 		estise[i].partyCnt[1][i] = 0
 	}
 	// 例 x番目のwを推定する
+	//	for x := 0; x < in.N; x++ {
+	//for wh := 0; wh < 2; wh++ {
 	//log.Printf("estise %d %.2f\n", estise[x].mesuredCnt[wh], estise[x].mesureSum[wh])
 	//log.Println("partyCnt", estise[x].partyCnt[wh])
-	for i := 0; i < in.N; i++ {
-		for wh := 0; wh < 2; wh++ {
-			//log.Println(i, wh, estise[i].partyCnt[wh])
-		}
-	}
-	maxStep := 50000
-	burnIn := 1000
+	//}
+	//}
+
+	maxStep := 100000
+	burnIn := maxStep / 10
 	sigma := in.sgm
-	sigma = 1000
 	var samplese [100][2][]float64
+	//estimateV2 := make([][2]float64, in.N)
 	for step := 0; step < maxStep; step++ {
 		for x := 0; x < in.N; x++ {
 			for wh := 0; wh < 2; wh++ {
@@ -405,21 +403,20 @@ func estimater(in Input) {
 					value -= float64(estise[x].partyCnt[wh][i]) * estimateV[i][wh]
 				}
 				mean := value / float64(estise[x].mesuredCnt[wh]) // 0番目のwの参加回数を引いて平均を取る
-				if mean < 0 {
-					mean = estimateV[x][wh]
-				}
 				new := rand.NormFloat64()*float64(sigma)/math.Sqrt(2.0) + mean
-				//log.Println(x, wh, estimateV[x][wh], mean, new)
-				if step == maxStep-1 {
-					//log.Printf("%d %d %.2f %.2f %.2f\n", x, wh, estimateV[x][wh], mean, new)
-				}
-				estimateV[x][wh] = math.Max(0, new)
+				estimateV[x][wh] = new
 				samplese[x][wh] = append(samplese[x][wh], estimateV[x][wh])
 			}
 		}
+		//	for i := 0; i < in.N; i++ {
+		//log.Println(i, estimateV[i])
+		//log.Printf("%d %.2f %.2f \n", i, estimateV2[i][0], estimateV2[i][1])
+		//}
+		//break
 	}
 	for i := 0; i < in.N; i++ {
 		for wh := 0; wh < 2; wh++ {
+			//log.Println(samplese[i][wh][:10])
 			mean := mean(samplese[i][wh][burnIn:])
 			std := std(samplese[i][wh][burnIn:])
 			log.Println(i, wh, int(mean), int(std))
@@ -461,9 +458,12 @@ func absInt(a int) int {
 	return a
 }
 
+// UまたはLが出てるindex または最初にでてくるUL
 func slicesIndex(slices []byte, v byte) (indexes []int) {
 	for i, s := range slices {
 		if s == v {
+			indexes = append(indexes, i)
+		} else if s != '.' && len(indexes) == 0 {
 			indexes = append(indexes, i)
 		}
 	}
