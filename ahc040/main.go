@@ -277,7 +277,6 @@ func (s *State) query(in Input, cmd []Cmd) {
 }
 
 func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
-	log.Println("check estimate")
 	input := make([][2]int, in.N)
 	for i := 0; i < in.N; i++ {
 		input[i][0] = in.w[i]
@@ -292,13 +291,13 @@ func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
 			t := trueSize[i][wh]
 			in := input[i][wh]
 			est := int(est[i][wh])
-			std := int(stds[i][wh])
-			log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
+			//std := int(stds[i][wh])
+			//log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
 			sumErr1 += absInt(in - t)
 			sumErr2 += absInt(est - t)
 		}
 	}
-	log.Printf("sumErr1=%d sumErr2=%d\n", sumErr1, sumErr2)
+	log.Printf("in.Sigm=%d, avgErr1=%d avgErr2=%d\n", in.sgm, sumErr1/in.N, sumErr2/in.N)
 }
 
 type EstimateValue struct {
@@ -318,9 +317,8 @@ func estimater(in Input) ([][2]float64, [][2]float64) {
 	var results [][2]float64
 	for t := 0; t < in.T; t++ {
 		// なんこの長方形を使うか
-		m := min(in.N, 30)
+		m := in.N
 		ns := selectRandom(in.N, m)
-		//log.Println(ns)
 		put := make([]byte, in.N)
 		for i := 0; i < in.N; i++ {
 			put[i] = '.'
@@ -329,11 +327,11 @@ func estimater(in Input) ([][2]float64, [][2]float64) {
 			// それぞれの長方形をw, hのどちらかに配置する
 			put[i] = "UL"[rand.Intn(2)]
 		}
-		//log.Println(string(put))
 		fmt.Println(len(ns))
 		for i := 0; i < in.N; i++ {
 			if put[i] != '.' {
 				fmt.Printf("%d %d %s %d\n", i, 0, string(put[i]), -1)
+				//log.Printf("%d %d %s %d\n", i, 0, string(put[i]), -1)
 			}
 		}
 		var w, h float64
@@ -380,6 +378,10 @@ func estimater(in Input) ([][2]float64, [][2]float64) {
 	for i := 0; i < in.N; i++ {
 		estise[i].partyCnt[0][i] = 0 // 自分自身は加算しない 更新するので
 		estise[i].partyCnt[1][i] = 0
+		estise[i].mesureSum[0] += float64(in.w[i])
+		estise[i].mesureSum[1] += float64(in.h[i])
+		estise[i].mesuredCnt[0] += 1
+		estise[i].mesuredCnt[1] += 1
 	}
 	// 例 x番目のwを推定する
 	//	for x := 0; x < in.N; x++ {
@@ -389,9 +391,9 @@ func estimater(in Input) ([][2]float64, [][2]float64) {
 	//}
 	//}
 
-	maxStep := 1000000
-	burnIn := maxStep / 5
-	sigma := in.sgm
+	maxStep := 100000
+	burnIn := maxStep / 3
+	sigma := float64(in.sgm)
 	var samplese [100][2][]float64
 	for step := 0; step < maxStep; step++ {
 		for x := 0; x < in.N; x++ {
@@ -405,12 +407,14 @@ func estimater(in Input) ([][2]float64, [][2]float64) {
 					value -= float64(estise[x].partyCnt[wh][i]) * estimateV[i][wh]
 				}
 				mean := value / float64(estise[x].mesuredCnt[wh]) // 0番目のwの参加回数を引いて平均を取る
-				new := rand.NormFloat64()*float64(sigma)/math.Sqrt(2.0) + mean
+				sigma2 := sigma / float64(estise[x].mesuredCnt[wh])
+				new := rand.NormFloat64()*sigma2/math.Sqrt(2.0) + mean
 				estimateV[x][wh] = new
 				samplese[x][wh] = append(samplese[x][wh], estimateV[x][wh])
 			}
 		}
 	}
+	log.Println(sigma)
 	stds := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
 		for wh := 0; wh < 2; wh++ {
@@ -428,11 +432,11 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	startTIme := time.Now()
 	in := input()
-	//solver(in)
 	est, stds := estimater(in)
 	elap := time.Since(startTIme)
-	log.Printf("time_ms=%d ms\n", elap.Milliseconds())
 	checkEstimate(in, est, stds)
+	//solver(in)
+	log.Printf("time_ms=%d ms\n", elap.Milliseconds())
 }
 
 // util
