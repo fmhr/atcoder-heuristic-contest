@@ -315,19 +315,23 @@ func estimater(in Input) {
 	var results [][2]float64
 	for t := 0; t < in.T; t++ {
 		// なんこの長方形を使うか
-		m := rand.Intn(10) + 3
+		m := rand.Intn(20) + 5
 		ns := selectRandom(in.N, m)
 		log.Println(ns)
 		put := make([]byte, in.N)
 		for i := 0; i < in.N; i++ {
-
+			put[i] = '.'
+		}
+		for _, i := range ns {
 			// それぞれの長方形をw, hのどちらかに配置する
 			put[i] = "UL"[rand.Intn(2)]
 		}
-		fmt.Println(in.N)
+		log.Println(string(put))
+		fmt.Println(len(ns))
 		for i := 0; i < in.N; i++ {
-			//log.Printf("%d %d %s %d\n", i, 0, string(put[i]), -1)
-			fmt.Printf("%d %d %s %d\n", i, 0, string(put[i]), -1)
+			if put[i] != '.' {
+				fmt.Printf("%d %d %s %d\n", i, 0, string(put[i]), -1)
+			}
 		}
 		var w, h float64
 		fmt.Scan(&w, &h)
