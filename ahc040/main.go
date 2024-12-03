@@ -276,26 +276,29 @@ func (s *State) query(in Input, cmd []Cmd) {
 	}
 }
 
-func checkEstimate(in Input) {
+func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
 	log.Println("check estimate")
-	estimate := make([][2]int, in.N)
+	input := make([][2]int, in.N)
 	for i := 0; i < in.N; i++ {
-		estimate[i][0] = in.w[i]
-		estimate[i][1] = in.h[i]
+		input[i][0] = in.w[i]
+		input[i][1] = in.h[i]
 	}
 	trueSize := make([][2]int, in.N)
-	sumErr := 0
-	sumErrp := 0.0
+	sumErr1 := 0
+	sumErr2 := 0
 	for i := 0; i < in.N; i++ {
-		fmt.Scan(&trueSize[i][0], &trueSize[i][1])
-		log.Printf("%dw, true:%v, estimate:%v, err:%d errp=%.4f%%\n", i, trueSize[i][0], estimate[i][0], estimate[i][0]-trueSize[i][0], float64(absInt(trueSize[i][0]-estimate[i][0]))/float64(trueSize[i][0]))
-		log.Printf("%dh, true:%v, estimate:%v, err:%d errp=%.4f%%\n", i, trueSize[i][1], estimate[i][1], estimate[i][1]-trueSize[i][1], float64(absInt(trueSize[i][1]-estimate[i][1]))/float64(trueSize[i][1]))
-		sumErrp += float64(absInt(trueSize[i][0]-estimate[i][0]))/float64(trueSize[i][0]) + float64(absInt(trueSize[i][1]-estimate[i][1]))/float64(trueSize[i][1])
-		sumErr += absInt(trueSize[i][0]-estimate[i][0]) + absInt(trueSize[i][1]-estimate[i][1])
-
+		for wh := 0; wh < 2; wh++ {
+			fmt.Scan(&trueSize[i][wh])
+			t := trueSize[i][wh]
+			in := input[i][wh]
+			est := int(est[i][wh])
+			std := int(stds[i][wh])
+			log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
+			sumErr1 += absInt(in - t)
+			sumErr2 += absInt(est - t)
+		}
 	}
-	log.Printf("sumErr:%.4f%% avgErr:%.4f%%\n", sumErrp, (sumErrp / float64(in.N*2)))
-	log.Printf("sumErr:%d avgErr:%.4f\n", sumErr, float64(sumErr)/float64(in.N*2))
+	log.Printf("sumErr1=%d sumErr2=%d\n", sumErr1, sumErr2)
 }
 
 type EstimateValue struct {
@@ -305,7 +308,7 @@ type EstimateValue struct {
 }
 
 // estimaterはin.T-1回までqueryを使って推定する
-func estimater(in Input) {
+func estimater(in Input) ([][2]float64, [][2]float64) {
 	estimateV := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
 		estimateV[i][0] = float64(in.w[i])
@@ -315,7 +318,7 @@ func estimater(in Input) {
 	var results [][2]float64
 	for t := 0; t < in.T; t++ {
 		// なんこの長方形を使うか
-		m := in.N/2 + 1
+		m := min(in.N, 30)
 		ns := selectRandom(in.N, m)
 		//log.Println(ns)
 		put := make([]byte, in.N)
@@ -386,11 +389,10 @@ func estimater(in Input) {
 	//}
 	//}
 
-	maxStep := 100000
-	burnIn := maxStep / 10
+	maxStep := 1000000
+	burnIn := maxStep / 5
 	sigma := in.sgm
 	var samplese [100][2][]float64
-	//estimateV2 := make([][2]float64, in.N)
 	for step := 0; step < maxStep; step++ {
 		for x := 0; x < in.N; x++ {
 			for wh := 0; wh < 2; wh++ {
@@ -408,22 +410,18 @@ func estimater(in Input) {
 				samplese[x][wh] = append(samplese[x][wh], estimateV[x][wh])
 			}
 		}
-		//	for i := 0; i < in.N; i++ {
-		//log.Println(i, estimateV[i])
-		//log.Printf("%d %.2f %.2f \n", i, estimateV2[i][0], estimateV2[i][1])
-		//}
-		//break
 	}
+	stds := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
 		for wh := 0; wh < 2; wh++ {
-			//log.Println(samplese[i][wh][:10])
 			mean := mean(samplese[i][wh][burnIn:])
+			estimateV[i][wh] = mean
 			std := std(samplese[i][wh][burnIn:])
-			log.Println(i, wh, int(mean), int(std))
+			stds[i][wh] = std
+			//log.Println(i, wh, int(mean), int(std))
 		}
 	}
-	//estimateV[x][wh] = new
-	// estimateW[0] = int(new) // 更新
+	return estimateV, stds
 }
 
 func main() {
@@ -431,10 +429,10 @@ func main() {
 	startTIme := time.Now()
 	in := input()
 	//solver(in)
-	estimater(in)
+	est, stds := estimater(in)
 	elap := time.Since(startTIme)
 	log.Printf("time_ms=%d ms\n", elap.Milliseconds())
-	checkEstimate(in)
+	checkEstimate(in, est, stds)
 }
 
 // util
@@ -505,4 +503,21 @@ func selectRandom(n, m int) []int {
 	sort.Ints(r)
 	// 最初のm個を返す
 	return r
+}
+
+// メトロポリス法で受理するかどうかを判断する関数
+func shouldAccept(xCurrent, xProposed, sigma float64) bool {
+	if xProposed < 0 {
+		return false
+	}
+	// 現在の値と提案された値を使って受理確率を計算
+	currentTerm := math.Pow(xCurrent, 2) / (2 * math.Pow(sigma, 2))
+	proposedTerm := math.Pow(xProposed, 2) / (2 * math.Pow(sigma, 2))
+	alpha := math.Exp(-(proposedTerm - currentTerm))
+
+	// 一様乱数を生成
+	randomValue := rand.Float64() // 0から1の乱数
+
+	// 乱数が受理確率以下なら受理
+	return randomValue <= alpha
 }
