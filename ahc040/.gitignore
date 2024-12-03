@@ -1,1 +1,6 @@
 fj/
+.venv/
+.ipynb_checkpoints/
+*.ipynb
+*.pdf
+*.txt
