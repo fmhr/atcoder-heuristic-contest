@@ -314,8 +314,13 @@ func estimater(in Input) {
 	puts := make([][]byte, 0)
 	var results [][2]float64
 	for t := 0; t < in.T; t++ {
+		// なんこの長方形を使うか
+		m := rand.Intn(10) + 3
+		ns := selectRandom(in.N, m)
+		log.Println(ns)
 		put := make([]byte, in.N)
 		for i := 0; i < in.N; i++ {
+
 			// それぞれの長方形をw, hのどちらかに配置する
 			put[i] = "UL"[rand.Intn(2)]
 		}
@@ -329,6 +334,7 @@ func estimater(in Input) {
 		results = append(results, [2]float64{w, h})
 		puts = append(puts, put)
 	}
+
 	// 推定
 	// 長方形のw,hを順番に推定する
 	// 上の測定回数をまず数える
@@ -477,4 +483,22 @@ func std(samples []float64) float64 {
 		sum += (v - m) * (v - m)
 	}
 	return math.Sqrt(sum / float64(len(samples)))
+}
+
+// 0からnの範囲からm個の整数をランダムに選んで返す関数
+func selectRandom(n, m int) []int {
+	// 0からnの整数をスライスに格納
+	nums := make([]int, n)
+	for i := 0; i < n; i++ {
+		nums[i] = i
+	}
+
+	// ランダムにシャッフル
+	rand.Shuffle(len(nums), func(i, j int) {
+		nums[i], nums[j] = nums[j], nums[i]
+	})
+	r := nums[:m]
+	sort.Ints(r)
+	// 最初のm個を返す
+	return r
 }
