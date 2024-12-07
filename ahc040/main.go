@@ -273,10 +273,11 @@ func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
 	log.Printf(" avgErr1=%d avgErr2=%d\n", sumErr1/in.N, sumErr2/in.N)
 }
 
+// w, hの両方を持つ
 type EstimateValue struct {
 	mesuredCnt [2]int     // 0:w, 1:h
 	mesureSum  [2]float64 // 測定したときの結果の合計
-	partyCnt   [2][]int   // 他の長方形が一緒に測定した回数
+	partyCnt   [2][]int   // 他の長方形が一緒に測定した回数 長方形の番号*2 (w, h)
 }
 
 // estimaterはin.T-1回までqueryを使って推定する
@@ -289,23 +290,26 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 		estimateV[i][1] = float64(in.h[i])
 	}
 	puts := make([][]byte, 0)
+	rolls := make([][]int, 0)
 	var results [][2]float64
 	for t := 0; t < in.T-1; t++ {
 		// なんこの長方形を使うか
 		m := in.N
 		ns := selectRandom(in.N, m)
 		put := make([]byte, in.N)
+		roll := make([]int, in.N)
 		for i := 0; i < in.N; i++ {
 			put[i] = '.'
 		}
 		for _, i := range ns {
 			// それぞれの長方形をw, hのどちらかに配置する
 			put[i] = "UL"[rand.Intn(2)]
+			roll[i] = rand.Intn(2)
 		}
 		fmt.Println(len(ns))
 		for i := 0; i < in.N; i++ {
 			if put[i] != '.' {
-				fmt.Printf("%d %d %s %d\n", i, 0, string(put[i]), -1)
+				fmt.Printf("%d %d %s %d\n", i, roll[i], string(put[i]), -1)
 				//log.Printf("%d %d %s %d\n", i, 0, string(put[i]), -1)
 			}
 		}
@@ -313,6 +317,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 		fmt.Scan(&w, &h)
 		results = append(results, [2]float64{w, h})
 		puts = append(puts, put)
+		rolls = append(rolls, roll)
 	}
 
 	// 推定
@@ -320,39 +325,47 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	// 上の測定回数をまず数える
 	estise := make([]EstimateValue, in.N)
 	for i := 0; i < in.N; i++ {
-		estise[i].partyCnt[0] = make([]int, in.N)
-		estise[i].partyCnt[1] = make([]int, in.N)
+		estise[i].partyCnt[0] = make([]int, in.N*2)
+		estise[i].partyCnt[1] = make([]int, in.N*2)
 	}
-	for k, p := range puts {
+	for k := 0; k < len(puts); k++ {
+		put := puts[k]
+		roll := rolls[k]
 		// k回目の測定結果
 		first := true // 一番最初の長方形は、両方測定される
-		for i, d := range p {
+		for i := 0; i < len(put); i++ {
 			// 0だけは常に両方測定される
-			if d == '.' {
+			if put[i] == '.' {
 				continue
 			}
-			if d == 'L' || first {
-				estise[i].mesuredCnt[0]++
-				estise[i].mesureSum[0] += results[k][0]
-				party := slicesIndex(p, 'L') // 一緒に測定された長方形の番号
+			if put[i] == 'L' || first {
+				wh := 0 + roll[i]
+				estise[i].mesuredCnt[wh]++
+				estise[i].mesureSum[wh] += results[k][0]
+				party := slicesIndex(put, 'L') // 一緒に測定された長方形の番号
 				for _, j := range party {
-					estise[i].partyCnt[0][j]++
+					// j番目の長方形がi番目の長方形と一緒に測定された回数
+					// 0:w, 1:h
+					ab := j*2 + 0 + roll[j]
+					estise[i].partyCnt[wh][ab]++
 				}
 			}
-			if d == 'U' || first {
-				estise[i].mesuredCnt[1]++
-				estise[i].mesureSum[1] += results[k][1]
-				party := slicesIndex(p, 'U')
+			if put[i] == 'U' || first {
+				wh := 1 - roll[i]
+				estise[i].mesuredCnt[wh]++
+				estise[i].mesureSum[wh] += results[k][1]
+				party := slicesIndex(put, 'U')
 				for _, j := range party {
-					estise[i].partyCnt[1][j]++
+					ab := j*2 + 1 - roll[j]
+					estise[i].partyCnt[wh][ab]++
 				}
 			}
 			first = false
 		}
 	}
 	for i := 0; i < in.N; i++ {
-		estise[i].partyCnt[0][i] = 0 // 自分自身は加算しない 更新するので
-		estise[i].partyCnt[1][i] = 0
+		estise[i].partyCnt[0][i*2] = 0 // 自分自身は加算しない 更新するので
+		estise[i].partyCnt[1][i*2+1] = 0
 		estise[i].mesureSum[0] += float64(in.w[i])
 		estise[i].mesureSum[1] += float64(in.h[i])
 		estise[i].mesuredCnt[0] += 1
@@ -382,9 +395,11 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 				//log.Println("partyCnt", estise[x].partyCnt[wh], x, wh)
 				value := estise[x].mesureSum[wh] // 0番目のwの測定結果の合計
 				// valueから他の長方形のwを引く
-				for i := 0; i < in.N; i++ {
+				for i := 0; i < in.N*2; i++ {
 					// i番目とx番目が一緒に測定された回数 * 推定値
-					value -= float64(estise[x].partyCnt[wh][i]) * estimateV[i][wh]
+					a := i / 2
+					b := i % 2
+					value -= float64(estise[x].partyCnt[wh][i]) * estimateV[a][b]
 				}
 				mean := value / float64(estise[x].mesuredCnt[wh]) // 0番目のwの参加回数を引いて平均を取る
 				sigma2 := sigma / float64(estise[x].mesuredCnt[wh])
