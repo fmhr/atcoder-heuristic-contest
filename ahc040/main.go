@@ -81,17 +81,16 @@ func BeamSearch(in Input, queryCnt *int) State {
 	return states[0]
 }
 
-func solver(in Input) {
-	queryCnt := 0
+func solver(in Input, queryCnt *int) {
 	var measured_w, measured_h int
 	// beam search
-	_ = BeamSearch(in, &queryCnt)
+	_ = BeamSearch(in, queryCnt)
 	log.Printf("queryCnt:%d /in.T:%d\n", queryCnt, in.T)
-	log.Printf("rest querySize:%d\n", in.T-queryCnt)
-	for queryCnt < in.T {
+	log.Printf("rest querySize:%d\n", in.T-*queryCnt)
+	for *queryCnt < in.T {
 		fmt.Println(0)
 		fmt.Scan(&measured_w, &measured_h)
-		queryCnt++
+		*queryCnt++
 	}
 }
 
@@ -257,7 +256,7 @@ func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
 			in := input[i][wh]
 			est := int(est[i][wh])
 			//std := int(stds[i][wh])
-			//log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
+			log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
 			sumErr1 += absInt(in - t)
 			sumErr2 += absInt(est - t)
 		}
@@ -272,7 +271,9 @@ type EstimateValue struct {
 }
 
 // estimaterはin.T-1回までqueryを使って推定する
-func estimater(in Input) ([][2]float64, [][2]float64) {
+func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
+	queryT := in.T - 1 // 推定に使いクエリ回数
+	*queryCnt = queryT
 	estimateV := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
 		estimateV[i][0] = float64(in.w[i])
@@ -280,7 +281,7 @@ func estimater(in Input) ([][2]float64, [][2]float64) {
 	}
 	puts := make([][]byte, 0)
 	var results [][2]float64
-	for t := 0; t < in.T; t++ {
+	for t := 0; t < queryT; t++ {
 		// なんこの長方形を使うか
 		m := in.N
 		ns := selectRandom(in.N, m)
@@ -356,7 +357,7 @@ func estimater(in Input) ([][2]float64, [][2]float64) {
 	//}
 	//}
 
-	maxStep := 100000
+	maxStep := 500000
 	burnIn := maxStep / 3
 	sigma := float64(in.sgm)
 	var samplese [100][2][]float64
@@ -373,7 +374,7 @@ func estimater(in Input) ([][2]float64, [][2]float64) {
 				}
 				mean := value / float64(estise[x].mesuredCnt[wh]) // 0番目のwの参加回数を引いて平均を取る
 				sigma2 := sigma / float64(estise[x].mesuredCnt[wh])
-				new := rand.NormFloat64()*sigma2/math.Sqrt(2.0) + mean
+				new := rand.NormFloat64()*sigma2 + mean
 				estimateV[x][wh] = new
 				samplese[x][wh] = append(samplese[x][wh], estimateV[x][wh])
 			}
@@ -397,9 +398,11 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	startTIme := time.Now()
 	in := input()
-	//est, stds := estimater(in)
-	//checkEstimate(in, est, stds)
-	solver(in)
+	queryCnt := 0
+	est, stds := estimater(in, &queryCnt)
+	fmt.Println("0")
+	checkEstimate(in, est, stds)
+	//solver(in, &queryCnt)
 	elap := time.Since(startTIme)
 	log.Printf("time_ms=%d ms\n", elap.Milliseconds())
 }
