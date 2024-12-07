@@ -34,7 +34,7 @@ type CmdWithScore struct {
 
 const beamWidth = 10
 
-func BeamSearch(in Input) State {
+func BeamSearch(in Input, queryCnt *int) State {
 	states := make([]State, 0)
 	states = append(states, NewState(in))
 	subStates := make([]State, 0)
@@ -51,10 +51,24 @@ func BeamSearch(in Input) State {
 		sort.Slice(subStates, func(i, j int) bool {
 			return subStates[i].score < subStates[j].score
 		})
-		states = subStates[:min(len(subStates), beamWidth)]
+		if t < in.N-1 {
+			states = subStates[:min(len(subStates), beamWidth)]
+		} else {
+			states = subStates
+		}
 		subStates = make([]State, 0)
 	}
 	log.Printf("beam_score=%d\n", states[0].score)
+	var w, h int
+	for i := 0; i < len(states) && *queryCnt < in.T; i++ {
+		fmt.Println(len(states[i].cmds))
+		for _, cmd := range states[i].cmds {
+			fmt.Println(cmd)
+		}
+		fmt.Scan(&w, &h)
+		*queryCnt++
+		log.Printf("estScore:%d, result:%d, deff:%d\n", states[i].score, w+h, states[i].score-w-h)
+	}
 	return states[0]
 }
 
@@ -62,14 +76,7 @@ func solver(in Input) {
 	queryCnt := 0
 	var measured_w, measured_h int
 	// beam search
-	beam_best := BeamSearch(in)
-	fmt.Println(len(beam_best.cmds))
-	for i := 0; i < len(beam_best.cmds); i++ {
-		fmt.Println(beam_best.cmds[i].String())
-	}
-	fmt.Scan(&measured_w, &measured_h)
-	queryCnt++
-	log.Printf("beam_result=%d\n", measured_w+measured_h)
+	_ = BeamSearch(in, &queryCnt)
 	log.Printf("queryCnt:%d /in.T:%d\n", queryCnt, in.T)
 	log.Printf("rest querySize:%d\n", in.T-queryCnt)
 	for queryCnt < in.T {
