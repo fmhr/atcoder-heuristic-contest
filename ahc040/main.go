@@ -210,8 +210,10 @@ func (s *State) do(in Input, c Cmd, t int, clearance int) {
 		x2 = x1 + w
 		y1 = 0
 		for _, q := range s.pos {
-			if q.t >= 0 && max(x1, q.x1) < min(x2, q.x2)-clearance {
-				y1 = max(y1, q.y2)
+			if q.t >= 0 {
+				if max(x1, q.x1) < min(x2, q.x2)-clearance {
+					y1 = max(y1, q.y2)
+				}
 			}
 		}
 		y2 = y1 + h
@@ -224,8 +226,10 @@ func (s *State) do(in Input, c Cmd, t int, clearance int) {
 		y2 = y1 + h
 		x1 = 0
 		for _, q := range s.pos {
-			if q.t >= 0 && max(y1, q.y1) < min(y2, q.y2)-clearance {
-				x1 = max(x1, q.x2)
+			if q.t >= 0 {
+				if max(y1, q.y1) < min(y2, q.y2)-clearance {
+					x1 = max(x1, q.x2)
+				}
 			}
 		}
 		x2 = x1 + w
