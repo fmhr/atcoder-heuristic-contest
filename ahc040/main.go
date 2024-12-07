@@ -53,7 +53,7 @@ func BeamSearch(in Input, queryCnt *int) State {
 			cmds := cmdGenerate(t)
 			for _, cmd := range cmds {
 				now := states[w].Clone()
-				now.do(in, cmd, t, 0)
+				now.do(in, cmd, t)
 				now.cmds = append(now.cmds, cmd)
 				subStates = append(subStates, now)
 			}
@@ -185,7 +185,7 @@ func (s *State) undo(c Cmd) {
 	s.score = s.W + s.H
 }
 
-func (s *State) do(in Input, c Cmd, t int, clearance int) {
+func (s *State) do(in Input, c Cmd, t int) {
 	// cmdのチェック
 	if s.pos[c.p].t >= 0 {
 		log.Println("c.p:", c.p, s.pos[c.p].t)
@@ -211,7 +211,7 @@ func (s *State) do(in Input, c Cmd, t int, clearance int) {
 		y1 = 0
 		for _, q := range s.pos {
 			if q.t >= 0 {
-				if max(x1, q.x1) < min(x2, q.x2)-clearance {
+				if max(x1, q.x1) < min(x2, q.x2) {
 					y1 = max(y1, q.y2)
 				}
 			}
@@ -227,7 +227,7 @@ func (s *State) do(in Input, c Cmd, t int, clearance int) {
 		x1 = 0
 		for _, q := range s.pos {
 			if q.t >= 0 {
-				if max(y1, q.y1) < min(y2, q.y2)-clearance {
+				if max(y1, q.y1) < min(y2, q.y2) {
 					x1 = max(x1, q.x2)
 				}
 			}
@@ -249,7 +249,7 @@ func (s *State) do(in Input, c Cmd, t int, clearance int) {
 
 func (s *State) query(in Input, cmd []Cmd) {
 	for t, c := range cmd {
-		s.do(in, c, t, in.sgm)
+		s.do(in, c, t)
 	}
 }
 
