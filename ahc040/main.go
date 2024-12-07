@@ -14,6 +14,15 @@ type Input struct {
 	w, h      []int
 }
 
+func (in Input) Clone() Input {
+	t := in
+	t.w = make([]int, in.N)
+	t.h = make([]int, in.N)
+	copy(t.w, in.w)
+	copy(t.h, in.h)
+	return t
+}
+
 func input() Input {
 	var n, t, sgm int
 	fmt.Scan(&n, &t, &sgm)
@@ -32,16 +41,14 @@ type CmdWithScore struct {
 	score int
 }
 
-var beamWidth = 20
+var beamWidth = 10
 
 func BeamSearch(in Input, queryCnt *int) State {
+	startTimeBS := time.Now()
 	states := make([]State, 0)
 	states = append(states, NewState(in))
 	subStates := make([]State, 0)
 	for t := 0; t < in.N; t++ {
-		if t > in.N-4 {
-			beamWidth = 40
-		}
 		for w := 0; w < min(len(states), beamWidth); w++ {
 			cmds := cmdGenerate(t)
 			for _, cmd := range cmds {
@@ -68,6 +75,7 @@ func BeamSearch(in Input, queryCnt *int) State {
 	})
 	log.Printf("beam_score=%d\n", states[0].score)
 	var w, h int
+	log.Println("queryCnt", *queryCnt)
 	for i := 0; i < len(states) && *queryCnt < in.T; i++ {
 		fmt.Println(len(states[i].cmds))
 		for _, cmd := range states[i].cmds {
@@ -77,7 +85,8 @@ func BeamSearch(in Input, queryCnt *int) State {
 		*queryCnt++
 		log.Printf("estScore:%d, result:%d, deff:%d\n", states[i].score, w+h, states[i].score-w-h)
 	}
-
+	timeBS := time.Since(startTimeBS)
+	log.Printf("bs_time=%.2f\n", timeBS.Seconds())
 	return states[0]
 }
 
@@ -255,13 +264,13 @@ func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
 			t := trueSize[i][wh]
 			in := input[i][wh]
 			est := int(est[i][wh])
-			//std := int(stds[i][wh])
+			std := int(stds[i][wh])
 			log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
 			sumErr1 += absInt(in - t)
 			sumErr2 += absInt(est - t)
 		}
 	}
-	log.Printf("in.Sigm=%d, avgErr1=%d avgErr2=%d\n", in.sgm, sumErr1/in.N, sumErr2/in.N)
+	log.Printf(" avgErr1=%d avgErr2=%d\n", sumErr1/in.N, sumErr2/in.N)
 }
 
 type EstimateValue struct {
@@ -281,7 +290,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	}
 	puts := make([][]byte, 0)
 	var results [][2]float64
-	for t := 0; t < queryT; t++ {
+	for t := 0; t < in.T-1; t++ {
 		// なんこの長方形を使うか
 		m := in.N
 		ns := selectRandom(in.N, m)
@@ -358,10 +367,15 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	//}
 
 	maxStep := 500000
-	burnIn := maxStep / 3
 	sigma := float64(in.sgm)
 	var samplese [100][2][]float64
-	for step := 0; step < maxStep; step++ {
+	timNow := time.Now()
+	var step int
+	for step = 0; step < maxStep; step++ {
+		elapsed := time.Since(timNow)
+		if elapsed > 1000*time.Millisecond {
+			break
+		}
 		for x := 0; x < in.N; x++ {
 			for wh := 0; wh < 2; wh++ {
 				//log.Printf("estise %d %.2f\n", estise[x].mesuredCnt[wh], estise[x].mesureSum[wh])
@@ -380,6 +394,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 			}
 		}
 	}
+	burnIn := step / 3
 	//log.Println(sigma)
 	stds := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
@@ -391,6 +406,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 			//log.Println(i, wh, int(mean), int(std))
 		}
 	}
+	log.Printf("estTime=%.2f\n", time.Since(timNow).Seconds())
 	return estimateV, stds
 }
 
@@ -398,13 +414,21 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	startTIme := time.Now()
 	in := input()
+	insub := in.Clone()
 	queryCnt := 0
 	est, stds := estimater(in, &queryCnt)
-	fmt.Println("0")
-	checkEstimate(in, est, stds)
-	//solver(in, &queryCnt)
+	//	fmt.Println("0")
+	//var w, h int
+	//fmt.Scan(&w, &h)
+	//log.Println("result", w, h)
+	for i := 0; i < in.N; i++ {
+		in.w[i] = int(est[i][0])
+		in.h[i] = int(est[i][1])
+	}
+	solver(in, &queryCnt)
 	elap := time.Since(startTIme)
-	log.Printf("time_ms=%d ms\n", elap.Milliseconds())
+	log.Printf("time=%.2f ms\n", elap.Seconds())
+	checkEstimate(insub, est, stds)
 }
 
 // util
