@@ -43,13 +43,14 @@ func BeamSearch(in Input, queryCnt *int) State {
 			cmds := cmdGenerate(t)
 			for _, cmd := range cmds {
 				now := states[w].Clone()
-				now.do(in, cmd, t)
+				now.do(in, cmd, t, in.sgm*2)
 				now.cmds = append(now.cmds, cmd)
 				subStates = append(subStates, now)
 			}
 		}
+		// ビームサーチ用の評価score_tでソート
 		sort.Slice(subStates, func(i, j int) bool {
-			return subStates[i].score < subStates[j].score
+			return subStates[i].score_t < subStates[j].score_t
 		})
 		if t < in.N-1 {
 			states = subStates[:min(len(subStates), beamWidth)]
@@ -58,6 +59,10 @@ func BeamSearch(in Input, queryCnt *int) State {
 		}
 		subStates = make([]State, 0)
 	}
+	// スコアによるソート
+	sort.Slice(subStates, func(i, j int) bool {
+		return subStates[i].score < subStates[j].score
+	})
 	log.Printf("beam_score=%d\n", states[0].score)
 	var w, h int
 	for i := 0; i < len(states) && *queryCnt < in.T; i++ {
@@ -69,6 +74,7 @@ func BeamSearch(in Input, queryCnt *int) State {
 		*queryCnt++
 		log.Printf("estScore:%d, result:%d, deff:%d\n", states[i].score, w+h, states[i].score-w-h)
 	}
+
 	return states[0]
 }
 
@@ -134,7 +140,7 @@ type State struct {
 	pos            [100]Pos
 	W, H           int
 	W2, H2         int // 更新前 undo用
-	score_t, score int
+	score_t, score int // score_t = score + x2 + y2 評価用
 	cmds           []Cmd
 }
 
@@ -168,7 +174,7 @@ func (s *State) undo(c Cmd) {
 	s.score = s.W + s.H
 }
 
-func (s *State) do(in Input, c Cmd, t int) {
+func (s *State) do(in Input, c Cmd, t int, clearance int) {
 	// cmdのチェック
 	if s.pos[c.p].t >= 0 {
 		log.Println("c.p:", c.p, s.pos[c.p].t)
@@ -183,33 +189,35 @@ func (s *State) do(in Input, c Cmd, t int) {
 	if c.r {
 		w, h = h, w // 90度回転
 	}
+
+	var x2, y2 int
 	if c.d == 'U' {
 		x1 := 0 // 基準になるx座標
 		if c.b >= 0 {
 			x1 = s.pos[c.b].x2
 		}
-		x2 := x1 + w
+		x2 = x1 + w
 		y1 := 0
 		for _, q := range s.pos {
-			if q.t >= 0 && max(x1, q.x1) < min(x2, q.x2) {
+			if q.t >= 0 && max(x1, q.x1) < min(x2, q.x2)+clearance {
 				y1 = max(y1, q.y2)
 			}
 		}
-		y2 := y1 + h
+		y2 = y1 + h
 		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, t}
 	} else {
 		y1 := 0 // 基準になるy座標
 		if c.b >= 0 {
 			y1 = s.pos[c.b].y2
 		}
-		y2 := y1 + h
+		y2 = y1 + h
 		x1 := 0
 		for _, q := range s.pos {
-			if q.t >= 0 && max(y1, q.y1) < min(y2, q.y2) {
+			if q.t >= 0 && max(y1, q.y1) < min(y2, q.y2)+clearance {
 				x1 = max(x1, q.x2)
 			}
 		}
-		x2 := x1 + w
+		x2 = x1 + w
 		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, t}
 	}
 	s.W2 = s.W
@@ -217,11 +225,12 @@ func (s *State) do(in Input, c Cmd, t int) {
 	s.W = max(s.W, s.pos[c.p].x2)
 	s.H = max(s.H, s.pos[c.p].y2)
 	s.score = s.W + s.H
+	s.score_t = s.score + (x2+y2)%10000
 }
 
 func (s *State) query(in Input, cmd []Cmd) {
 	for t, c := range cmd {
-		s.do(in, c, t)
+		s.do(in, c, t, in.sgm)
 	}
 }
 
