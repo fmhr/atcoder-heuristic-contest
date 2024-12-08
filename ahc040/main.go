@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"math/rand"
+	"os"
 	"sort"
 	"time"
 )
@@ -202,6 +204,7 @@ func (s *State) do(in Input, c Cmd, t int) {
 	}
 
 	var x1, x2, y1, y2 int
+	var penalty int
 	if c.d == 'U' {
 		x1 = 0 // 基準になるx座標
 		if c.b >= 0 {
@@ -213,6 +216,12 @@ func (s *State) do(in Input, c Cmd, t int) {
 			if q.t >= 0 {
 				if max(x1, q.x1) < min(x2, q.x2) {
 					y1 = max(y1, q.y2)
+				} else {
+					// 横をスレスレに通り抜けたとき
+					c := max(x1, q.x1) - min(x2, q.x2)
+					if c < int(in.sgm) {
+						penalty += in.sgm - c
+					}
 				}
 			}
 		}
@@ -229,6 +238,12 @@ func (s *State) do(in Input, c Cmd, t int) {
 			if q.t >= 0 {
 				if max(y1, q.y1) < min(y2, q.y2) {
 					x1 = max(x1, q.x2)
+				} else {
+					// 縦をスレスレに通り抜けたとき
+					c := max(y1, q.y1) - min(y2, q.y2)
+					if c < int(in.sgm) {
+						penalty += in.sgm - c
+					}
 				}
 			}
 		}
@@ -237,10 +252,7 @@ func (s *State) do(in Input, c Cmd, t int) {
 	}
 	s.W2 = s.W
 	s.H2 = s.H
-	penalty := 0
-	if s.W < s.pos[c.p].x2 || s.H < s.pos[c.p].y2 {
-		penalty += 10000000
-	}
+
 	s.W = max(s.W, s.pos[c.p].x2)
 	s.H = max(s.H, s.pos[c.p].y2)
 	s.score = s.W + s.H
@@ -296,7 +308,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	puts := make([][]byte, 0)
 	rolls := make([][]int, 0)
 	var results [][2]float64
-	for t := 0; t < in.T-1; t++ {
+	for t := 0; t < queryT; t++ {
 		// なんこの長方形を使うか
 		m := in.N
 		ns := selectRandom(in.N, m)
@@ -429,7 +441,13 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	return estimateV, stds
 }
 
+var ATCODER int
+
 func main() {
+	if os.Getenv("ATCODER") == "1" {
+		ATCODER = 1
+		log.SetOutput(io.Discard)
+	}
 	log.SetFlags(log.Lshortfile)
 	startTIme := time.Now()
 	in := input()
@@ -447,7 +465,9 @@ func main() {
 	solver(in, &queryCnt)
 	elap := time.Since(startTIme)
 	log.Printf("time=%.2f ms\n", elap.Seconds())
-	checkEstimate(insub, est, stds)
+	if ATCODER != 1 {
+		checkEstimate(insub, est, stds)
+	}
 }
 
 // util
