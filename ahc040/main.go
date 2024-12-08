@@ -294,6 +294,9 @@ type EstimateValue struct {
 	mesuredCnt [2]int     // 0:w, 1:h
 	mesureSum  [2]float64 // 測定したときの結果の合計
 	partyCnt   [2][]int   // 他の長方形が一緒に測定した回数 長方形の番号*2 (w, h)
+	sigma2     [2]float64
+	alpha      [2]float64
+	beta       [2]float64
 }
 
 // estimaterはin.T-1回までqueryを使って推定する
@@ -341,8 +344,12 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	// 上の測定回数をまず数える
 	estise := make([]EstimateValue, in.N)
 	for i := 0; i < in.N; i++ {
-		estise[i].partyCnt[0] = make([]int, in.N*2)
-		estise[i].partyCnt[1] = make([]int, in.N*2)
+		for wh := 0; wh < 2; wh++ {
+			estise[i].partyCnt[wh] = make([]int, in.N*2)
+			estise[i].alpha[wh] = 2.0
+			estise[i].beta[wh] = 1.0
+			estise[i].sigma2[wh] = float64(in.sgm * in.sgm)
+		}
 	}
 	for k := 0; k < len(puts); k++ {
 		put := puts[k]
@@ -395,8 +402,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	//}
 	//}
 
-	maxStep := 500000
-	sigma := float64(in.sgm)
+	maxStep := 5000
 	var samplese [100][2][]float64
 	timNow := time.Now()
 	var step int
@@ -417,10 +423,16 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 					b := i % 2
 					value -= float64(estise[x].partyCnt[wh][i]) * estimateV[a][b]
 				}
+				// muの更新
 				mean := value / float64(estise[x].mesuredCnt[wh]) // 0番目のwの参加回数を引いて平均を取る
-				sigma2 := sigma / float64(estise[x].mesuredCnt[wh])
-				new := rand.NormFloat64()*sigma2 + mean
-				estimateV[x][wh] = new
+				mu := rand.NormFloat64()*math.Sqrt(estise[x].sigma2[wh]) + mean
+				// sigma^2の更新
+				alphaNew := estise[x].alpha[wh] + float64(estise[x].mesuredCnt[wh])/2
+				betaNew := estise[x].beta[wh] + 0.5*float64(estise[x].mesuredCnt[wh])*(math.Pow(mean-mu, 2))
+				estise[x].sigma2[wh] = 1 / sampleGamma(alphaNew, 1.0/betaNew)
+
+				//new := rand.NormFloat64()*sigma2 + mean
+				estimateV[x][wh] = mu
 				samplese[x][wh] = append(samplese[x][wh], estimateV[x][wh])
 			}
 		}
@@ -555,4 +567,32 @@ func shouldAccept(xCurrent, xProposed, sigma float64) bool {
 
 	// 乱数が受理確率以下なら受理
 	return randomValue <= alpha
+}
+
+func sampleGamma(shape, scale float64) float64 {
+	if shape <= 0 || scale <= 0 {
+		log.Println(shape, scale)
+		panic("shape and scale must be positive")
+	}
+	if shape < 1 {
+		return sampleGamma(1.0+shape, scale) * math.Pow(rand.Float64(), 1.0/shape)
+	}
+
+	// Marsaglia and Tsang method
+	d := shape - 1.0/3.0
+	c := 1.0 / math.Sqrt(9.0*d)
+	for {
+		x := rand.NormFloat64()
+		v := 1.0 + c*x
+		if v > 0 {
+			v = v * v * v // v = v^3
+			u := rand.Float64()
+			if u < 1.0-0.0331*math.Pow(x, 4) {
+				return d * v * scale
+			}
+			if math.Log(u) < 0.5*x*x+d*(1.0-v+math.Log(v)) {
+				return d * v * scale
+			}
+		}
+	}
 }
