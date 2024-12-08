@@ -1,12 +1,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"math"
 	"math/rand"
 	"os"
+	"runtime/pprof"
 	"sort"
 	"time"
 )
@@ -454,13 +456,26 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 }
 
 var ATCODER int
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 
 func main() {
+	log.SetFlags(log.Lshortfile)
 	if os.Getenv("ATCODER") == "1" {
 		ATCODER = 1
 		log.SetOutput(io.Discard)
 	}
-	log.SetFlags(log.Lshortfile)
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
 	startTIme := time.Now()
 	in := input()
 	insub := in.Clone()
