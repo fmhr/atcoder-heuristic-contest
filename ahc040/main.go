@@ -108,15 +108,15 @@ func solver(in Input, queryCnt *int) {
 }
 
 type Cmd struct {
-	p int  // 長方形の番号
-	r bool // 1:90度回転
+	p int8 // 長方形の番号
+	r int8 // 1:90度回転
 	d byte // U：下から上に配置 L:右から左に配置
-	b int  // 基準となる長方形の番号
+	b int8 // 基準となる長方形の番号
 }
 
 func (c Cmd) String() string {
 	r := 0
-	if c.r {
+	if c.r == 1 {
 		r = 1
 	}
 	return fmt.Sprintf("%d %d %s %d", c.p, r, string(c.d), c.b)
@@ -125,10 +125,11 @@ func (c Cmd) String() string {
 // n: 追加する長方形
 func cmdGenerate(n int) []Cmd {
 	cmds := make([]Cmd, 0)
-	for r := 0; r < 2; r++ {
-		for d := 0; d < 2; d++ {
-			for b := -1; b < n; b++ {
-				cmds = append(cmds, Cmd{p: n, r: r == 1, d: "UL"[d], b: b})
+	var r, d, b int8
+	for r = 0; r < 2; r++ {
+		for d = 0; d < 2; d++ {
+			for b = -1; b < int8(n); b++ {
+				cmds = append(cmds, Cmd{p: int8(n), r: r, d: "UL"[d], b: b})
 			}
 		}
 	}
