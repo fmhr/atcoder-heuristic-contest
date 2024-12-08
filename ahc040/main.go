@@ -219,9 +219,7 @@ func (s *State) do(in Input, c Cmd, t int) {
 				} else {
 					// 横をスレスレに通り抜けたとき
 					c := max(x1, q.x1) - min(x2, q.x2)
-					if c < int(in.sgm) {
-						penalty += in.sgm - c
-					}
+					penalty += in.sgm / (c + 1)
 				}
 			}
 		}
@@ -241,9 +239,7 @@ func (s *State) do(in Input, c Cmd, t int) {
 				} else {
 					// 縦をスレスレに通り抜けたとき
 					c := max(y1, q.y1) - min(y2, q.y2)
-					if c < int(in.sgm) {
-						penalty += in.sgm - c
-					}
+					penalty += in.sgm / (c + 1)
 				}
 			}
 		}
@@ -256,7 +252,7 @@ func (s *State) do(in Input, c Cmd, t int) {
 	s.W = max(s.W, s.pos[c.p].x2)
 	s.H = max(s.H, s.pos[c.p].y2)
 	s.score = s.W + s.H
-	s.score_t = s.score + (min(x1, y1))%100 + penalty
+	s.score_t = s.score + (min(x1, y1))/20 + penalty
 }
 
 func (s *State) query(in Input, cmd []Cmd) {
@@ -301,7 +297,7 @@ type EstimateValue struct {
 
 // estimaterはin.T-1回までqueryを使って推定する
 func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
-	queryT := in.T - 1 // 推定に使いクエリ回数
+	queryT := min(in.N, in.T-1) // 推定に使いクエリ回数
 	*queryCnt = queryT
 	estimateV := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
@@ -346,7 +342,11 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	for i := 0; i < in.N; i++ {
 		for wh := 0; wh < 2; wh++ {
 			estise[i].partyCnt[wh] = make([]int, in.N*2)
-			estise[i].alpha[wh] = 2.0
+			if wh == 0 {
+				estise[i].alpha[wh] = float64(in.w[i])
+			} else {
+				estise[i].alpha[wh] = float64(in.h[i])
+			}
 			estise[i].beta[wh] = 1.0
 			estise[i].sigma2[wh] = float64(in.sgm * in.sgm)
 		}
@@ -402,7 +402,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	//}
 	//}
 
-	maxStep := 5000
+	maxStep := 50000
 	var samplese [100][2][]float64
 	timNow := time.Now()
 	var step int
