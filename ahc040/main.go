@@ -15,13 +15,13 @@ import (
 
 type Input struct {
 	N, T, sgm int
-	w, h      []int
+	w, h      []int32
 }
 
 func (in Input) Clone() Input {
 	t := in
-	t.w = make([]int, in.N)
-	t.h = make([]int, in.N)
+	t.w = make([]int32, in.N)
+	t.h = make([]int32, in.N)
 	copy(t.w, in.w)
 	copy(t.h, in.h)
 	return t
@@ -30,8 +30,8 @@ func (in Input) Clone() Input {
 func input() Input {
 	var n, t, sgm int
 	fmt.Scan(&n, &t, &sgm)
-	w := make([]int, n)
-	h := make([]int, n)
+	w := make([]int32, n)
+	h := make([]int32, n)
 	for i := 0; i < n; i++ {
 		fmt.Scan(&w[i], &h[i])
 		//log.Println(i, w[i], h[i])
@@ -42,7 +42,7 @@ func input() Input {
 
 type CmdWithScore struct {
 	cmd   Cmd
-	score int
+	score int32
 }
 
 var beamWidth = 10
@@ -78,7 +78,7 @@ func BeamSearch(in Input, queryCnt *int) State {
 		return subStates[i].score < subStates[j].score
 	})
 	log.Printf("beam_score=%d\n", states[0].score)
-	var w, h int
+	var w, h int32
 	log.Println("queryCnt", *queryCnt)
 	for i := 0; i < len(states) && *queryCnt < in.T; i++ {
 		fmt.Println(len(states[i].cmds))
@@ -136,7 +136,7 @@ func cmdGenerate(n int) []Cmd {
 }
 
 type Pos struct {
-	x1, x2, y1, y2 int
+	x1, x2, y1, y2 int32
 	r              bool
 	t              int
 }
@@ -151,11 +151,11 @@ func (p *Pos) reset() {
 }
 
 type State struct {
-	turn           int
+	turn           int32
 	pos            [100]Pos
-	W, H           int
-	W2, H2         int // 更新前 undo用
-	score_t, score int // score_t = score + x2 + y2 評価用
+	W, H           int32
+	W2, H2         int32 // 更新前 undo用
+	score_t, score int32 // score_t = score + x2 + y2 評価用
 	cmds           []Cmd
 }
 
@@ -205,8 +205,8 @@ func (s *State) do(in Input, c Cmd, t int) {
 		w, h = h, w // 90度回転
 	}
 
-	var x1, x2, y1, y2 int
-	var penalty int
+	var x1, x2, y1, y2 int32
+	var penalty float64
 	if c.d == 'U' {
 		x1 = 0 // 基準になるx座標
 		if c.b >= 0 {
@@ -216,12 +216,12 @@ func (s *State) do(in Input, c Cmd, t int) {
 		y1 = 0
 		for _, q := range s.pos {
 			if q.t >= 0 {
-				if max(x1, q.x1) < min(x2, q.x2) {
-					y1 = max(y1, q.y2)
+				if max32(x1, q.x1) < mini32(x2, q.x2) {
+					y1 = max32(y1, q.y2)
 				} else {
 					// 横をスレスレに通り抜けたとき
-					c := max(x1, q.x1) - min(x2, q.x2)
-					penalty += in.sgm / (c + 1)
+					c := max32(x1, q.x1) - mini32(x2, q.x2)
+					penalty += float64(in.sgm) / float64(c+1)
 				}
 			}
 		}
@@ -236,12 +236,12 @@ func (s *State) do(in Input, c Cmd, t int) {
 		x1 = 0
 		for _, q := range s.pos {
 			if q.t >= 0 {
-				if max(y1, q.y1) < min(y2, q.y2) {
-					x1 = max(x1, q.x2)
+				if max32(y1, q.y1) < mini32(y2, q.y2) {
+					x1 = max32(x1, q.x2)
 				} else {
 					// 縦をスレスレに通り抜けたとき
-					c := max(y1, q.y1) - min(y2, q.y2)
-					penalty += in.sgm / (c + 1)
+					c := max32(y1, q.y1) - mini32(y2, q.y2)
+					penalty += float64(in.sgm) / float64(c+1)
 				}
 			}
 		}
@@ -251,10 +251,10 @@ func (s *State) do(in Input, c Cmd, t int) {
 	s.W2 = s.W
 	s.H2 = s.H
 
-	s.W = max(s.W, s.pos[c.p].x2)
-	s.H = max(s.H, s.pos[c.p].y2)
+	s.W = max32(s.W, s.pos[c.p].x2)
+	s.H = max32(s.H, s.pos[c.p].y2)
 	s.score = s.W + s.H
-	s.score_t = s.score + (min(x1, y1))/20 + penalty
+	s.score_t = s.score + (mini32(x1, y1))/20 + int32(penalty)
 }
 
 func (s *State) query(in Input, cmd []Cmd) {
@@ -264,27 +264,26 @@ func (s *State) query(in Input, cmd []Cmd) {
 }
 
 func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
-	input := make([][2]int, in.N)
+	input := make([][2]int32, in.N)
 	for i := 0; i < in.N; i++ {
 		input[i][0] = in.w[i]
 		input[i][1] = in.h[i]
 	}
-	trueSize := make([][2]int, in.N)
-	sumErr1 := 0
-	sumErr2 := 0
+	trueSize := make([][2]int32, in.N)
+	var sumErr1, sumErr2 int32
 	for i := 0; i < in.N; i++ {
 		for wh := 0; wh < 2; wh++ {
 			fmt.Scan(&trueSize[i][wh])
 			t := trueSize[i][wh]
 			in := input[i][wh]
-			est := int(est[i][wh])
-			std := int(stds[i][wh])
+			est := int32(est[i][wh])
+			std := int32(stds[i][wh])
 			log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
-			sumErr1 += absInt(in - t)
-			sumErr2 += absInt(est - t)
+			sumErr1 += abs32(in - t)
+			sumErr2 += abs32(est - t)
 		}
 	}
-	log.Printf(" avgErr1=%d avgErr2=%d\n", sumErr1/in.N, sumErr2/in.N)
+	log.Printf(" avgErr1=%d avgErr2=%d\n", int(sumErr1)/in.N, int(sumErr2)/in.N)
 }
 
 // w, hの両方を持つ
@@ -464,36 +463,33 @@ func main() {
 		ATCODER = 1
 		log.SetOutput(io.Discard)
 	}
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal("could not create CPU profile: ", err)
-		}
-		defer f.Close() // error handling omitted for example
-		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Fatal("could not start CPU profile: ", err)
-		}
-		defer pprof.StopCPUProfile()
+	//if *cpuprofile != "" {
+	log.Println("cpu profile")
+	f, err := os.Create("cpu.prof")
+	if err != nil {
+		log.Fatal("could not create CPU profile: ", err)
 	}
+	defer f.Close() // error handling omitted for example
+	if err := pprof.StartCPUProfile(f); err != nil {
+		log.Fatal("could not start CPU profile: ", err)
+	}
+	defer pprof.StopCPUProfile()
+	//}
 
 	startTIme := time.Now()
 	in := input()
-	insub := in.Clone()
+	//insub := in.Clone()
 	queryCnt := 0
-	est, stds := estimater(in, &queryCnt)
-	//	fmt.Println("0")
-	//var w, h int
-	//fmt.Scan(&w, &h)
-	//log.Println("result", w, h)
-	for i := 0; i < in.N; i++ {
-		in.w[i] = int(est[i][0])
-		in.h[i] = int(est[i][1])
-	}
+	//est, stds := estimater(in, &queryCnt)
+	//for i := 0; i < in.N; i++ {
+	//in.w[i] = int(est[i][0])
+	//in.h[i] = int(est[i][1])
+	//}
 	solver(in, &queryCnt)
 	elap := time.Since(startTIme)
 	log.Printf("time=%.2f ms\n", elap.Seconds())
 	if ATCODER != 1 {
-		checkEstimate(insub, est, stds)
+		//checkEstimate(insub, est, stds)
 	}
 }
 
@@ -511,7 +507,20 @@ func max(a, b int) int {
 	return b
 }
 
-func absInt(a int) int {
+func mini32(a, b int32) int32 {
+	if a < b {
+		return a
+	}
+	return b
+}
+func max32(a, b int32) int32 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func abs32(a int32) int32 {
 	if a < 0 {
 		return -a
 	}
