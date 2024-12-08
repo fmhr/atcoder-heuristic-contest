@@ -138,8 +138,8 @@ func cmdGenerate(n int) []Cmd {
 
 type Pos struct {
 	x1, x2, y1, y2 int32
-	r              bool
-	t              int
+	r              int8
+	t              int32
 }
 
 func (p *Pos) reset() {
@@ -147,7 +147,7 @@ func (p *Pos) reset() {
 	p.x2 = -1
 	p.y1 = -1
 	p.y2 = -1
-	p.r = false
+	p.r = 0
 	p.t = -1
 }
 
@@ -202,7 +202,7 @@ func (s *State) do(in Input, c Cmd, t int) {
 		panic("not used")
 	}
 	w, h := in.w[c.p], in.h[c.p]
-	if c.r {
+	if c.r == 1 {
 		w, h = h, w // 90度回転
 	}
 
@@ -227,7 +227,7 @@ func (s *State) do(in Input, c Cmd, t int) {
 			}
 		}
 		y2 = y1 + h
-		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, t}
+		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, int32(t)}
 	} else {
 		y1 = 0 // 基準になるy座標
 		if c.b >= 0 {
@@ -247,7 +247,7 @@ func (s *State) do(in Input, c Cmd, t int) {
 			}
 		}
 		x2 = x1 + w
-		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, t}
+		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, int32(t)}
 	}
 	s.W2 = s.W
 	s.H2 = s.H
