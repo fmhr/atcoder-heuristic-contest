@@ -72,13 +72,13 @@ func (c *CMDTree) addTo(p *CmdNode) {
 	c.root = p
 }
 
-var beamWidth = 20
+var beamWidth = 200
 
 func BeamSearch(in Input, queryCnt *int) State {
 	states := make([]State, 0)
 	cmdTree := CMDTree{}
 	posTree := PosTree{}
-	states = append(states, NewState(in))
+	states = append(states, State{W: 0, H: 0, score: 0, score_t: 0})
 	states[0].cmdp = cmdTree.root
 	states[0].posP = posTree.root
 	subStates := make([]State, 0)
@@ -86,14 +86,16 @@ func BeamSearch(in Input, queryCnt *int) State {
 		for w := 0; w < min(len(states), beamWidth); w++ {
 			cmds := cmdGenerate(int8(t))
 			posts := states[w].posP.posList() // これまでの配置
+			now := states[w].Clone()
 			for _, cmd := range cmds {
-				now := states[w].Clone()
 				penalty, pos := now.do(in, cmd, t, posts)
 				if penalty == 0 {
-					now.cmdp = &CmdNode{cmd, states[w].cmdp}
-					now.posP = &PosNode{t, pos, states[w].posP}
-					subStates = append(subStates, now)
+					new := now.Clone()
+					new.cmdp = &CmdNode{cmd, states[w].cmdp}
+					new.posP = &PosNode{t, pos, states[w].posP}
+					subStates = append(subStates, new)
 				}
+				now.undo()
 			}
 		}
 		// ビームサーチ用の評価score_tでソート
@@ -210,47 +212,27 @@ type PosTree struct {
 }
 
 type State struct {
-	turn int32
-	//pos            [100]Pos
+	turn           int32
 	W, H           int32
 	W2, H2         int32 // 更新前 undo用
 	score_t, score int32 // score_t = score + x2 + y2 評価用
+	score2         int32 // undo用
 	cmdp           *CmdNode
 	posP           *PosNode
 }
 
 func (s State) Clone() State {
 	t := s
-	t.cmdp = s.cmdp
 	return t
 }
 
-func NewState(in Input) State {
-	s := State{}
-	s.turn = 0
-	//	for i := 0; i < 100; i++ {
-	//s.pos[i].reset()
-	//}
-	s.W = 0
-	s.H = 0
-	s.W2 = 0
-	s.H2 = 0
-	s.score_t = 0
-	s.score = 0
-	return s
+func (s *State) undo() {
+	s.W = s.W2
+	s.H = s.H2
+	s.score = s.W + s.H
 }
 
 func (s *State) do(in Input, c Cmd, t int, posts []Pos) (penalty float64, pos Pos) {
-	// cmdのチェック
-	//if s.pos[c.p].t >= 0 {
-	//log.Println("c.p:", c.p, s.pos[c.p].t)
-	//log.Println("c:", c, s.pos[c.p].t)
-	//panic("already used")
-	//} else if c.b >= 0 && s.pos[c.b].t < 0 {
-	//log.Println(c.String())
-	//log.Printf("b=%d, t=%d\n", c.b, s.pos[c.b].t)
-	//panic("not used")
-	//}
 	w, h := in.w[c.p], in.h[c.p]
 	if c.r == 1 {
 		w, h = h, w // 90度回転
@@ -293,7 +275,6 @@ func (s *State) do(in Input, c Cmd, t int, posts []Pos) (penalty float64, pos Po
 					}
 					if diff > 0 && diff < int32(in.sgm)*2 {
 						penalty += float64(in.sgm*2) / float64(diff)
-						return penalty, Pos{}
 					}
 				}
 			}
@@ -347,12 +328,6 @@ func (s *State) do(in Input, c Cmd, t int, posts []Pos) (penalty float64, pos Po
 	s.score_t = s.score + (x1+y1)/20
 	return penalty, pos
 }
-
-//func (s *State) query(in Input, cmd []Cmd) {
-//for t, c := range cmd {
-//s.do(in, c, t)
-//}
-//}
 
 func checkEstimate(in Input, est [][2]float64) {
 	input := make([][2]int32, in.N)
