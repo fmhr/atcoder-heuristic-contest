@@ -77,17 +77,21 @@ var beamWidth = 20
 func BeamSearch(in Input, queryCnt *int) State {
 	states := make([]State, 0)
 	cmdTree := CMDTree{}
+	posTree := PosTree{}
 	states = append(states, NewState(in))
 	states[0].cmdp = cmdTree.root
+	states[0].posP = posTree.root
 	subStates := make([]State, 0)
 	for t := 0; t < in.N; t++ {
 		for w := 0; w < min(len(states), beamWidth); w++ {
 			cmds := cmdGenerate(int8(t))
+			posts := states[w].posP.posList() // これまでの配置
 			for _, cmd := range cmds {
 				now := states[w].Clone()
-				now.do(in, cmd, t)
-				if now.penalty == 0 {
+				penalty, pos := now.do(in, cmd, t, posts)
+				if penalty == 0 {
 					now.cmdp = &CmdNode{cmd, states[w].cmdp}
+					now.posP = &PosNode{t, pos, states[w].posP}
 					subStates = append(subStates, now)
 				}
 			}
@@ -106,9 +110,6 @@ func BeamSearch(in Input, queryCnt *int) State {
 	}
 	// スコアによるソート
 	sort.Slice(subStates, func(i, j int) bool {
-		if subStates[i].score == subStates[j].score {
-			return subStates[i].penalty < subStates[j].penalty
-		}
 		return subStates[i].score < subStates[j].score
 	})
 	var w, h int32
@@ -174,8 +175,8 @@ func cmdGenerate(n int8) []Cmd {
 
 type Pos struct {
 	x1, x2, y1, y2 int32
-	r              int8
 	t              int32
+	r              int8
 }
 
 func (p *Pos) reset() {
@@ -187,14 +188,35 @@ func (p *Pos) reset() {
 	p.t = -1
 }
 
+type PosNode struct {
+	index  int
+	pos    Pos
+	parent *PosNode
+}
+
+func (p *PosNode) posList() []Pos {
+	posList := make([]Pos, 0)
+	for q := p; q != nil; q = q.parent {
+		posList = append(posList, q.pos)
+	}
+	for i, j := 0, len(posList)-1; i < j; i, j = i+1, j-1 {
+		posList[i], posList[j] = posList[j], posList[i]
+	}
+	return posList
+}
+
+type PosTree struct {
+	root *PosNode
+}
+
 type State struct {
-	turn           int32
-	pos            [100]Pos
+	turn int32
+	//pos            [100]Pos
 	W, H           int32
 	W2, H2         int32 // 更新前 undo用
 	score_t, score int32 // score_t = score + x2 + y2 評価用
-	penalty        float64
 	cmdp           *CmdNode
+	posP           *PosNode
 }
 
 func (s State) Clone() State {
@@ -206,9 +228,9 @@ func (s State) Clone() State {
 func NewState(in Input) State {
 	s := State{}
 	s.turn = 0
-	for i := 0; i < 100; i++ {
-		s.pos[i].reset()
-	}
+	//	for i := 0; i < 100; i++ {
+	//s.pos[i].reset()
+	//}
 	s.W = 0
 	s.H = 0
 	s.W2 = 0
@@ -218,50 +240,48 @@ func NewState(in Input) State {
 	return s
 }
 
-func (s *State) do(in Input, c Cmd, t int) {
+func (s *State) do(in Input, c Cmd, t int, posts []Pos) (penalty float64, pos Pos) {
 	// cmdのチェック
-	if s.pos[c.p].t >= 0 {
-		log.Println("c.p:", c.p, s.pos[c.p].t)
-		log.Println("c:", c, s.pos[c.p].t)
-		panic("already used")
-	} else if c.b >= 0 && s.pos[c.b].t < 0 {
-		log.Println(c.String())
-		log.Printf("b=%d, t=%d\n", c.b, s.pos[c.b].t)
-		panic("not used")
-	}
+	//if s.pos[c.p].t >= 0 {
+	//log.Println("c.p:", c.p, s.pos[c.p].t)
+	//log.Println("c:", c, s.pos[c.p].t)
+	//panic("already used")
+	//} else if c.b >= 0 && s.pos[c.b].t < 0 {
+	//log.Println(c.String())
+	//log.Printf("b=%d, t=%d\n", c.b, s.pos[c.b].t)
+	//panic("not used")
+	//}
 	w, h := in.w[c.p], in.h[c.p]
 	if c.r == 1 {
 		w, h = h, w // 90度回転
 	}
 
 	var x1, x2, y1, y2 int32
-	var penalty float64
 	collision := 0
 	if c.d == 'U' {
 		x1 = 0 // 基準になるx座標
 		if c.b >= 0 {
-			x1 = s.pos[c.b].x2
+			x1 = posts[c.b].x2
 		}
 		x2 = x1 + w
 		y1 = 0
-		for i := len(s.pos) - 1; i >= 0; i-- {
-			q := s.pos[i]
+		for _, q := range posts {
 			if q.t >= 0 {
 				if max32(x1, q.x1) < mini32(x2, q.x2) {
 					y1 = max32(y1, q.y2)
-					if collision == 0 {
-						// 重なった部分が小さすぎる場合、ペナルティを追加する
-						var diff int32
-						if x1 > q.x1 {
-							diff = max32(x2, q.x2) - mini32(x1, q.x1)
-						} else {
-							diff = max32(x2, q.x2) - mini32(x1, q.x1)
-						}
-						if diff > 0 && diff < int32(in.sgm)*2 {
-							penalty += float64(in.sgm*2) / float64(diff)
-							log.Println(diff, in.sgm*2, penalty)
-						}
-					}
+					//if collision == 0 {
+					//// 重なった部分が小さすぎる場合、ペナルティを追加する
+					//var diff int32
+					//if x1 > q.x1 {
+					//diff = max32(x2, q.x2) - mini32(x1, q.x1)
+					//} else {
+					//diff = max32(x2, q.x2) - mini32(x1, q.x1)
+					//}
+					//if diff > 0 && diff < int32(in.sgm)*2 {
+					//penalty += float64(in.sgm*2) / float64(diff)
+					//return penalty
+					//}
+					//}
 					collision++
 				} else if collision == 0 {
 					// ギリギリすり抜けたときのペナルティ
@@ -273,34 +293,35 @@ func (s *State) do(in Input, c Cmd, t int) {
 					}
 					if diff > 0 && diff < int32(in.sgm)*2 {
 						penalty += float64(in.sgm*2) / float64(diff)
+						return penalty, Pos{}
 					}
 				}
 			}
 		}
 		y2 = y1 + h
-		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, int32(t)}
+		pos = Pos{x1: x1, x2: x2, y1: y1, y2: y2, r: c.r, t: int32(t)}
 	} else {
 		y1 = 0 // 基準になるy座標
 		if c.b >= 0 {
-			y1 = s.pos[c.b].y2
+			y1 = posts[c.b].y2
 		}
 		y2 = y1 + h
 		x1 = 0
-		for _, q := range s.pos {
+		for _, q := range posts {
 			if q.t >= 0 {
 				if max32(y1, q.y1) < mini32(y2, q.y2) {
 					x1 = max32(x1, q.x2)
-					if collision == 0 {
-						var diff int32
-						if y1 > q.y1 {
-							diff = max32(y2, q.y2) - mini32(y1, q.y1)
-						} else {
-							diff = max32(y2, q.y2) - mini32(y1, q.y1)
-						}
-						if diff > 0 && diff < int32(in.sgm)*2 {
-							penalty += float64(in.sgm*2) / float64(diff)
-						}
-					}
+					//if collision == 0 {
+					//var diff int32
+					//if y1 > q.y1 {
+					//diff = max32(y2, q.y2) - mini32(y1, q.y1)
+					//} else {
+					//diff = max32(y2, q.y2) - mini32(y1, q.y1)
+					//}
+					//if diff > 0 && diff < int32(in.sgm)*2 {
+					//penalty += float64(in.sgm*2) / float64(diff)
+					//}
+					//}
 					collision++
 				} else if collision == 0 {
 					var diff int32
@@ -316,23 +337,22 @@ func (s *State) do(in Input, c Cmd, t int) {
 			}
 		}
 		x2 = x1 + w
-		s.pos[c.p] = Pos{x1, x2, y1, y2, c.r, int32(t)}
+		pos = Pos{x1: x1, x2: x2, y1: y1, y2: y2, r: c.r, t: int32(t)}
 	}
 	s.W2 = s.W
 	s.H2 = s.H
-
-	s.W = max32(s.W, s.pos[c.p].x2)
-	s.H = max32(s.H, s.pos[c.p].y2)
+	s.W = max32(s.W, pos.x2)
+	s.H = max32(s.H, pos.y2)
 	s.score = s.W + s.H
-	s.penalty += penalty
 	s.score_t = s.score + (x1+y1)/20
+	return penalty, pos
 }
 
-func (s *State) query(in Input, cmd []Cmd) {
-	for t, c := range cmd {
-		s.do(in, c, t)
-	}
-}
+//func (s *State) query(in Input, cmd []Cmd) {
+//for t, c := range cmd {
+//s.do(in, c, t)
+//}
+//}
 
 func checkEstimate(in Input, est [][2]float64) {
 	input := make([][2]int32, in.N)
@@ -557,10 +577,10 @@ func main() {
 		in.h[i] = int32(est[i][1])
 	}
 	estTime := time.Since(startTIme).Seconds()
-	log.Printf("estTime:%.2f estQueryUse:%d\n", estTime, queryCnt)
+	log.Printf("estTime=%.3f estQueryUse:%d\n", estTime, queryCnt)
 	solver(in, &queryCnt)
 	elap := time.Since(startTIme)
-	log.Printf("beamSearchTime=%.2f s\n", elap.Seconds()-estTime)
+	log.Printf("bsTime=%.3f s\n", elap.Seconds()-estTime)
 	log.Printf("time=%.2f ms\n", elap.Seconds())
 	if ATCODER != 1 {
 		checkEstimate(insub, est)
