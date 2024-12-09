@@ -55,3 +55,6 @@ run: run_go run_vis
 #### reactive
 run_reactive:
 	$(RUN_CMD) go run main.go < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+
+run_cpu:
+	$(RUN_CMD) go run main.go -cpuprofile cpu.prof < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
