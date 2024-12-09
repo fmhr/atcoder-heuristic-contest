@@ -14,8 +14,9 @@ import (
 )
 
 type Input struct {
-	N, T, sgm int
-	w, h      []int32
+	N, T int
+	sgm  int32
+	w, h []int32
 }
 
 func (in Input) Clone() Input {
@@ -28,7 +29,8 @@ func (in Input) Clone() Input {
 }
 
 func input() Input {
-	var n, t, sgm int
+	var n, t int
+	var sgm int32
 	fmt.Scan(&n, &t, &sgm)
 	w := make([]int32, n)
 	h := make([]int32, n)
@@ -45,7 +47,7 @@ type CmdWithScore struct {
 	score int32
 }
 
-var beamWidth = 10
+var beamWidth = 20
 
 func BeamSearch(in Input, queryCnt *int) State {
 	startTimeBS := time.Now()
@@ -54,19 +56,25 @@ func BeamSearch(in Input, queryCnt *int) State {
 	subStates := make([]State, 0)
 	for t := 0; t < in.N; t++ {
 		for w := 0; w < min(len(states), beamWidth); w++ {
-			cmds := cmdGenerate(t)
+			cmds := cmdGenerate(int8(t))
 			for _, cmd := range cmds {
 				now := states[w].Clone()
 				now.do(in, cmd, t)
 				now.cmds = append(now.cmds, cmd)
-				subStates = append(subStates, now)
+				//tmpStates = append(tmpStates, now)
+				if now.penalty == 0 {
+					subStates = append(subStates, now)
+				}
 			}
+			//n := min(len(tmpStates), beamWidth/len(states)*2)
+			//subStates = append(subStates, tmpStates[:n]...)
 		}
 		// ビームサーチ用の評価score_tでソート
 		sort.Slice(subStates, func(i, j int) bool {
 			return subStates[i].score_t < subStates[j].score_t
 		})
-		if t < in.N-1 {
+
+		if t < in.N-4 {
 			states = subStates[:min(len(subStates), beamWidth)]
 		} else {
 			states = subStates
@@ -75,11 +83,16 @@ func BeamSearch(in Input, queryCnt *int) State {
 	}
 	// スコアによるソート
 	sort.Slice(subStates, func(i, j int) bool {
+		if subStates[i].score == subStates[j].score {
+			return subStates[i].penalty < subStates[j].penalty
+		}
 		return subStates[i].score < subStates[j].score
 	})
 	log.Printf("beam_score=%d\n", states[0].score)
 	var w, h int32
 	log.Println("queryCnt", *queryCnt)
+	bestScore := int32(1e9)
+	bestTime := 0
 	for i := 0; i < len(states) && *queryCnt < in.T; i++ {
 		fmt.Println(len(states[i].cmds))
 		for _, cmd := range states[i].cmds {
@@ -87,8 +100,14 @@ func BeamSearch(in Input, queryCnt *int) State {
 		}
 		fmt.Scan(&w, &h)
 		*queryCnt++
-		log.Printf("estScore:%d, result:%d, deff:%d\n", states[i].score, w+h, states[i].score-w-h)
+		log.Printf("estScore:%d, result:%d, deff:%d\n", states[i].score, w+h, w+h-states[i].score)
+		if bestScore > w+h {
+			bestScore = w + h
+			bestTime = i
+		}
 	}
+	log.Println("bestScore", bestScore)
+	log.Println("bestTime", bestTime)
 	timeBS := time.Since(startTimeBS)
 	log.Printf("bs_time=%.2f\n", timeBS.Seconds())
 	return states[0]
@@ -123,7 +142,7 @@ func (c Cmd) String() string {
 }
 
 // n: 追加する長方形
-func cmdGenerate(n int) []Cmd {
+func cmdGenerate(n int8) []Cmd {
 	cmds := make([]Cmd, 0)
 	var r, d, b int8
 	for r = 0; r < 2; r++ {
@@ -157,6 +176,7 @@ type State struct {
 	W, H           int32
 	W2, H2         int32 // 更新前 undo用
 	score_t, score int32 // score_t = score + x2 + y2 評価用
+	penalty        float64
 	cmds           []Cmd
 }
 
@@ -208,6 +228,7 @@ func (s *State) do(in Input, c Cmd, t int) {
 
 	var x1, x2, y1, y2 int32
 	var penalty float64
+	collision := 0
 	if c.d == 'U' {
 		x1 = 0 // 基準になるx座標
 		if c.b >= 0 {
@@ -215,14 +236,36 @@ func (s *State) do(in Input, c Cmd, t int) {
 		}
 		x2 = x1 + w
 		y1 = 0
-		for _, q := range s.pos {
+		for i := len(s.pos) - 1; i >= 0; i-- {
+			q := s.pos[i]
 			if q.t >= 0 {
 				if max32(x1, q.x1) < mini32(x2, q.x2) {
 					y1 = max32(y1, q.y2)
-				} else {
-					// 横をスレスレに通り抜けたとき
-					c := max32(x1, q.x1) - mini32(x2, q.x2)
-					penalty += float64(in.sgm) / float64(c+1)
+					if collision == 0 {
+						// 重なった部分が小さすぎる場合、ペナルティを追加する
+						var diff int32
+						if x1 > q.x1 {
+							diff = max32(x2, q.x2) - mini32(x1, q.x1)
+						} else {
+							diff = max32(x2, q.x2) - mini32(x1, q.x1)
+						}
+						if diff > 0 && diff < int32(in.sgm)*2 {
+							penalty += float64(in.sgm*2) / float64(diff)
+							log.Println(diff, in.sgm*2, penalty)
+						}
+					}
+					collision++
+				} else if collision == 0 {
+					// ギリギリすり抜けたときのペナルティ
+					var diff int32
+					if x1 < q.x1 {
+						diff = q.x1 - x2
+					} else {
+						diff = x1 - q.x2
+					}
+					if diff > 0 && diff < int32(in.sgm)*2 {
+						penalty += float64(in.sgm*2) / float64(diff)
+					}
 				}
 			}
 		}
@@ -239,10 +282,28 @@ func (s *State) do(in Input, c Cmd, t int) {
 			if q.t >= 0 {
 				if max32(y1, q.y1) < mini32(y2, q.y2) {
 					x1 = max32(x1, q.x2)
-				} else {
-					// 縦をスレスレに通り抜けたとき
-					c := max32(y1, q.y1) - mini32(y2, q.y2)
-					penalty += float64(in.sgm) / float64(c+1)
+					if collision == 0 {
+						var diff int32
+						if y1 > q.y1 {
+							diff = max32(y2, q.y2) - mini32(y1, q.y1)
+						} else {
+							diff = max32(y2, q.y2) - mini32(y1, q.y1)
+						}
+						if diff > 0 && diff < int32(in.sgm)*2 {
+							penalty += float64(in.sgm*2) / float64(diff)
+						}
+					}
+					collision++
+				} else if collision == 0 {
+					var diff int32
+					if y1 < q.y1 {
+						diff = q.y1 - y2
+					} else {
+						diff = y1 - q.y2
+					}
+					if diff > 0 && diff < int32(in.sgm)*2 {
+						penalty += float64(in.sgm*2) / float64(diff)
+					}
 				}
 			}
 		}
@@ -255,7 +316,8 @@ func (s *State) do(in Input, c Cmd, t int) {
 	s.W = max32(s.W, s.pos[c.p].x2)
 	s.H = max32(s.H, s.pos[c.p].y2)
 	s.score = s.W + s.H
-	s.score_t = s.score + (mini32(x1, y1))/20 + int32(penalty)
+	s.penalty += penalty
+	s.score_t = s.score + (x1+y1)/20
 }
 
 func (s *State) query(in Input, cmd []Cmd) {
@@ -278,7 +340,7 @@ func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
 			t := trueSize[i][wh]
 			in := input[i][wh]
 			est := int32(est[i][wh])
-			std := int32(stds[i][wh])
+			std := stds[i][wh]
 			log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
 			sumErr1 += abs32(in - t)
 			sumErr2 += abs32(est - t)
@@ -299,7 +361,7 @@ type EstimateValue struct {
 
 // estimaterはin.T-1回までqueryを使って推定する
 func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
-	queryT := min(in.N, in.T-1) // 推定に使いクエリ回数
+	queryT := min(in.N, in.T/2) // 推定に使いクエリ回数
 	*queryCnt = queryT
 	estimateV := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
@@ -408,6 +470,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	var samplese [100][2][]float64
 	timNow := time.Now()
 	var step int
+	burnIn := step / 3
 	for step = 0; step < maxStep; step++ {
 		elapsed := time.Since(timNow)
 		if elapsed > 1000*time.Millisecond {
@@ -439,16 +502,15 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 			}
 		}
 	}
-	burnIn := step / 3
-	//log.Println(sigma)
 	stds := make([][2]float64, in.N)
+	stdSum := 0
 	for i := 0; i < in.N; i++ {
 		for wh := 0; wh < 2; wh++ {
 			mean := mean(samplese[i][wh][burnIn:])
 			estimateV[i][wh] = mean
 			std := std(samplese[i][wh][burnIn:])
 			stds[i][wh] = std
-			//log.Println(i, wh, int(mean), int(std))
+			stdSum += int(std)
 		}
 	}
 	log.Printf("estTime=%.2f\n", time.Since(timNow).Seconds())
@@ -479,18 +541,18 @@ func main() {
 
 	startTIme := time.Now()
 	in := input()
-	//insub := in.Clone()
+	insub := in.Clone()
 	queryCnt := 0
-	//est, stds := estimater(in, &queryCnt)
-	//for i := 0; i < in.N; i++ {
-	//in.w[i] = int(est[i][0])
-	//in.h[i] = int(est[i][1])
-	//}
+	est, stds := estimater(in, &queryCnt)
+	for i := 0; i < in.N; i++ {
+		in.w[i] = int32(est[i][0])
+		in.h[i] = int32(est[i][1])
+	}
 	solver(in, &queryCnt)
 	elap := time.Since(startTIme)
 	log.Printf("time=%.2f ms\n", elap.Seconds())
 	if ATCODER != 1 {
-		//checkEstimate(insub, est, stds)
+		checkEstimate(insub, est, stds)
 	}
 }
 
