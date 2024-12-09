@@ -47,12 +47,38 @@ type CmdWithScore struct {
 	score int32
 }
 
+type CmdNode struct {
+	cmd    Cmd
+	parent *CmdNode
+}
+
+func (c *CmdNode) cmds() []Cmd {
+	cmds := make([]Cmd, 0)
+	for p := c; p != nil; p = p.parent {
+		cmds = append(cmds, p.cmd)
+	}
+	// reverse
+	for i, j := 0, len(cmds)-1; i < j; i, j = i+1, j-1 {
+		cmds[i], cmds[j] = cmds[j], cmds[i]
+	}
+	return cmds
+}
+
+type CMDTree struct {
+	root *CmdNode
+}
+
+func (c *CMDTree) addTo(p *CmdNode) {
+	c.root = p
+}
+
 var beamWidth = 20
 
 func BeamSearch(in Input, queryCnt *int) State {
-	startTimeBS := time.Now()
 	states := make([]State, 0)
+	cmdTree := CMDTree{}
 	states = append(states, NewState(in))
+	states[0].cmdp = cmdTree.root
 	subStates := make([]State, 0)
 	for t := 0; t < in.N; t++ {
 		for w := 0; w < min(len(states), beamWidth); w++ {
@@ -60,14 +86,11 @@ func BeamSearch(in Input, queryCnt *int) State {
 			for _, cmd := range cmds {
 				now := states[w].Clone()
 				now.do(in, cmd, t)
-				now.cmds = append(now.cmds, cmd)
-				//tmpStates = append(tmpStates, now)
 				if now.penalty == 0 {
+					now.cmdp = &CmdNode{cmd, states[w].cmdp}
 					subStates = append(subStates, now)
 				}
 			}
-			//n := min(len(tmpStates), beamWidth/len(states)*2)
-			//subStates = append(subStates, tmpStates[:n]...)
 		}
 		// ビームサーチ用の評価score_tでソート
 		sort.Slice(subStates, func(i, j int) bool {
@@ -88,28 +111,24 @@ func BeamSearch(in Input, queryCnt *int) State {
 		}
 		return subStates[i].score < subStates[j].score
 	})
-	log.Printf("beam_score=%d\n", states[0].score)
 	var w, h int32
-	log.Println("queryCnt", *queryCnt)
 	bestScore := int32(1e9)
 	bestTime := 0
 	for i := 0; i < len(states) && *queryCnt < in.T; i++ {
-		fmt.Println(len(states[i].cmds))
-		for _, cmd := range states[i].cmds {
+		cmds := states[i].cmdp.cmds()
+		fmt.Println(len(cmds))
+		for _, cmd := range cmds {
 			fmt.Println(cmd)
 		}
 		fmt.Scan(&w, &h)
 		*queryCnt++
-		log.Printf("estScore:%d, result:%d, deff:%d\n", states[i].score, w+h, w+h-states[i].score)
+		//log.Printf("estScore:%d, result:%d, deff:%d\n", states[i].score, w+h, w+h-states[i].score)
 		if bestScore > w+h {
 			bestScore = w + h
 			bestTime = i
 		}
 	}
-	log.Println("bestScore", bestScore)
-	log.Println("bestTime", bestTime)
-	timeBS := time.Since(startTimeBS)
-	log.Printf("bs_time=%.2f\n", timeBS.Seconds())
+	log.Println("bestScore:", bestScore, "bestQueryNum:", bestTime)
 	return states[0]
 }
 
@@ -117,8 +136,6 @@ func solver(in Input, queryCnt *int) {
 	var measured_w, measured_h int
 	// beam search
 	_ = BeamSearch(in, queryCnt)
-	log.Printf("queryCnt:%d /in.T:%d\n", queryCnt, in.T)
-	log.Printf("rest querySize:%d\n", in.T-*queryCnt)
 	for *queryCnt < in.T {
 		fmt.Println(0)
 		fmt.Scan(&measured_w, &measured_h)
@@ -177,13 +194,12 @@ type State struct {
 	W2, H2         int32 // 更新前 undo用
 	score_t, score int32 // score_t = score + x2 + y2 評価用
 	penalty        float64
-	cmds           []Cmd
+	cmdp           *CmdNode
 }
 
 func (s State) Clone() State {
 	t := s
-	t.cmds = make([]Cmd, len(s.cmds))
-	copy(t.cmds, s.cmds)
+	t.cmdp = s.cmdp
 	return t
 }
 
@@ -199,15 +215,7 @@ func NewState(in Input) State {
 	s.H2 = 0
 	s.score_t = 0
 	s.score = 0
-	s.cmds = make([]Cmd, 0, in.N)
 	return s
-}
-
-func (s *State) undo(c Cmd) {
-	s.pos[c.p].reset()
-	s.W = s.W2
-	s.H = s.H2
-	s.score = s.W + s.H
 }
 
 func (s *State) do(in Input, c Cmd, t int) {
@@ -326,7 +334,7 @@ func (s *State) query(in Input, cmd []Cmd) {
 	}
 }
 
-func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
+func checkEstimate(in Input, est [][2]float64) {
 	input := make([][2]int32, in.N)
 	for i := 0; i < in.N; i++ {
 		input[i][0] = in.w[i]
@@ -340,13 +348,14 @@ func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
 			t := trueSize[i][wh]
 			in := input[i][wh]
 			est := int32(est[i][wh])
-			std := stds[i][wh]
-			log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
+			//std := stds[i][wh]
+			//log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
 			sumErr1 += abs32(in - t)
 			sumErr2 += abs32(est - t)
 		}
 	}
-	log.Printf(" avgErr1=%d avgErr2=%d\n", int(sumErr1)/in.N, int(sumErr2)/in.N)
+	log.Println("出力後に実際のスコアと比較")
+	log.Printf("avgErr1=%d avgErr2=%d\n", int(sumErr1)/in.N, int(sumErr2)/in.N)
 }
 
 // w, hの両方を持つ
@@ -513,7 +522,6 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 			stdSum += int(std)
 		}
 	}
-	log.Printf("estTime=%.2f\n", time.Since(timNow).Seconds())
 	return estimateV, stds
 }
 
@@ -526,33 +534,36 @@ func main() {
 		ATCODER = 1
 		log.SetOutput(io.Discard)
 	}
-	//if *cpuprofile != "" {
-	log.Println("cpu profile")
-	f, err := os.Create("cpu.prof")
-	if err != nil {
-		log.Fatal("could not create CPU profile: ", err)
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
 	}
-	defer f.Close() // error handling omitted for example
-	if err := pprof.StartCPUProfile(f); err != nil {
-		log.Fatal("could not start CPU profile: ", err)
-	}
-	defer pprof.StopCPUProfile()
-	//}
 
 	startTIme := time.Now()
 	in := input()
 	insub := in.Clone()
 	queryCnt := 0
-	est, stds := estimater(in, &queryCnt)
+	est, _ := estimater(in, &queryCnt)
 	for i := 0; i < in.N; i++ {
 		in.w[i] = int32(est[i][0])
 		in.h[i] = int32(est[i][1])
 	}
+	estTime := time.Since(startTIme).Seconds()
+	log.Printf("estTime:%.2f estQueryUse:%d\n", estTime, queryCnt)
 	solver(in, &queryCnt)
 	elap := time.Since(startTIme)
+	log.Printf("beamSearchTime=%.2f s\n", elap.Seconds()-estTime)
 	log.Printf("time=%.2f ms\n", elap.Seconds())
 	if ATCODER != 1 {
-		checkEstimate(insub, est, stds)
+		checkEstimate(insub, est)
 	}
 }
 
