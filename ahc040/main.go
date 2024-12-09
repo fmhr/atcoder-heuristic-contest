@@ -470,7 +470,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	//}
 	//}
 
-	maxStep := 50000
+	maxStep := 5000
 	var samplese [100][2][]float64
 	timNow := time.Now()
 	var step int
