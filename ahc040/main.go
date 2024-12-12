@@ -329,28 +329,28 @@ func (s *State) do(in Input, c Cmd, t int, posts []Pos) (penalty float64, pos Po
 	return penalty, pos
 }
 
-func checkEstimate(in Input, est [][2]float64) {
+func checkEstimate(in Input, est [][2]float64, stds [][2]float64) {
 	input := make([][2]int32, in.N)
 	for i := 0; i < in.N; i++ {
 		input[i][0] = in.w[i]
 		input[i][1] = in.h[i]
 	}
 	trueSize := make([][2]int32, in.N)
-	var sumErr1, sumErr2 int32
+	var sumErr1, sumErr2 int
 	for i := 0; i < in.N; i++ {
 		for wh := 0; wh < 2; wh++ {
 			fmt.Scan(&trueSize[i][wh])
 			t := trueSize[i][wh]
 			in := input[i][wh]
 			est := int32(est[i][wh])
-			//std := stds[i][wh]
-			//log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
-			sumErr1 += abs32(in - t)
-			sumErr2 += abs32(est - t)
+			std := stds[i][wh]
+			log.Printf("%d, true:%v, input:%v(%d), est:%v(%d) std:%v\n", i, t, in, in-t, est, est-t, std)
+			sumErr1 += int(in-t) * int(in-t)
+			sumErr2 += int(est-t) * int(est-t)
 		}
 	}
 	log.Println("出力後に実際のスコアと比較")
-	log.Printf("avgErr1=%d avgErr2=%d\n", int(sumErr1)/in.N, int(sumErr2)/in.N)
+	log.Printf("avgErr1=%d avgErr2=%d\n", int(math.Sqrt(float64(sumErr1))), int(math.Sqrt(float64(sumErr2))))
 }
 
 // w, hの両方を持つ
@@ -363,9 +363,15 @@ type EstimateValue struct {
 	beta       [2]float64
 }
 
+// 観測結果
+type Observation struct {
+	used [200]bool
+	size float64
+}
+
 // estimaterはin.T-1回までqueryを使って推定する
 func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
-	queryT := min(in.N, in.T/2) // 推定に使いクエリ回数
+	queryT := in.T // 推定に使いクエリ回数
 	*queryCnt = queryT
 	estimateV := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
@@ -375,7 +381,10 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	puts := make([][]byte, 0)
 	rolls := make([][]int, 0)
 	var results [][2]float64
+	var observations []Observation
 	for t := 0; t < queryT; t++ {
+		var ulist [200]bool // 下から上に配置、結果はw
+		var llist [200]bool // 右から左に配置、結果はh
 		// なんこの長方形を使うか
 		m := in.N
 		ns := selectRandom(in.N, m)
@@ -394,10 +403,21 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 			if put[i] != '.' {
 				fmt.Printf("%d %d %s %d\n", i, roll[i], string(put[i]), -1)
 				//log.Printf("%d %d %s %d\n", i, 0, string(put[i]), -1)
+				if put[i] == 'U' {
+					ulist[i*2+(1+roll[i])%2] = true
+				} else if put[i] == 'L' {
+					llist[i*2+roll[i]] = true
+				}
 			}
 		}
+		//log.Println("ulist", ulist[0], ulist[1])
+		//log.Println("llist", llist[0], llist[1])
 		var w, h float64
 		fmt.Scan(&w, &h)
+		obw := Observation{used: ulist, size: w}
+		obh := Observation{used: llist, size: h}
+		observations = append(observations, obw)
+		observations = append(observations, obh)
 		results = append(results, [2]float64{w, h})
 		puts = append(puts, put)
 		rolls = append(rolls, roll)
@@ -411,14 +431,15 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 		for wh := 0; wh < 2; wh++ {
 			estise[i].partyCnt[wh] = make([]int, in.N*2)
 			if wh == 0 {
-				estise[i].alpha[wh] = float64(in.w[i])
+				estise[i].alpha[wh] = 3
 			} else {
-				estise[i].alpha[wh] = float64(in.h[i])
+				estise[i].alpha[wh] = 3
 			}
-			estise[i].beta[wh] = 1.0
+			estise[i].beta[wh] = (3 - 1) * float64(in.sgm*in.sgm)
 			estise[i].sigma2[wh] = float64(in.sgm * in.sgm)
 		}
 	}
+	log.Println(estise[0].sigma2[0])
 	for k := 0; k < len(puts); k++ {
 		put := puts[k]
 		roll := rolls[k]
@@ -470,14 +491,14 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	//}
 	//}
 
-	maxStep := 5000
+	maxStep := 5000000
 	var samplese [100][2][]float64
 	timNow := time.Now()
 	var step int
 	burnIn := step / 3
 	for step = 0; step < maxStep; step++ {
 		elapsed := time.Since(timNow)
-		if elapsed > 1000*time.Millisecond {
+		if elapsed > 2000*time.Millisecond {
 			break
 		}
 		for x := 0; x < in.N; x++ {
@@ -497,8 +518,22 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 				mu := rand.NormFloat64()*math.Sqrt(estise[x].sigma2[wh]) + mean
 				// sigma^2の更新
 				alphaNew := estise[x].alpha[wh] + float64(estise[x].mesuredCnt[wh])/2
-				betaNew := estise[x].beta[wh] + 0.5*float64(estise[x].mesuredCnt[wh])*(math.Pow(mean-mu, 2))
-				estise[x].sigma2[wh] = 1 / sampleGamma(alphaNew, 1.0/betaNew)
+				betaNew := estise[x].beta[wh]
+				for i := 0; i < len(observations); i++ {
+					if observations[i].used[x*2+wh] {
+						mu_t := observations[i].size
+						for j := 0; j < in.N*2; j++ {
+							if i != j && observations[i].used[j] {
+								mu_t -= estimateV[j/2][j%2]
+							}
+						}
+						betaNew += math.Pow(mu_t-mu, 2) / 2
+					}
+				}
+				estise[x].sigma2[wh] = sampleGamma(alphaNew, 1/betaNew)
+				estise[x].alpha[wh] = alphaNew
+				estise[x].beta[wh] = betaNew
+				estise[x].sigma2[wh] = float64(in.sgm*in.sgm) / 2
 
 				//new := rand.NormFloat64()*sigma2 + mean
 				estimateV[x][wh] = mu
@@ -506,6 +541,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 			}
 		}
 	}
+	log.Println("STEP", step)
 	stds := make([][2]float64, in.N)
 	stdSum := 0
 	for i := 0; i < in.N; i++ {
@@ -515,6 +551,11 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 			std := std(samplese[i][wh][burnIn:])
 			stds[i][wh] = std
 			stdSum += int(std)
+		}
+	}
+	for i := 0; i < in.N; i++ {
+		for j := 0; j < 2; j++ {
+			//log.Printf("%d %d sigma2 %.2f\n", i, j, estise[i].sigma2[j])
 		}
 	}
 	return estimateV, stds
@@ -546,7 +587,7 @@ func main() {
 	in := input()
 	insub := in.Clone()
 	queryCnt := 0
-	est, _ := estimater(in, &queryCnt)
+	est, stds := estimater(in, &queryCnt)
 	for i := 0; i < in.N; i++ {
 		in.w[i] = int32(est[i][0])
 		in.h[i] = int32(est[i][1])
@@ -558,7 +599,7 @@ func main() {
 	log.Printf("bsTime=%.3f s\n", elap.Seconds()-estTime)
 	log.Printf("time=%.2f ms\n", elap.Seconds())
 	if ATCODER != 1 {
-		checkEstimate(insub, est)
+		checkEstimate(insub, est, stds)
 	}
 }
 
@@ -662,17 +703,18 @@ func shouldAccept(xCurrent, xProposed, sigma float64) bool {
 	return randomValue <= alpha
 }
 
-func sampleGamma(shape, scale float64) float64 {
-	if shape <= 0 || scale <= 0 {
-		log.Println(shape, scale)
+// ガンマ分布から乱数を生成する関数
+func sampleGamma(alpha, beta float64) float64 {
+	if alpha <= 0 || beta <= 0 {
+		log.Println(alpha, beta)
 		panic("shape and scale must be positive")
 	}
-	if shape < 1 {
-		return sampleGamma(1.0+shape, scale) * math.Pow(rand.Float64(), 1.0/shape)
+	if alpha < 1 {
+		return sampleGamma(1.0+alpha, beta) * math.Pow(rand.Float64(), 1.0/alpha)
 	}
 
 	// Marsaglia and Tsang method
-	d := shape - 1.0/3.0
+	d := alpha - 1.0/3.0
 	c := 1.0 / math.Sqrt(9.0*d)
 	for {
 		x := rand.NormFloat64()
@@ -681,11 +723,18 @@ func sampleGamma(shape, scale float64) float64 {
 			v = v * v * v // v = v^3
 			u := rand.Float64()
 			if u < 1.0-0.0331*math.Pow(x, 4) {
-				return d * v * scale
+				return d * v * beta
 			}
 			if math.Log(u) < 0.5*x*x+d*(1.0-v+math.Log(v)) {
-				return d * v * scale
+				return d * v * beta
 			}
 		}
 	}
+}
+
+// 逆ガンマ分布から乱数を生成する関数
+func sampleInverseGamma(alpha, beta float64) float64 {
+	// ガンマ分布の逆数を取る
+	gammaSample := sampleGamma(alpha, beta)
+	return 1.0 / gammaSample
 }
