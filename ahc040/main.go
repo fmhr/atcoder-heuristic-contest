@@ -365,8 +365,8 @@ type EstimateValue struct {
 
 // 観測結果
 type Observation struct {
-	used [200]bool
-	size float64
+	used   [200]bool
+	result float64
 }
 
 // estimaterはin.T-1回までqueryを使って推定する
@@ -375,13 +375,14 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 	*queryCnt = queryT
 	estimateV := make([][2]float64, in.N)
 	for i := 0; i < in.N; i++ {
-		estimateV[i][0] = float64(in.w[i])
-		estimateV[i][1] = float64(in.h[i])
+		estimateV[i][0] = float64(0)
+		estimateV[i][1] = float64(0)
 	}
 	puts := make([][]byte, 0)
 	rolls := make([][]int, 0)
 	var results [][2]float64
 	var observations []Observation
+
 	for t := 0; t < queryT; t++ {
 		var ulist [200]bool // 下から上に配置、結果はw
 		var llist [200]bool // 右から左に配置、結果はh
@@ -414,8 +415,8 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 		//log.Println("llist", llist[0], llist[1])
 		var w, h float64
 		fmt.Scan(&w, &h)
-		obw := Observation{used: ulist, size: w}
-		obh := Observation{used: llist, size: h}
+		obw := Observation{used: ulist, result: w}
+		obh := Observation{used: llist, result: h}
 		observations = append(observations, obw)
 		observations = append(observations, obh)
 		results = append(results, [2]float64{w, h})
@@ -521,7 +522,7 @@ func estimater(in Input, queryCnt *int) ([][2]float64, [][2]float64) {
 				betaNew := estise[x].beta[wh]
 				for i := 0; i < len(observations); i++ {
 					if observations[i].used[x*2+wh] {
-						mu_t := observations[i].size
+						mu_t := observations[i].result
 						for j := 0; j < in.N*2; j++ {
 							if i != j && observations[i].used[j] {
 								mu_t -= estimateV[j/2][j%2]
