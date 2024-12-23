@@ -261,18 +261,13 @@ func main() {
 	getTime()
 	input := readInput()
 	updateInput(input)
-	log.Println("get time: ", getTime())
-	t := time.Now()
+	log.Println("time", getTime())
 	for i := 0; i < input.N; i++ {
 		for j := 0; j < 2; j++ {
 			estimateV0(input.wh[i][j], float64(input.sigma))
 		}
 	}
-	log.Println("estimateV0 all elaps time: ", time.Since(t))
-	log.Println("get time: ", getTime())
-	//estimateV0(input.wh[0][0], float64(input.sigma))
-	elp := getTime()
-	log.Println(elp)
+	log.Println("time", getTime())
 	var w, h int
 	for i := 0; i < input.T; i++ {
 		fmt.Print("0\n")
