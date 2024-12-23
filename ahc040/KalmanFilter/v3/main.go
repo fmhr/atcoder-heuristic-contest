@@ -52,13 +52,13 @@ func estimate(ys []float64, sigma float64) ([]float64, []float64) {
 	// 事前分布の対数
 	// lMinからlMaxまでlStep刻みで一様分布とみなして対数を取る
 	logPLPrior := -math.Log(float64((lMax-lMin)/lStep + 1))
-	log.Println("logPLPrior", logPLPrior)
+	//log.Println("logPLPrior", logPLPrior)
 
 	// 各観測値に対して、Lに依存しない値を事前に計算
 	betas := make([]float64, len(ys))
 	cdfBetas := make([]float64, len(ys))
 	phiBetas := make([]float64, len(ys))
-	log.Println("i, y, beta, cdf, phi")
+	//log.Println("i, y, beta, cdf, phi")
 	for i, y := range ys {
 		// 分布の上限 100000 を基準に、観測値 y との差を標準偏差 sigma でスケーリング
 		// 0~100000の中に入る確率
@@ -110,7 +110,7 @@ func estimate(ys []float64, sigma float64) ([]float64, []float64) {
 		logPs[i] = lp[1]
 	}
 	logDenominator := LogSumExp(logPs)
-	log.Println("logDenominator", logDenominator)
+	//log.Println("logDenominator", logDenominator)
 
 	// 各x_i の事後確率と分散
 	xmeans := make([]float64, 0, len(ys))
@@ -179,8 +179,56 @@ func estimate(ys []float64, sigma float64) ([]float64, []float64) {
 		}
 		xvars = append(xvars, varSum)
 	}
-
 	return xmeans, xvars
+}
+
+// v0 １つの観測値に対する事後確率を計算
+// return 平均, 標準偏差
+func estimateV0(y int, std float64) (float64, float64) {
+	// Lの範囲を設定
+	lMin := 10000
+	lMax := 100000
+	lStep := 10
+	// 事前分布を(lMax-lMin)/lStep+1個作る
+	// 事前分布の平均のリスト(10000~100000)
+	llist := make([]float64, 0, (lMax-lMin)/lStep+1)
+	for l := lMin; l <= lMax; l += lStep {
+		llist = append(llist, float64(l))
+	}
+
+	// それぞれの尤度の計算 P(y|L)
+	linkhoods := make([]float64, len(llist))
+	for i, l := range llist {
+		linkhoods[i] = normalPDF(float64(y), l, std)
+		//log.Println(y, l, linkhoods[i])
+	}
+	// 事前分布 (一様分布) P(L)
+	prior := 1.0 / float64(len(llist))
+
+	// 事後分布の計算 P(L|y)
+	posterior := make([]float64, len(llist))
+	sumPosterior := 0.0
+	for i := 0; i < len(llist); i++ {
+		posterior[i] = linkhoods[i] * prior // 尤度 * 事前分布
+		sumPosterior += posterior[i]
+	}
+	for i := 0; i < len(llist); i++ {
+		// 正規化 (事後確率の和が1になるように総和で割る)
+		posterior[i] /= sumPosterior
+	}
+	// 平均の計算(事後分布)
+	mean := 0.0
+	for i := 0; i < len(llist); i++ {
+		//log.Println(llist[i], posterior[i], llist[i]*posterior[i])
+		mean += llist[i] * posterior[i] // L * P(L|y)
+	}
+	// 分散の計算(事後分布)
+	variance := 0.0
+	for i := 0; i < len(llist); i++ {
+		variance += (llist[i] - mean) * (llist[i] - mean) * posterior[i] // (L - mean)^2 * P(L|y)
+	}
+	log.Printf("mean: %.0f, std: %.0f\n", mean, math.Sqrt(variance))
+	return mean, math.Sqrt(variance)
 }
 
 type Input struct {
@@ -194,6 +242,7 @@ func readInput() Input {
 	var N, T int
 	var sigma int
 	fmt.Scan(&N, &T, &sigma)
+	log.Printf("N: %d, T: %d, sigma: %d\n", N, T, sigma)
 	wh := make([][2]int, N)
 	for i := 0; i < N; i++ {
 		fmt.Scan(&wh[i][0], &wh[i][1])
@@ -212,8 +261,16 @@ func main() {
 	getTime()
 	input := readInput()
 	updateInput(input)
-
-	time.Sleep(1 * time.Second)
+	log.Println("get time: ", getTime())
+	t := time.Now()
+	for i := 0; i < input.N; i++ {
+		for j := 0; j < 2; j++ {
+			estimateV0(input.wh[i][j], float64(input.sigma))
+		}
+	}
+	log.Println("estimateV0 all elaps time: ", time.Since(t))
+	log.Println("get time: ", getTime())
+	//estimateV0(input.wh[0][0], float64(input.sigma))
 	elp := getTime()
 	log.Println(elp)
 	var w, h int
@@ -239,6 +296,7 @@ func getTime() float64 {
 // 数式: f(x) = (1 / √(2π)) * e^(-(x^2)/2)
 // x の周辺に観測値が出現する「密度」。数値そのものは確率ではない。
 // x は平均値付近で大きな値を取り、それ以外の場所では小さな値を取る。
+// xには正規化された値を入れるひつようがある
 func NormalPDF(x float64) float64 {
 	return math.Exp(-x*x/2.0) / math.Sqrt(2.0*math.Pi)
 }
@@ -249,6 +307,12 @@ func NormalPDF(x float64) float64 {
 // 値が x 以下になる確率（累積したもの）。0～1の間の値を取る。
 func NormalCDF(x float64) float64 {
 	return 0.5 * (1.0 + math.Erf(x/math.Sqrt(2.0)))
+}
+
+// 一番原始的？な正規分布の確率密度関数
+func normalPDF(x, mu, sigma float64) float64 {
+	return (1 / (math.Sqrt(2 * math.Pi * sigma * sigma))) *
+		math.Exp(-((x-mu)*(x-mu))/(2*sigma*sigma))
 }
 
 // overflow を防ぐための近似式
