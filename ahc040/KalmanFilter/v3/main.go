@@ -10,7 +10,6 @@ import (
 
 var (
 	ATCODER = "0"
-	LOCAL   = "0"
 )
 
 func init() {
@@ -18,13 +17,10 @@ func init() {
 	if os.Getenv("ATCODER") == "1" {
 		ATCODER = "1"
 	}
-	if os.Getenv("LOCAL") == "1" {
-		LOCAL = "1"
-	}
 }
 
 // 矩形の精度を推定で高める
-func updateInput(input Input) {
+func updateInput(input Input) []float64 {
 	// whの平均と分散を計算
 	means := make([]float64, input.N*2)
 	vars := make([]float64, input.N*2)
@@ -37,6 +33,7 @@ func updateInput(input Input) {
 	for i := 0; i < input.N*2; i++ {
 		log.Printf("%.0f ±%.0f\n", means[i], math.Sqrt(vars[i]))
 	}
+	return means
 }
 
 // 初期入力を生成方法からベイズ推定で補正
@@ -260,11 +257,16 @@ const TL = 2.9
 func main() {
 	getTime()
 	input := readInput()
-	updateInput(input)
+	means := updateInput(input)
 	log.Println("time", getTime())
+
+	var estMean []float64
+	var estStd []float64
 	for i := 0; i < input.N; i++ {
 		for j := 0; j < 2; j++ {
-			estimateV0(input.wh[i][j], float64(input.sigma))
+			m, sd := estimateV0(input.wh[i][j], float64(input.sigma))
+			estMean = append(estMean, m)
+			estStd = append(estStd, sd)
 		}
 	}
 	log.Println("time", getTime())
@@ -273,6 +275,30 @@ func main() {
 		fmt.Print("0\n")
 		fmt.Scan(&w, &h)
 	}
+	if ATCODER != "1" {
+		trueWH := make([]int, input.N*2)
+		for i := 0; i < input.N*2; i++ {
+			fmt.Scan(&trueWH[i])
+		}
+		checkEstimate(input, estMean, trueWH)
+		checkEstimate(input, means, trueWH)
+	}
+}
+
+func checkEstimate(in Input, estMean []float64, trueWH []int) {
+	sum1 := 0.0
+	sum2 := 0.0
+	for i := 0; i < in.N*2; i++ {
+		s := "good"
+		if math.Abs(estMean[i]-float64(trueWH[i])) > math.Abs(float64(in.wh[i/2][i%2])-float64(trueWH[i])) {
+			s = "bad"
+		}
+		log.Printf("true: %d, input:%6d(%6d), est: %.0f(%5d) %s\n", trueWH[i], in.wh[i/2][i%2], in.wh[i/2][i%2]-trueWH[i], estMean[i], int(estMean[i])-trueWH[i], s)
+		sum1 += (estMean[i] - float64(trueWH[i])) * (estMean[i] - float64(trueWH[i]))
+		sum2 += (float64(in.wh[i/2][i%2]) - float64(trueWH[i])) * (float64(in.wh[i/2][i%2]) - float64(trueWH[i]))
+	}
+	log.Println("RMSE", math.Sqrt(sum1/float64(in.N*2)))
+	log.Println("RMSE", math.Sqrt(sum2/float64(in.N*2)))
 }
 
 var STIME time.Time
@@ -281,7 +307,8 @@ func getTime() float64 {
 	if STIME == (time.Time{}) {
 		STIME = time.Now()
 	}
-	if LOCAL == "1" {
+	if ATCODER != "1" {
+		// うちのPCは、ジャッジサーバより２倍ぐらい早い（願望）
 		return time.Since(STIME).Seconds() * 2.0
 	}
 	return time.Since(STIME).Seconds()
@@ -308,6 +335,12 @@ func NormalCDF(x float64) float64 {
 func normalPDF(x, mu, sigma float64) float64 {
 	return (1 / (math.Sqrt(2 * math.Pi * sigma * sigma))) *
 		math.Exp(-((x-mu)*(x-mu))/(2*sigma*sigma))
+}
+
+// 対数を使う
+func normalPDF2(x, mu, sigma float64) float64 {
+	logPDF := -math.Log(sigma*math.Sqrt(2*math.Pi)) - ((x-mu)*(x-mu))/(2*sigma*sigma)
+	return math.Exp(logPDF)
 }
 
 // overflow を防ぐための近似式
