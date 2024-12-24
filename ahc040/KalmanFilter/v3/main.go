@@ -228,6 +228,48 @@ func estimateV0(y int, std float64) (float64, float64) {
 	return mean, math.Sqrt(variance)
 }
 
+// 対数をつけて計算することで、精度を高める
+func estimateV0WithLog(y int, sigma float64) {
+	lMin := 10000
+	lMax := 100000
+	lStep := 10
+	llist := make([]float64, 0, (lMax-lMin)/lStep+1)
+	for l := lMin; l <= lMax; l += lStep {
+		llist = append(llist, float64(l))
+	}
+	// 対数尤度 P(y|L)= -log(σ√{2*π}) - {(y - L)^2}/{2*σ^2}
+	logLikelihoods := make([]float64, len(llist))
+	for i, l := range llist {
+		logLikelihoods[i] = normalPDFLog(float64(y), l, sigma)
+	}
+	// 対数事前分布 P(L) = -log(n)
+	// 1/n は対数で -log(n) になる
+	logPrior := -math.Log(float64(len(llist)))
+	// 対数事後分布 P(L|y) ∝ P(y|L) + P(L)
+	logPosteriors := make([]float64, len(llist))
+	for i := 0; i < len(llist); i++ {
+		logPosteriors[i] = logLikelihoods[i] + logPrior
+	}
+	// 正規化定数
+	LogSumPosterior := LogSumExp(logPosteriors)
+	// 正規化された事後分布 対数をとる
+	posteriors := make([]float64, len(llist))
+	for i := 0; i < len(llist); i++ {
+		posteriors[i] = math.Exp(logPosteriors[i] - LogSumPosterior)
+	}
+	// 平均
+	mean := 0.0
+	for i := 0; i < len(llist); i++ {
+		mean += llist[i] * posteriors[i]
+	}
+	// 分散
+	variance := 0.0
+	for i := 0; i < len(llist); i++ {
+		variance += (llist[i] - mean) * (llist[i] - mean) * posteriors[i]
+	}
+	log.Printf("mean: %.0f, std: %.0f\n", mean, math.Sqrt(variance))
+}
+
 type Input struct {
 	N, T  int
 	sigma int
@@ -280,8 +322,8 @@ func main() {
 		for i := 0; i < input.N*2; i++ {
 			fmt.Scan(&trueWH[i])
 		}
-		checkEstimate(input, estMean, trueWH)
-		checkEstimate(input, means, trueWH)
+		//checkEstimate(input, estMean, trueWH)
+		//checkEstimate(input, means, trueWH)
 	}
 }
 
@@ -332,9 +374,16 @@ func NormalCDF(x float64) float64 {
 }
 
 // 一番原始的？な正規分布の確率密度関数
+//
+//	(1 / (σ√{2π})) * e^(-(x - μ)^2 / 2σ^2)
 func normalPDF(x, mu, sigma float64) float64 {
 	return (1 / (math.Sqrt(2 * math.Pi * sigma * sigma))) *
 		math.Exp(-((x-mu)*(x-mu))/(2*sigma*sigma))
+}
+
+// logP(y|L) = -log(sigma√{2*π}) - {(y - L)^2}/{2*σ^2}
+func normalPDFLog(x, mu, sigma float64) float64 {
+	return -math.Log(sigma*math.Sqrt(2*math.Pi)) - ((x-mu)*(x-mu))/(2*sigma*sigma)
 }
 
 // 対数を使う
@@ -343,7 +392,10 @@ func normalPDF2(x, mu, sigma float64) float64 {
 	return math.Exp(logPDF)
 }
 
-// overflow を防ぐための近似式
+// LogSumExp は対数の和を計算します
+// overflow を防ぐ
+// logP(y) = log(Σ exp(logP(y|L) + logP(L))) 一般式
+// logP(y) = M + log(Σ exp(logP(y|L) + logP(L) - M)) に変形 M = max(logP(L|y))
 func LogSumExp(logs []float64) float64 {
 	if len(logs) == 0 {
 		return math.Inf(-1)
