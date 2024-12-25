@@ -272,57 +272,6 @@ func estimateV0WithLog(y int, sigma float64) (float64, float64) {
 	return mean, math.Sqrt(variance)
 }
 
-func estimateV0withScaling(yMin, yMax int, y int, std float64) (float64, float64) {
-	lMin := yMin
-	lMax := 100000
-	lStep := 10
-	// 事前分布を(lMax-lMin)/lStep+1個作る
-	llist := make([]int, 0, (lMax-lMin)/lStep+1)
-	for l := lMin; l <= lMax; l += lStep {
-		llist = append(llist, l)
-	}
-	minL := llist[0]
-	maxL := llist[len(llist)-1]
-	// scaling
-	scaledList := make([]float64, len(llist))
-	for i, l := range llist {
-		scaledList[i] = float64(100000-l+1) / 90000
-	}
-	// それぞれの尤度の計算 P(y|L)
-	linkhoods := make([]float64, len(llist))
-	for i, l := range scaledList {
-		linkhoods[i] = normalPDFLog(float64(y), float64(l), std/(float64(maxL)-float64(minL)))
-	}
-	// 事前分布 (一様分布) P(L)
-	prior := -math.Log(float64(len(llist)))
-	// 事後分布の計算 P(L|y)
-	posterior := make([]float64, len(llist))
-	for i := 0; i < len(llist); i++ {
-		posterior[i] = linkhoods[i] + prior // 尤度 * 事前分布
-	}
-	LogSumPosterior := LogSumExp(posterior)
-	for i := 0; i < len(llist); i++ {
-		posterior[i] = math.Exp(LogSumPosterior - posterior[i])
-	}
-	// スケーリング後の平均の計算(事後分布)
-	mean := 0.0
-	for i := 0; i < len(llist); i++ {
-		mean += scaledList[i] * posterior[i] // L * P(L|y)
-	}
-	// スケーリング後の分散の計算(事後分布)
-	variance := 0.0
-	for i := 0; i < len(llist); i++ {
-		variance += (scaledList[i] - mean) * (scaledList[i] - mean) * posterior[i] // (L - mean)^2 * P(L|y)
-	}
-
-	// 元のスケールに戻す
-	mean = float64(minL) + mean*float64(maxL-minL)
-	variance = variance * float64(maxL-minL) * float64(maxL-minL)
-	std = math.Sqrt(variance)
-	log.Println("mean", mean, "std", std)
-	return mean, std
-}
-
 type Input struct {
 	N, T  int
 	sigma int
