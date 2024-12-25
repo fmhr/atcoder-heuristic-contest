@@ -43,7 +43,7 @@ func updateInput(input Input) []float64 {
 func estimate(ys []float64, sigma float64) ([]float64, []float64) {
 	// Lの範囲を設定
 	lMin := 10000
-	lMax := 50000 // TODO: 100000
+	lMax := 50000
 	lStep := 10
 
 	// 事前分布の対数
@@ -58,6 +58,7 @@ func estimate(ys []float64, sigma float64) ([]float64, []float64) {
 	//log.Println("i, y, beta, cdf, phi")
 	for i, y := range ys {
 		// 分布の上限 100000 を基準に、観測値 y との差を標準偏差 sigma でスケーリング
+		// /sigama にすることで、スケール後の標準偏差が1になる
 		// 0~100000の中に入る確率
 		beta := (100000.0 - y) / sigma
 		betas[i] = beta
@@ -143,6 +144,7 @@ func estimate(ys []float64, sigma float64) ([]float64, []float64) {
 
 			cdfDiff := cdfBeta - cdfAlpha
 			if cdfDiff <= 0.0 {
+				log.Println("cdfDiff <= 0.0")
 				continue
 			}
 
@@ -181,9 +183,8 @@ func estimate(ys []float64, sigma float64) ([]float64, []float64) {
 
 // v0 １つの観測値に対する事後確率を計算
 // return 平均, 標準偏差
-func estimateV0(y int, std float64) (float64, float64) {
+func estimateV0(lMin int, y int, std float64) (float64, float64) {
 	// Lの範囲を設定
-	lMin := 10000
 	lMax := 100000
 	lStep := 10
 	// 事前分布を(lMax-lMin)/lStep+1個作る
@@ -224,12 +225,12 @@ func estimateV0(y int, std float64) (float64, float64) {
 	for i := 0; i < len(llist); i++ {
 		variance += (llist[i] - mean) * (llist[i] - mean) * posterior[i] // (L - mean)^2 * P(L|y)
 	}
-	log.Printf("mean: %.0f, std: %.0f\n", mean, math.Sqrt(variance))
+	//log.Printf("mean: %.0f, std: %.0f\n", mean, math.Sqrt(variance))
 	return mean, math.Sqrt(variance)
 }
 
 // 対数をつけて計算することで、精度を高める
-func estimateV0WithLog(y int, sigma float64) {
+func estimateV0WithLog(y int, sigma float64) (float64, float64) {
 	lMin := 10000
 	lMax := 100000
 	lStep := 10
@@ -268,6 +269,60 @@ func estimateV0WithLog(y int, sigma float64) {
 		variance += (llist[i] - mean) * (llist[i] - mean) * posteriors[i]
 	}
 	log.Printf("mean: %.0f, std: %.0f\n", mean, math.Sqrt(variance))
+	return mean, math.Sqrt(variance)
+}
+
+func estimateV0withScaling(yMin, yMax int, y int, std float64) (float64, float64) {
+	lMin := yMin
+	lMax := 100000
+	lStep := 10
+	// 事前分布を(lMax-lMin)/lStep+1個作る
+	llist := make([]int, 0, (lMax-lMin)/lStep+1)
+	for l := lMin; l <= lMax; l += lStep {
+		llist = append(llist, l)
+	}
+	minL := llist[0]
+	maxL := llist[len(llist)-1]
+	// scaling
+	scaledList := make([]float64, len(llist))
+	for i, l := range llist {
+		scaledList[i] = float64(100000-l+1) / 90000
+	}
+	// それぞれの尤度の計算 P(y|L)
+	linkhoods := make([]float64, len(llist))
+	for i, l := range scaledList {
+		linkhoods[i] = normalPDF(float64(y), float64(l), std/(float64(maxL)-float64(minL)))
+	}
+	// 事前分布 (一様分布) P(L)
+	prior := 1.0 / float64(len(llist))
+	// 事後分布の計算 P(L|y)
+	posterior := make([]float64, len(llist))
+	sumPosterior := 0.0
+	for i := 0; i < len(llist); i++ {
+		posterior[i] = linkhoods[i] * prior // 尤度 * 事前分布
+		sumPosterior += posterior[i]
+	}
+	for i := 0; i < len(llist); i++ {
+		// 正規化 (事後確率の和が1になるように総和で割る)
+		posterior[i] /= sumPosterior
+	}
+	// スケーリング後の平均の計算(事後分布)
+	mean := 0.0
+	for i := 0; i < len(llist); i++ {
+		mean += scaledList[i] * posterior[i] // L * P(L|y)
+	}
+	// スケーリング後の分散の計算(事後分布)
+	variance := 0.0
+	for i := 0; i < len(llist); i++ {
+		variance += (scaledList[i] - mean) * (scaledList[i] - mean) * posterior[i] // (L - mean)^2 * P(L|y)
+	}
+
+	// 元のスケールに戻す
+	mean = float64(minL) + mean*float64(maxL-minL)
+	variance = variance * float64(maxL-minL) * float64(maxL-minL)
+	std = math.Sqrt(variance)
+	log.Println("mean", mean, "std", std)
+	return mean, std
 }
 
 type Input struct {
@@ -300,13 +355,20 @@ func main() {
 	getTime()
 	input := readInput()
 	means := updateInput(input)
+	_ = means
 	log.Println("time", getTime())
 
 	var estMean []float64
 	var estStd []float64
+	yMin := 1000000
+	yMax := 0
+	for i := 0; i < input.N*2; i++ {
+		yMin = min(yMin, input.wh[i/2][i%2])
+		yMax = max(yMax, input.wh[i/2][i%2])
+	}
 	for i := 0; i < input.N; i++ {
 		for j := 0; j < 2; j++ {
-			m, sd := estimateV0(input.wh[i][j], float64(input.sigma))
+			m, sd := estimateV0withScaling(yMin, yMax, input.wh[i][j], float64(input.sigma))
 			estMean = append(estMean, m)
 			estStd = append(estStd, sd)
 		}
@@ -322,8 +384,10 @@ func main() {
 		for i := 0; i < input.N*2; i++ {
 			fmt.Scan(&trueWH[i])
 		}
-		//checkEstimate(input, estMean, trueWH)
-		//checkEstimate(input, means, trueWH)
+		checkEstimate(input, estMean, trueWH)
+		// wataさんのを再現
+		log.Println("wataさんのを再現")
+		checkEstimate(input, means, trueWH)
 	}
 }
 
@@ -331,16 +395,16 @@ func checkEstimate(in Input, estMean []float64, trueWH []int) {
 	sum1 := 0.0
 	sum2 := 0.0
 	for i := 0; i < in.N*2; i++ {
-		s := "good"
-		if math.Abs(estMean[i]-float64(trueWH[i])) > math.Abs(float64(in.wh[i/2][i%2])-float64(trueWH[i])) {
-			s = "bad"
-		}
-		log.Printf("true: %d, input:%6d(%6d), est: %.0f(%5d) %s\n", trueWH[i], in.wh[i/2][i%2], in.wh[i/2][i%2]-trueWH[i], estMean[i], int(estMean[i])-trueWH[i], s)
+		//s := "good"
+		//if math.Abs(estMean[i]-float64(trueWH[i])) > math.Abs(float64(in.wh[i/2][i%2])-float64(trueWH[i])) {
+		//s = "bad"
+		//}
+		//log.Printf("true: %d, input:%6d(%6d), est: %.0f(%5d) %s\n", trueWH[i], in.wh[i/2][i%2], in.wh[i/2][i%2]-trueWH[i], estMean[i], int(estMean[i])-trueWH[i], s)
 		sum1 += (estMean[i] - float64(trueWH[i])) * (estMean[i] - float64(trueWH[i]))
 		sum2 += (float64(in.wh[i/2][i%2]) - float64(trueWH[i])) * (float64(in.wh[i/2][i%2]) - float64(trueWH[i]))
 	}
-	log.Println("RMSE", math.Sqrt(sum1/float64(in.N*2)))
-	log.Println("RMSE", math.Sqrt(sum2/float64(in.N*2)))
+	log.Println("RMSE est  ", math.Sqrt(sum1/float64(in.N*2)))
+	log.Println("RMSE input", math.Sqrt(sum2/float64(in.N*2)))
 }
 
 var STIME time.Time
@@ -377,6 +441,9 @@ func NormalCDF(x float64) float64 {
 //
 //	(1 / (σ√{2π})) * e^(-(x - μ)^2 / 2σ^2)
 func normalPDF(x, mu, sigma float64) float64 {
+	//log.Println("normalPDF", x, mu, sigma)
+	//log.Println("1 / (σ√{2π})", 1/(sigma*math.Sqrt(2*math.Pi)))
+	//log.Printf("%f, %f, %f\n", (x-mu)*(x-mu), 2*sigma*sigma, -((x-mu)*(x-mu))/(2*sigma*sigma))
 	return (1 / (math.Sqrt(2 * math.Pi * sigma * sigma))) *
 		math.Exp(-((x-mu)*(x-mu))/(2*sigma*sigma))
 }
