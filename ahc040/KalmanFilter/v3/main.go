@@ -183,10 +183,11 @@ func estimate(ys []float64, sigma float64) ([]float64, []float64) {
 
 // v0 １つの観測値に対する事後確率を計算
 // return 平均, 標準偏差
-func estimateV0(lMin int, y int, std float64) (float64, float64) {
+func estimateV0(yMin int, y int, std float64) (float64, float64) {
 	// Lの範囲を設定
+	lMin := max(yMin-int(std*2), 10000)
 	lMax := 100000
-	lStep := 10
+	lStep := 100
 	// 事前分布を(lMax-lMin)/lStep+1個作る
 	// 事前分布の平均のリスト(10000~100000)
 	llist := make([]float64, 0, (lMax-lMin)/lStep+1)
@@ -315,7 +316,7 @@ func main() {
 	}
 	for i := 0; i < input.N; i++ {
 		for j := 0; j < 2; j++ {
-			m, sd := estimateV0withScaling(yMin, yMax, input.wh[i][j], float64(input.sigma))
+			m, sd := estimateV0(yMin, input.wh[i][j], float64(input.sigma))
 			estMean = append(estMean, m)
 			estStd = append(estStd, sd)
 		}
