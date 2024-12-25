@@ -291,20 +291,18 @@ func estimateV0withScaling(yMin, yMax int, y int, std float64) (float64, float64
 	// それぞれの尤度の計算 P(y|L)
 	linkhoods := make([]float64, len(llist))
 	for i, l := range scaledList {
-		linkhoods[i] = normalPDF(float64(y), float64(l), std/(float64(maxL)-float64(minL)))
+		linkhoods[i] = normalPDFLog(float64(y), float64(l), std/(float64(maxL)-float64(minL)))
 	}
 	// 事前分布 (一様分布) P(L)
-	prior := 1.0 / float64(len(llist))
+	prior := -math.Log(float64(len(llist)))
 	// 事後分布の計算 P(L|y)
 	posterior := make([]float64, len(llist))
-	sumPosterior := 0.0
 	for i := 0; i < len(llist); i++ {
-		posterior[i] = linkhoods[i] * prior // 尤度 * 事前分布
-		sumPosterior += posterior[i]
+		posterior[i] = linkhoods[i] + prior // 尤度 * 事前分布
 	}
+	LogSumPosterior := LogSumExp(posterior)
 	for i := 0; i < len(llist); i++ {
-		// 正規化 (事後確率の和が1になるように総和で割る)
-		posterior[i] /= sumPosterior
+		posterior[i] = math.Exp(LogSumPosterior - posterior[i])
 	}
 	// スケーリング後の平均の計算(事後分布)
 	mean := 0.0
