@@ -61,6 +61,7 @@ func estimate(ys []float64, sigma float64) ([]float64, []float64) {
 		// /sigama にすることで、スケール後の標準偏差が1になる
 		// 0~100000の中に入る確率
 		beta := (100000.0 - y) / sigma
+		log.Println(y, beta)
 		betas[i] = beta
 		cdfBetas[i] = NormalCDF(beta)
 		phiBetas[i] = NormalPDF(beta)
@@ -231,7 +232,7 @@ func estimateV0(yMin int, y int, std float64) (float64, float64) {
 }
 
 // 対数をつけて計算することで、精度を高める
-func estimateV0WithLog(y int, sigma float64) (float64, float64) {
+func estimateV0WithLog(y int, std float64) (float64, float64) {
 	lMin := 10000
 	lMax := 100000
 	lStep := 10
@@ -242,7 +243,7 @@ func estimateV0WithLog(y int, sigma float64) (float64, float64) {
 	// 対数尤度 P(y|L)= -log(σ√{2*π}) - {(y - L)^2}/{2*σ^2}
 	logLikelihoods := make([]float64, len(llist))
 	for i, l := range llist {
-		logLikelihoods[i] = normalPDFLog(float64(y), l, sigma)
+		logLikelihoods[i] = normalPDFLog(float64(y), l, std)
 	}
 	// 対数事前分布 P(L) = -log(n)
 	// 1/n は対数で -log(n) になる
@@ -316,7 +317,7 @@ func main() {
 	}
 	for i := 0; i < input.N; i++ {
 		for j := 0; j < 2; j++ {
-			m, sd := estimateV0(yMin, input.wh[i][j], float64(input.sigma))
+			m, sd := estimateV0WithLog(input.wh[i][j], float64(input.sigma))
 			estMean = append(estMean, m)
 			estStd = append(estStd, sd)
 		}
