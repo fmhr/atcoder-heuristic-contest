@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand/v2"
 	"os"
 	"time"
+
+	"gonum.org/v1/gonum/mat"
 )
 
 var (
@@ -32,6 +35,28 @@ func updateInput(input Input) []float64 {
 	_, _ = means, vars
 	for i := 0; i < input.N*2; i++ {
 		log.Printf("%.0f ±%.0f\n", means[i], math.Sqrt(vars[i]))
+	}
+	// 十時型に並べてクエリすることで和の計測を行う
+	// 現在の事後分布における計測結果の分散が大きくなるようにクエリを行う
+	NumWidth := 10
+	rng := rand.New(rand.NewPCG(0, 0))
+	stime := getTime()
+	iter := 0
+	for input.turn+NumWidth < input.T {
+		best := make([][][]Cmd, 0)
+		max := 0.0
+		for len(best[0][0]) == 0 ||
+			getTime()-stime < 0.5*float64(input.turn+1)/(float64(input.T)-float64(NumWidth)) {
+			iter++
+			cmds := make([]Cmd, 0)
+			cmds = append(cmds, Cmd{p: 0, r: false, d: false, b: ^uint(0)})
+			row := make([]int, 0)
+			col := make([]int, 0)
+			rb := ^1
+			cb := ^1
+			sim := NewSim()
+			// この先は, Estimator->Simulatorの順で実装する必要がある
+		}
 	}
 	return means
 }
@@ -274,7 +299,15 @@ func estimateV0WithLog(y int, std float64) (float64, float64) {
 	return mean, math.Sqrt(variance)
 }
 
+type Cmd struct {
+	p uint
+	r bool
+	d bool
+	b uint
+}
+
 type Input struct {
+	turn  int
 	N, T  int
 	sigma int
 	wh    [][2]int // w, h
@@ -427,4 +460,101 @@ func LogSumExp(logs []float64) float64 {
 		sum += math.Exp(logv - max)
 	}
 	return max + math.Log(sum)
+}
+
+// T型に配置して、観測値からそれぞれの平均と分散を推定する
+type Val struct {
+	mean  float64
+	sigma float64
+	a     []int // 一緒に観測れたもののindex
+}
+
+func NewVal() *Val {
+	return &Val{
+		mean:  0.0,
+		sigma: 0.0,
+		a:     make([]int, 0),
+	}
+}
+
+func (v *Val) Update(i int, estimator *Estimator) {
+	mean := estimator.mean.At(i, 0)
+	variance := estimator.convariance.At(i, i)
+	v.mean = mean
+	// new Variance
+	newVar := v.sigma*v.sigma + variance
+	// add covariance terms
+	// 一緒に観測されたもの(j)とiの共分散を足す
+	for _, j := range v.a {
+		newVar += 2 * estimator.convariance.At(i, j)
+	}
+	v.sigma = math.Sqrt(newVar)
+	v.a = append(v.a, i)
+}
+
+func (v *Val) UpperBound(d float64) float64 {
+	return v.mean + v.sigma*d
+}
+
+func (v *Val) LowerBound(d float64) float64 {
+	return v.mean - v.sigma*d
+}
+
+// Estimator implements Kalman Filter
+type Estimator struct {
+	mean        *mat.VecDense // 1次元 平均
+	convariance *mat.Dense    // 2次元 共分散行列
+	sigma2      float64
+	n           int // サイズ
+}
+
+func NewEstimator(means []float64, vars []float64, sigma float64) *Estimator {
+	n := len(means)
+	sigma2 := sigma * sigma
+	// Create mean vector
+	mean := mat.NewVecDense(n, means)
+	// Create diagonal covariance matris
+	covariance := NewDiagonalDense(n, vars) // 対角行列(n*n)
+
+	return &Estimator{
+		mean:        mean,
+		convariance: covariance,
+		sigma2:      sigma2,
+		n:           n,
+	}
+}
+
+func (e *Estimator) Update(S []int, t float64) {
+	// Create observation vector h 観察行列
+	h := mat.NewVecDense(e.n, nil)
+	for _, idx := range S {
+		h.SetVec(idx, 1.0)
+	}
+	// Calculate S_i = h^T * Σ * h + σ^2
+	var siMatrix mat.Dense
+	siMatrix.Mul(h.T(), e.convariance)               // h^T * Σ 観察行列の逆と共分散行列 (Mul:行列の積)
+	si := mat.Dot(siMatrix.RowView(0), h) + e.sigma2 // (h^T * Σ) * h + σ^2 (Dot:ベクトルの内積)
+	// Calculate K = Σ * h / S_i カルマンゲイン
+	k := mat.NewVecDense(e.n, nil)
+	k.MulVec(e.convariance, h) // Σ * h 共分散行列と観察行列の積
+	k.ScaleVec(1.0/si, k)      // Σ * h / S_i カルマンゲイン
+	// Calculate residual r = t - h^T * μ 観測値と観察行列の積
+	residual := t - mat.Dot(h, e.mean)
+	// Update mean μ_new = μ_old + K * r 平均の更新
+	e.mean.AddScaledVec(e.mean, residual, k)
+	// Update Covariance Σ_new = Σ_old - K * h^T * ∑_old 共分散行列の更新
+	var khT, update mat.Dense
+	khT.Mul(k, h.T())
+	update.Mul(&khT, e.convariance)
+	e.convariance.Sub(e.convariance, &update)
+}
+
+// NewDiagonalDense は対角行列をmat.Denseで生成します
+// mat.NewDiagDense は体格行列をvectorで生成するので使えない
+func NewDiagonalDense(n int, v []float64) *mat.Dense {
+	dense := mat.NewDense(n, n, nil)
+	for i := 0; i < n; i++ {
+		dense.Set(i, i, v[i])
+	}
+	return dense
 }
