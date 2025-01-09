@@ -300,18 +300,19 @@ func estimateV0WithLog(y int, std float64) (float64, float64) {
 }
 
 type Cmd struct {
-	p uint
-	r bool
-	d bool
-	b uint
+	p uint // piece index
+	r bool // rotation
+	d bool // direction
+	b uint // base piece index
 }
 
 type Input struct {
-	turn  int
-	N, T  int
-	sigma int
-	wh    [][2]int // w, h
-	wv    [][2]int // wh, sigma^2
+	turn      int
+	N, T      int
+	sigma     int
+	wh        [][2]int // w, h
+	whv       [][2]Val
+	estimator *Estimator
 }
 
 func readInput() Input {
@@ -323,12 +324,28 @@ func readInput() Input {
 	for i := 0; i < N; i++ {
 		fmt.Scan(&wh[i][0], &wh[i][1])
 	}
-	wv := make([][2]int, 2*N)
-	for i := 0; i < 2*N; i++ {
-		wv[i][0] = wh[i/2][i%2]
-		wv[i][1] = sigma * sigma
+	return NewInput(N, T, sigma, wh)
+}
+
+func NewInput(N, T, sigma int, wh [][2]int) Input {
+	whv := make([][2]Val, N)
+	means := make([]float64, 2*N)
+	variances := make([]float64, 2*N)
+	sigma2 := float64(sigma * sigma)
+
+	for i, pair := range wh {
+		w, h := float64(pair[0]), float64(pair[1])
+		whv[i] = [2]Val{
+			{mean: w, sigma: sigma2}, {mean: h, sigma: sigma2}} // ?
+		means[i*2] = w
+		variances[i*2] = sigma2
+		means[i*2+1] = h
+		variances[i*2+1] = sigma2
 	}
-	return Input{N, T, sigma, wh, wv}
+	return Input{
+		N: N, T: T, sigma: sigma, wh: wh, whv: whv,
+		estimator: NewEstimator(means, variances, float64(sigma)),
+	}
 }
 
 const TL = 2.9
@@ -477,26 +494,36 @@ func NewVal() *Val {
 	}
 }
 
-func (v *Val) Update(i int, estimator *Estimator) {
+func (v Val) clone() *Val {
+	return &Val{
+		mean:  v.mean,
+		sigma: v.sigma,
+		a:     append([]int{}, v.a...),
+	}
+}
+
+func (v *Val) Add(i int, estimator *Estimator) {
 	mean := estimator.mean.At(i, 0)
 	variance := estimator.convariance.At(i, i)
-	v.mean = mean
+	v.mean += mean
 	// new Variance
 	newVar := v.sigma*v.sigma + variance
 	// add covariance terms
 	// 一緒に観測されたもの(j)とiの共分散を足す
 	for _, j := range v.a {
-		newVar += 2 * estimator.convariance.At(i, j)
+		newVar += 2 * estimator.convariance.At(i, j) // なぜ２倍？
 	}
 	v.sigma = math.Sqrt(newVar)
 	v.a = append(v.a, i)
 }
 
-func (v *Val) UpperBound(d float64) float64 {
+// UpperBound は上限を計算します
+func (v *Val) ub(d float64) float64 {
 	return v.mean + v.sigma*d
 }
 
-func (v *Val) LowerBound(d float64) float64 {
+// LowerBound は下限を計算します
+func (v *Val) lb(d float64) float64 {
 	return v.mean - v.sigma*d
 }
 
@@ -557,4 +584,73 @@ func NewDiagonalDense(n int, v []float64) *mat.Dense {
 		dense.Set(i, i, v[i])
 	}
 	return dense
+}
+
+// Simulater
+type Sim struct {
+	pos  [][4]*Val // (x1, x2, y1, y2)
+	done []bool
+	W    *Val
+	H    *Val
+}
+
+// 初期化
+func NewSim(n int) *Sim {
+	pos := make([][4]*Val, n)
+	for i := range pos {
+		pos[i] = [4]*Val{NewVal(), NewVal(), NewVal(), NewVal()}
+	}
+	return &Sim{
+		pos:  pos,
+		done: make([]bool, n),
+		W:    NewVal(),
+		H:    NewVal(),
+	}
+}
+
+// Put attemps to place a rectangle according to the command
+func (s *Sim) Put(input *Input, c Cmd, strict bool) bool {
+	d := 1.5 // 1.5倍の幅で判定
+	w := int(c.p * 2)
+	h := int(c.p*2 + 1)
+
+	// 回転
+	if c.r {
+		w, h = h, w
+	}
+
+	touch := false
+
+	if !c.d { // place to the right
+		var x1 *Val
+		if c.b == ^uint(0) {
+			x1 = NewVal()
+		} else {
+			x1 = s.pos[c.b][1]
+		}
+		x2 := x1.clone()
+		x2.Add(w, input.estimator)
+		var y1 *Val
+		// すでに設置済みのものとの衝突判定
+		for q := range c.p {
+			if !s.done[q] || q == c.b {
+				continue
+			}
+			if s.pos[q][1].ub(d) > x1.lb(d) && x2.ub(d) > s.pos[q][0].lb(d) {
+				if s.pos[q][3].mean > y1.mean {
+					if strict {
+						touch = s.pos[q][1].lb(d) < x1.ub(d) || x2.lb(d) < s.pos[q][0].ub(d)
+					}
+					y1 = s.pos[q][3].clone()
+				}
+			}
+			if touch {
+				return false
+			}
+			y2 := y1.clone()
+			y2.Add(h, input.estimator)
+			s.pos[c.p] = [4]*Val{x1, x2, y1, y2}
+			// wip
+		}
+	}
 }
