@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -40,6 +41,23 @@ func input(re *bufio.Reader) (in Input) {
 type State struct {
 	state   [20][20]byte
 	t, x, y int
+	eval    int
+	act     *ActionNode
+}
+
+func (s State) clone() *State {
+	newState := &State{}
+	for i := 0; i < 20; i++ {
+		for j := 0; j < 20; j++ {
+			newState.state[i][j] = s.state[i][j]
+		}
+	}
+	newState.t = s.t
+	newState.x = s.x
+	newState.y = s.y
+	newState.eval = s.eval
+	newState.act = s.act
+	return newState
 }
 
 func NewState(in Input) *State {
@@ -55,8 +73,38 @@ func NewState(in Input) *State {
 	return s
 }
 
+func (s State) generateActions() []Action {
+	oniExitRow := make([]bool, 20)
+	oniExitColumn := make([]bool, 20)
+	for i := 0; i < 20; i++ {
+		for j := 0; j < 20; j++ {
+			if s.state[i][j] == oni {
+				oniExitRow[i] = true
+				oniExitColumn[j] = true
+			}
+		}
+	}
+	actions := make([]Action, 0)
+	for i := 0; i < 20; i++ {
+		if oniExitRow[i] {
+			actions = append(actions, Action{Up, uint8(i)})
+			actions = append(actions, Action{Down, uint8(i)})
+		}
+		if oniExitColumn[i] {
+			actions = append(actions, Action{Left, uint8(i)})
+			actions = append(actions, Action{Right, uint8(i)})
+		}
+	}
+	return actions
+}
+
 type Action struct {
 	act, target uint8
+}
+
+type ActionNode struct {
+	act    Action
+	parent *ActionNode
 }
 
 const (
@@ -85,11 +133,13 @@ const (
 	huku = 'o'
 )
 
-func (s *State) move(act Action) {
+func (s *State) move(act Action) bool {
 	switch act.act {
 	case Left:
 		if s.state[act.target][0] == oni {
 			s.x--
+		} else if s.state[act.target][0] == huku {
+			return false
 		}
 		for i := 1; i < 20; i++ {
 			s.state[act.target][i-1] = s.state[act.target][i]
@@ -98,6 +148,8 @@ func (s *State) move(act Action) {
 	case Right:
 		if s.state[act.target][19] == oni {
 			s.x--
+		} else if s.state[act.target][19] == huku {
+			return false
 		}
 		for i := 18; i >= 0; i-- {
 			s.state[act.target][i+1] = s.state[act.target][i]
@@ -106,6 +158,8 @@ func (s *State) move(act Action) {
 	case Up:
 		if s.state[0][act.target] == oni {
 			s.x--
+		} else if s.state[0][act.target] == huku {
+			return false
 		}
 		for i := 1; i < 20; i++ {
 			s.state[i-1][act.target] = s.state[i][act.target]
@@ -114,6 +168,8 @@ func (s *State) move(act Action) {
 	case Down:
 		if s.state[19][act.target] == oni {
 			s.x--
+		} else if s.state[19][act.target] == huku {
+			return false
 		}
 		for i := 18; i >= 0; i-- {
 			s.state[i+1][act.target] = s.state[i][act.target]
@@ -121,6 +177,7 @@ func (s *State) move(act Action) {
 		s.state[0][act.target] = '.'
 	}
 	s.t++
+	return true
 }
 
 // 評価関数
@@ -128,7 +185,7 @@ func (s *State) move(act Action) {
 // 同じ行,列に複数の鬼がいると嬉しい
 // 鬼が福に囲まれていると嬉しくない
 // 鬼が外に血が付くと嬉しい
-func (s State) eval() int {
+func (s State) calcEval() int {
 	oniCount := s.x
 	// 同じ列にいる鬼の数を行列ごとにカウント
 	onis := 0
@@ -161,7 +218,7 @@ func (s State) eval() int {
 			}
 		}
 	}
-	log.Printf("oni:%d onis:%d oniDis:%d\n", oniCount, onis, oniDistanceSum)
+	//log.Printf("oni:%d onis:%d oniDis:%d\n", oniCount, onis, oniDistanceSum)
 	return -oniCount*1000 + onis + -oniDistanceSum
 }
 
@@ -172,7 +229,7 @@ func hint(s State) {
 			if s.state[i][j] == oni {
 				minimumStep := 100000
 				minimumAction := make([]Action, 0)
-				log.Println("turn:", s.t, "oni:", s.x, "fuku:", s.y, "eval:", s.eval())
+				log.Println("turn:", s.t, "oni:", s.x, "fuku:", s.y, "eval:", s.calcEval())
 				//log.Printf("鬼 %d %d\n", i, j)
 				// LRUDを選択する
 				// Left 左に福がいたらだめ
@@ -272,10 +329,45 @@ func hint(s State) {
 					panic("error")
 				}
 			}
-			//s.eval()
 		}
 	}
 	log.Println("T=", s.t)
+}
+
+func beamSearch(in Input) {
+	beamWidth := 10
+	s := NewState(in)
+	states := make([]State, 0)
+	states = append(states, *s)
+	nexts := make([]State, 0)
+	loop := 0
+	for loop < 100 {
+		loop++
+		for _, state := range states {
+			actions := state.generateActions()
+			if len(actions) == 0 {
+				break
+			}
+			for _, act := range actions {
+				newState := state.clone()
+				ok := newState.move(act)
+				if ok {
+					newState.act = &ActionNode{act, state.act}
+					newState.eval = newState.calcEval()
+					nexts = append(nexts, *newState)
+				}
+			}
+			sort.Slice(nexts, func(i, j int) bool {
+				return nexts[i].eval > nexts[j].eval
+			})
+			if len(nexts) > beamWidth {
+				nexts = nexts[:beamWidth]
+			}
+			states = make([]State, len(nexts))
+			copy(states, nexts)
+		}
+		log.Println(states[0].t, states[0].x, states[0].eval, states[0].act)
+	}
 }
 
 var startTime time.Time
@@ -288,8 +380,9 @@ func main() {
 	writer := bufio.NewWriter(os.Stdout)
 	defer writer.Flush()
 	in := input(reader)
-	s := NewState(in)
-	hint(*s)
+	//s := NewState(in)
+	//hint(*s)
+	beamSearch(in)
 	log.Printf("time=%v\n", time.Since(startTime))
 }
 
