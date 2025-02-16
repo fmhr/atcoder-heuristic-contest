@@ -275,6 +275,30 @@ func (f *Field) selectRails(path []Pos) (types []int16) {
 	return
 }
 
+// countSrcDst は、posから距離２以内のsrc,dstの数を返す
+// 駅を想定
+func (f Field) countSrcDst(pos Pos, in Input) (srcNum, dstNum int) {
+	for dy := -2; dy <= 2; dy++ {
+		for dx := -2; dx <= 2; dx++ {
+			if absInt(dy)+absInt(dx) > 2 {
+				continue
+			}
+			y, x := pos.Y+int16(dy), pos.X+int16(dx)
+			if y >= 0 && y < 50 && x >= 0 && x < 50 {
+				for i := 0; i < in.M; i++ {
+					if in.src[i].Y == y && in.src[i].X == x {
+						srcNum++
+					}
+					if in.dst[i].Y == y && in.dst[i].X == x {
+						dstNum++
+					}
+				}
+			}
+		}
+	}
+	return srcNum, dstNum
+}
+
 var ErrNotEnoughMoney = fmt.Errorf("not enough money")
 
 type State struct {
