@@ -75,15 +75,17 @@ func NewField(n int) *Field {
 	return f
 }
 
-func (f *Field) build(kind int16, y, x int16) {
-	if f.cell[y][x] != EMPTY {
+func (f *Field) build(act Action) {
+	if f.cell[act.Y][act.X] != EMPTY {
 		panic("already built")
 	}
-	if kind < 0 || kind > 6 {
-		panic("invalid kind")
+	if act.Kind < 0 || act.Kind > 6 {
+		panic("invalid kind:" + fmt.Sprint(act.Kind))
 	}
-	f.cell[y][x] = kind
+	f.cell[act.Y][act.X] = act.Kind
 	// 連結成分をつなげる
+	y, x := act.Y, act.X
+	kind := act.Kind
 	// 上
 	if y > 0 {
 		switch kind {
@@ -246,6 +248,7 @@ type State struct {
 	field   *Field
 	money   int
 	turn    int
+	income  int
 	actions []Action
 }
 
@@ -257,14 +260,14 @@ func NewState(in *Input) *State {
 }
 
 // レールを建設する
-func (s *State) buildRail(t, y, x int16) error {
+func (s *State) buildRail(act Action) error {
 	if s.money < COST_RAIL {
 		return ErrNotEnoughMoney
 	}
-	s.field.build(y, x, t)
+	s.field.build(act)
 	s.money -= COST_RAIL
-	s.turn--
-	s.actions = append(s.actions, Action{Kind: t, Y: y, X: x})
+	s.turn++
+	s.actions = append(s.actions, act)
 	return nil
 }
 
@@ -273,16 +276,17 @@ func (s *State) buildStation(y, x int16) error {
 	if s.money < COST_STATION {
 		return ErrNotEnoughMoney
 	}
-	s.field.build(y, x, STATION)
+	act := Action{Kind: STATION, Y: y, X: x}
+	s.field.build(act)
 	s.money -= COST_STATION
-	s.turn--
-	s.actions = append(s.actions, Action{Kind: STATION, Y: y, X: x})
+	s.turn++
+	s.actions = append(s.actions, act)
 	return nil
 }
 
 // 何もしない
 func (s *State) doNothing() {
-	s.turn--
+	s.turn++
 	s.actions = append(s.actions, Action{Kind: DO_NOTHING})
 }
 
@@ -323,7 +327,7 @@ func readInput(re *bufio.Reader) *Input {
 
 func greedy(in Input) {
 	p := make([][2]int, in.M)
-	// income が小さい順にソート
+	// income(駅館距離) が小さい順にソート
 	for i := 0; i < in.M; i++ {
 		p[i] = [2]int{i, int(in.income[i])}
 	}
@@ -340,6 +344,9 @@ func greedy(in Input) {
 	types := state.field.selectRails(path)
 	log.Println(types)
 	for i := 0; i < len(path); i++ {
+		act := Action{Kind: types[i], Y: path[i].Y, X: path[i].X}
+		state.buildRail(act)
+		log.Println(state)
 		fmt.Println(STATION, path[i].Y, path[i].X)
 		in.T--
 	}
