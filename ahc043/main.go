@@ -38,7 +38,7 @@ var railMap = map[int16]string{
 	7:               "+", // other
 }
 
-var railCost = map[int16]int{
+var buildCost = map[int16]int{
 	-1:              0,            // EMPTY
 	STATION:         COST_STATION, // STATION
 	RAIL_HORIZONTAL: COST_RAIL,
@@ -76,6 +76,9 @@ func NewField(n int) *Field {
 }
 
 func (f *Field) build(act Action) {
+	if act.Kind == DO_NOTHING {
+		return
+	}
 	if f.cell[act.Y][act.X] != EMPTY {
 		panic("already built")
 	}
@@ -126,6 +129,36 @@ func (f *Field) build(act Action) {
 			}
 		}
 	}
+}
+
+// collectStationsは、posから距離２以内の駅の位置を返す
+func (f Field) collectStations(pos Pos) (stations []Pos) {
+	for dy := -2; dy <= 2; dy++ {
+		for dx := -2; dx <= 2; dx++ {
+			if absInt(dy)+absInt(dx) > 2 {
+				continue
+			}
+			y, x := pos.Y+int16(dy), pos.X+int16(dx)
+			if y >= 0 && y < 50 && x >= 0 && x < 50 && f.cell[y][x] == STATION {
+				stations = append(stations, Pos{Y: y, X: x})
+			}
+		}
+	}
+	return stations
+}
+
+// isConnected 駅,路線をつかって	、a,bがつながっているかを返す
+func (f Field) isConnected(a, b Pos) bool {
+	stations0 := f.collectStations(a)
+	stations1 := f.collectStations(b)
+	for _, s0 := range stations0 {
+		for _, s1 := range stations1 {
+			if f.uf.same(int(s0.Y)*50+int(s0.X), int(s1.Y)*50+int(s1.X)) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // 2点間の最短経路を返す (a から b へ)
@@ -259,35 +292,24 @@ func NewState(in *Input) *State {
 	return s
 }
 
-// レールを建設する
-func (s *State) buildRail(act Action) error {
-	if s.money < COST_RAIL {
+func (s *State) do(act Action, in Input) error {
+	if s.money < buildCost[act.Kind] {
 		return ErrNotEnoughMoney
 	}
 	s.field.build(act)
-	s.money -= COST_RAIL
+	s.money -= buildCost[act.Kind]
 	s.turn++
 	s.actions = append(s.actions, act)
-	return nil
-}
-
-// 駅を建設する
-func (s *State) buildStation(y, x int16) error {
-	if s.money < COST_STATION {
-		return ErrNotEnoughMoney
+	if act.Kind == STATION {
+		// income を更新
+		for i := 0; i < in.M; i++ {
+			if s.field.isConnected(in.src[i], in.dst[i]) {
+				s.income += in.income[i]
+			}
+		}
 	}
-	act := Action{Kind: STATION, Y: y, X: x}
-	s.field.build(act)
-	s.money -= COST_STATION
-	s.turn++
-	s.actions = append(s.actions, act)
+	s.money += s.income
 	return nil
-}
-
-// 何もしない
-func (s *State) doNothing() {
-	s.turn++
-	s.actions = append(s.actions, Action{Kind: DO_NOTHING})
 }
 
 type Pos struct {
@@ -306,23 +328,6 @@ type Input struct {
 	src    []Pos // 人の初期位置
 	dst    []Pos // 人の目的地
 	income []int // 人の収入
-}
-
-func readInput(re *bufio.Reader) *Input {
-	var in Input
-	fmt.Fscan(re, &in.N, &in.M, &in.K, &in.T)
-	src := make([]Pos, in.M)
-	dst := make([]Pos, in.M)
-	income := make([]int, in.M)
-	for i := 0; i < in.M; i++ {
-		fmt.Fscan(re, &src[i].Y, &src[i].X, &dst[i].Y, &dst[i].X)
-		income[i] = int(distance(src[i], dst[i]))
-	}
-	log.Printf("readInput: N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
-	in.src = src
-	in.dst = dst
-	in.income = income
-	return &in
 }
 
 func greedy(in Input) {
@@ -345,14 +350,34 @@ func greedy(in Input) {
 	log.Println(types)
 	for i := 0; i < len(path); i++ {
 		act := Action{Kind: types[i], Y: path[i].Y, X: path[i].X}
-		state.buildRail(act)
-		log.Println(state)
-		fmt.Println(STATION, path[i].Y, path[i].X)
-		in.T--
+		state.do(act, in)
 	}
-	for ; in.T > 0; in.T-- {
-		fmt.Println(DO_NOTHING)
+	for t := 0; t < in.T; t++ {
+		if t < len(state.actions) {
+			fmt.Println(state.actions[t])
+		} else {
+			state.do(Action{Kind: DO_NOTHING}, in)
+			fmt.Println(DO_NOTHING)
+		}
 	}
+	log.Printf("income=%v money=%v\n", state.income, state.money)
+}
+
+func readInput(re *bufio.Reader) *Input {
+	var in Input
+	fmt.Fscan(re, &in.N, &in.M, &in.K, &in.T)
+	src := make([]Pos, in.M)
+	dst := make([]Pos, in.M)
+	income := make([]int, in.M)
+	for i := 0; i < in.M; i++ {
+		fmt.Fscan(re, &src[i].Y, &src[i].X, &dst[i].Y, &dst[i].X)
+		income[i] = int(distance(src[i], dst[i]))
+	}
+	log.Printf("readInput: N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
+	in.src = src
+	in.dst = dst
+	in.income = income
+	return &in
 }
 
 func main() {
@@ -364,10 +389,17 @@ func main() {
 	in := readInput(reader)
 	greedy(*in)
 	//log.Printf("in=%+v\n", in)
-	log.Printf("time=%v\n", time.Since(startTime))
+	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
 
 func absInt16(x int16) int16 {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func absInt(x int) int {
 	if x < 0 {
 		return -x
 	}
