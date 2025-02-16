@@ -49,3 +49,7 @@ func TestShortestPaht(t *testing.T) {
 		log.Printf("%02d %s\n", i, str)
 	}
 }
+
+func TestCountSrcDst(t *testing.T) {
+
+}
