@@ -10,32 +10,284 @@ import (
 )
 
 const (
-	EMPTY           = -1
-	DO_NOTHING      = -1
-	STATION         = 0
-	RAIL_HORIZONTAL = 1
-	RAIL_VERTICAL   = 2
-	RAIL_LEFT_DOWN  = 3
-	RAIL_LEFT_UP    = 4
-	RAIL_RIGHT_UP   = 5
-	RAIL_RIGHT_DOWN = 6
-	COST_STATION    = 5000
-	COST_RAIL       = 100
+	COST_STATION = 5000
+	COST_RAIL    = 100
 )
 
+const (
+	EMPTY           int16 = -1
+	DO_NOTHING      int16 = -1
+	STATION         int16 = 0
+	RAIL_HORIZONTAL int16 = 1
+	RAIL_VERTICAL   int16 = 2
+	RAIL_LEFT_DOWN  int16 = 3
+	RAIL_LEFT_UP    int16 = 4
+	RAIL_RIGHT_UP   int16 = 5
+	RAIL_RIGHT_DOWN int16 = 6
+)
+
+var railMap = map[int16]string{
+	-1:              " ", // EMPTY
+	STATION:         "◎", // STATION
+	RAIL_HORIZONTAL: "─", // RAIL_HORIZONTAL
+	RAIL_VERTICAL:   "│", // RAIL_VERTICAL
+	RAIL_LEFT_DOWN:  "┐", // RAIL_LEFT_DOWN
+	RAIL_LEFT_UP:    "┘", // RAIL_LEFT_UP
+	RAIL_RIGHT_UP:   "└", // RAIL_RIGHT_UP
+	RAIL_RIGHT_DOWN: "┌", // RAIL_RIGHT_DOWN
+	7:               "+", // other
+}
+
+var railCost = map[int16]int{
+	-1:              0,            // EMPTY
+	STATION:         COST_STATION, // STATION
+	RAIL_HORIZONTAL: COST_RAIL,
+	RAIL_VERTICAL:   COST_RAIL,
+	RAIL_LEFT_DOWN:  COST_RAIL,
+	RAIL_LEFT_UP:    COST_RAIL,
+	RAIL_RIGHT_UP:   COST_RAIL,
+	RAIL_RIGHT_DOWN: COST_RAIL,
+	7:               0, // other
+}
+
+type Action struct {
+	Kind int16
+	Y, X int16
+}
+
+func (a Action) String() string {
+	return fmt.Sprintf("%d %d %d", a.Kind, a.Y, a.X)
+}
+
 type Field struct {
-	rail [50][50]int
+	cell [50][50]int16
 	uf   *UnionFind
 }
 
 func NewField(n int) *Field {
 	f := new(Field)
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			f.cell[i][j] = EMPTY
+		}
+	}
 	f.uf = NewUnionFind(n * n)
 	return f
 }
 
+func (f *Field) build(kind int16, y, x int16) {
+	if f.cell[y][x] != EMPTY {
+		panic("already built")
+	}
+	if kind < 0 || kind > 6 {
+		panic("invalid kind")
+	}
+	f.cell[y][x] = kind
+	// 連結成分をつなげる
+	// 上
+	if y > 0 {
+		switch kind {
+		case STATION, RAIL_VERTICAL, RAIL_LEFT_UP, RAIL_RIGHT_UP:
+			switch f.cell[y-1][x] {
+			case STATION, RAIL_VERTICAL, RAIL_LEFT_DOWN, RAIL_RIGHT_DOWN:
+				f.uf.unite(int(y)*50+int(x), int(y-1)*50+int(x))
+			}
+		}
+	}
+	// 下
+	if y < 49 {
+		switch kind {
+		case STATION, RAIL_VERTICAL, RAIL_LEFT_DOWN, RAIL_RIGHT_DOWN:
+			switch f.cell[y+1][x] {
+			case STATION, RAIL_VERTICAL, RAIL_LEFT_UP, RAIL_RIGHT_UP:
+				f.uf.unite(int(y)*50+int(x), int(y+1)*50+int(x))
+			}
+		}
+	}
+	// 左
+	if x > 0 {
+		switch kind {
+		case STATION, RAIL_HORIZONTAL, RAIL_LEFT_DOWN, RAIL_LEFT_UP:
+			switch f.cell[y][x-1] {
+			case STATION, RAIL_HORIZONTAL, RAIL_RIGHT_DOWN, RAIL_RIGHT_UP:
+				f.uf.unite(int(y)*50+int(x), int(y)*50+int(x-1))
+			}
+		}
+	}
+	// 右
+	if x < 49 {
+		switch kind {
+		case STATION, RAIL_HORIZONTAL, RAIL_RIGHT_DOWN, RAIL_RIGHT_UP:
+			switch f.cell[y][x+1] {
+			case STATION, RAIL_HORIZONTAL, RAIL_LEFT_DOWN, RAIL_LEFT_UP:
+				f.uf.unite(int(y)*50+int(x), int(y)*50+int(x+1))
+			}
+		}
+	}
+}
+
+// 2点間の最短経路を返す (a から b へ)
+// a, bを含む経路を返す
+func (f *Field) shortestPath(a, b Pos) (path []Pos) {
+	// a から b への最短経路を返す
+	// field=EMPTY なら移動可能 それ以外は移動不可
+	var dist [2500]int16
+	for i := 0; i < 2500; i++ {
+		dist[i] = 10000
+	}
+	dist[int(a.Y)*50+int(a.X)] = 0
+	var que []Pos
+	que = append(que, a)
+	for len(que) > 0 {
+		p := que[0]
+		que = que[1:]
+		if p == b {
+			break
+		}
+		// 上
+		if p.Y > 0 && f.cell[p.Y-1][p.X] == EMPTY {
+			if dist[int(p.Y-1)*50+int(p.X)] > dist[int(p.Y)*50+int(p.X)]+1 {
+				dist[int(p.Y-1)*50+int(p.X)] = dist[int(p.Y)*50+int(p.X)] + 1
+				que = append(que, Pos{Y: p.Y - 1, X: p.X})
+			}
+		}
+		// 下
+		if p.Y < 49 && f.cell[p.Y+1][p.X] == EMPTY {
+			if dist[int(p.Y+1)*50+int(p.X)] > dist[int(p.Y)*50+int(p.X)]+1 {
+				dist[int(p.Y+1)*50+int(p.X)] = dist[int(p.Y)*50+int(p.X)] + 1
+				que = append(que, Pos{Y: p.Y + 1, X: p.X})
+			}
+		}
+		// 左
+		if p.X > 0 && f.cell[p.Y][p.X-1] == EMPTY {
+			if dist[int(p.Y)*50+int(p.X-1)] > dist[int(p.Y)*50+int(p.X)]+1 {
+				dist[int(p.Y)*50+int(p.X-1)] = dist[int(p.Y)*50+int(p.X)] + 1
+				que = append(que, Pos{Y: p.Y, X: p.X - 1})
+			}
+		}
+		// 右
+		if p.X < 49 && f.cell[p.Y][p.X+1] == EMPTY {
+			if dist[int(p.Y)*50+int(p.X+1)] > dist[int(p.Y)*50+int(p.X)]+1 {
+				dist[int(p.Y)*50+int(p.X+1)] = dist[int(p.Y)*50+int(p.X)] + 1
+				que = append(que, Pos{Y: p.Y, X: p.X + 1})
+			}
+		}
+	}
+	if dist[int(b.Y)*50+int(b.X)] == 10000 {
+		return nil
+	}
+	// b から a への経路を復元
+	path = append(path, b)
+	for path[len(path)-1] != a {
+		p := path[len(path)-1]
+		// 上
+		if p.Y > 0 && f.cell[p.Y-1][p.X] == EMPTY {
+			if dist[int(p.Y-1)*50+int(p.X)] == dist[int(p.Y)*50+int(p.X)]-1 {
+				path = append(path, Pos{Y: p.Y - 1, X: p.X})
+				continue
+			}
+		}
+		// 下
+		if p.Y < 49 && f.cell[p.Y+1][p.X] == EMPTY {
+			if dist[int(p.Y+1)*50+int(p.X)] == dist[int(p.Y)*50+int(p.X)]-1 {
+				path = append(path, Pos{Y: p.Y + 1, X: p.X})
+				continue
+			}
+		}
+		// 左
+		if p.X > 0 && f.cell[p.Y][p.X-1] == EMPTY {
+			if dist[int(p.Y)*50+int(p.X-1)] == dist[int(p.Y)*50+int(p.X)]-1 {
+				path = append(path, Pos{Y: p.Y, X: p.X - 1})
+				continue
+			}
+		}
+		// 右
+		if p.X < 49 && f.cell[p.Y][p.X+1] == EMPTY {
+			if dist[int(p.Y)*50+int(p.X+1)] == dist[int(p.Y)*50+int(p.X)]-1 {
+				path = append(path, Pos{Y: p.Y, X: p.X + 1})
+				continue
+			}
+		}
+		log.Println(path)
+	}
+	return path
+}
+
+func (f *Field) selectRails(path []Pos) (types []int16) {
+	types = make([]int16, len(path))
+	types[0] = STATION
+	types[len(path)-1] = STATION
+	for i := 1; i < len(path)-1; i++ {
+		y0, x0 := path[i-1].Y, path[i-1].X
+		y1, x1 := path[i].Y, path[i].X
+		y2, x2 := path[i+1].Y, path[i+1].X
+		if y0 == y1 && y1 == y2 {
+			types[i] = RAIL_HORIZONTAL
+		} else if x0 == x1 && x1 == x2 {
+			types[i] = RAIL_VERTICAL
+		} else if (y0 < y1 && x1 < x2) || (y2 < y1 && x1 < x0) {
+			types[i] = RAIL_RIGHT_UP
+		} else if (y0 < y1 && x1 > x2) || (y2 < y1 && x1 > x0) {
+			types[i] = RAIL_LEFT_UP
+		} else if (y0 > y1 && x1 < x2) || (y2 > y1 && x1 < x0) {
+			types[i] = RAIL_RIGHT_DOWN
+		} else if (y0 > y1 && x1 > x2) || (y2 > y1 && x1 > x0) {
+			types[i] = RAIL_LEFT_DOWN
+		} else {
+			panic("invalid path")
+		}
+	}
+	return
+}
+
+var ErrNotEnoughMoney = fmt.Errorf("not enough money")
+
+type State struct {
+	field   *Field
+	money   int
+	turn    int
+	actions []Action
+}
+
+func NewState(in *Input) *State {
+	s := new(State)
+	s.field = NewField(in.N)
+	s.money = in.K
+	return s
+}
+
+// レールを建設する
+func (s *State) buildRail(t, y, x int16) error {
+	if s.money < COST_RAIL {
+		return ErrNotEnoughMoney
+	}
+	s.field.build(y, x, t)
+	s.money -= COST_RAIL
+	s.turn--
+	s.actions = append(s.actions, Action{Kind: t, Y: y, X: x})
+	return nil
+}
+
+// 駅を建設する
+func (s *State) buildStation(y, x int16) error {
+	if s.money < COST_STATION {
+		return ErrNotEnoughMoney
+	}
+	s.field.build(y, x, STATION)
+	s.money -= COST_STATION
+	s.turn--
+	s.actions = append(s.actions, Action{Kind: STATION, Y: y, X: x})
+	return nil
+}
+
+// 何もしない
+func (s *State) doNothing() {
+	s.turn--
+	s.actions = append(s.actions, Action{Kind: DO_NOTHING})
+}
+
 type Pos struct {
-	X, Y int16
+	Y, X int16
 }
 
 func distance(a, b Pos) int16 {
@@ -43,13 +295,13 @@ func distance(a, b Pos) int16 {
 }
 
 type Input struct {
-	N      int     // 縦長 N=50
-	M      int     // 人数 50<=M<=1600
-	K      int     // 初期資金 11000<=K<=20000
-	T      int     // ターン数 T=800
-	src    []Pos   // 人の初期位置
-	dst    []Pos   // 人の目的地
-	income []int16 // 人の収入
+	N      int   // 縦長 N=50
+	M      int   // 人数 50<=M<=1600
+	K      int   // 初期資金 11000<=K<=20000
+	T      int   // ターン数 T=800
+	src    []Pos // 人の初期位置
+	dst    []Pos // 人の目的地
+	income []int // 人の収入
 }
 
 func readInput(re *bufio.Reader) *Input {
@@ -59,24 +311,41 @@ func readInput(re *bufio.Reader) *Input {
 	dst := make([]Pos, in.M)
 	income := make([]int, in.M)
 	for i := 0; i < in.M; i++ {
-		fmt.Fscan(re, &src[i].X, &src[i].Y, &dst[i].X, &dst[i].Y)
+		fmt.Fscan(re, &src[i].Y, &src[i].X, &dst[i].Y, &dst[i].X)
 		income[i] = int(distance(src[i], dst[i]))
-		log.Println(src[i], dst[i], income[i])
 	}
-	log.Printf("N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
+	log.Printf("readInput: N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
+	in.src = src
+	in.dst = dst
+	in.income = income
 	return &in
 }
 
-func greedy(in *Input) {
-	points := make([][5]int16, in.M)
+func greedy(in Input) {
+	p := make([][2]int, in.M)
 	// income が小さい順にソート
 	for i := 0; i < in.M; i++ {
-		points[i] = [5]int16{in.src[i].X, in.src[i].Y, in.dst[i].X, in.dst[i].Y, in.income[i]}
+		p[i] = [2]int{i, int(in.income[i])}
 	}
-	sort.Slice(points, func(i, j int) bool {
-		return points[i][4] < points[j][4]
+	sort.Slice(p, func(i, j int) bool {
+		return p[i][1] < p[j][1]
 	})
-
+	// 駅の配置
+	state := NewState(&in)
+	path := state.field.shortestPath(in.src[p[0][0]], in.dst[p[0][0]])
+	if path == nil {
+		panic("no path")
+	}
+	log.Println(path)
+	types := state.field.selectRails(path)
+	log.Println(types)
+	for i := 0; i < len(path); i++ {
+		fmt.Println(STATION, path[i].Y, path[i].X)
+		in.T--
+	}
+	for ; in.T > 0; in.T-- {
+		fmt.Println(DO_NOTHING)
+	}
 }
 
 func main() {
@@ -86,7 +355,8 @@ func main() {
 	writer := bufio.NewWriter(os.Stdout)
 	defer writer.Flush()
 	in := readInput(reader)
-	log.Printf("in=%+v\n", in)
+	greedy(*in)
+	//log.Printf("in=%+v\n", in)
 	log.Printf("time=%v\n", time.Since(startTime))
 }
 
