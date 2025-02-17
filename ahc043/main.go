@@ -412,6 +412,19 @@ func distance(a, b Pos) int16 {
 	return absInt16(a.X-b.X) + absInt16(a.Y-b.Y)
 }
 
+// choseStationPosition は,駅の場所をあらかじめ決める
+// Inputからすべての家と職場の位置を所得して、その全てが駅から距離２以下になるように駅を配置する
+func choseStationPosition(in Input) (poss []Pos) {
+	var grid [2500]int16
+	for i := 0; i < in.M; i++ {
+		y, x := in.src[i].Y, in.src[i].X
+		grid[int(y)*50+int(x)] += 1
+		y, x = in.dst[i].Y, in.dst[i].X
+		grid[int(y)*50+int(x)] += 1
+	}
+	return poss
+}
+
 func greedy(in Input) {
 	state := NewState(&in)
 	bestPos := Pos{Y: 0, X: 0}
@@ -497,7 +510,7 @@ func greedy(in Input) {
 				// 収入がないので待っても無駄
 				continue
 			}
-			// 建設途中にDoNothingが入るターン数
+			// 建設途中にDoNothingが入るターン数 簡易計算
 			doNotthingTurn = needMoney / state.income
 			if state.turn+doNotthingTurn+len(path) > in.T {
 				// 完成するまでに残りターンが足りない
@@ -554,6 +567,7 @@ func greedy(in Input) {
 		fmt.Println(DO_NOTHING)
 		t++
 	}
+	log.Printf("stations=%d\n", len(state.field.stations))
 }
 
 type Input struct {

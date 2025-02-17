@@ -1,8 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"log"
 	"math/rand"
+	"os"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -50,6 +55,61 @@ func TestShortestPaht(t *testing.T) {
 	}
 }
 
-func TestCountSrcDst(t *testing.T) {
+func TestReadInput(t *testing.T) {
+	in, err := readInputFile("tools/in/0000.txt")
+	if err != nil {
+		t.Fatalf("failed to read input: %v", err)
+	}
+	_ = in
+	//log.Println(in)
+}
 
+// ファイルから入力を読み込む関数
+func readInputFile(filename string) (*Input, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Scan()
+
+	// 最初の行をパース (N, M, K, T)
+	header := strings.Fields(scanner.Text())
+	if len(header) < 4 {
+		return nil, fmt.Errorf("invalid input format")
+	}
+
+	in := Input{}
+	in.N, _ = strconv.Atoi(header[0])
+	in.M, _ = strconv.Atoi(header[1])
+	in.K, _ = strconv.Atoi(header[2])
+	in.T, _ = strconv.Atoi(header[3])
+
+	in.src = make([]Pos, in.M)
+	in.dst = make([]Pos, in.M)
+	in.income = make([]int, in.M)
+
+	// M 行の (src.Y, src.X, dst.Y, dst.X) を読み込む
+	for i := 0; i < in.M; i++ {
+		if !scanner.Scan() {
+			return nil, fmt.Errorf("unexpected EOF while reading positions")
+		}
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 4 {
+			return nil, fmt.Errorf("invalid position format on line %d", i+2)
+		}
+
+		srcY, _ := strconv.Atoi(fields[0])
+		srcX, _ := strconv.Atoi(fields[1])
+		dstY, _ := strconv.Atoi(fields[2])
+		dstX, _ := strconv.Atoi(fields[3])
+
+		in.src[i] = Pos{X: int16(srcX), Y: int16(srcY)}
+		in.dst[i] = Pos{X: int16(dstX), Y: int16(dstY)}
+		in.income[i] = int(distance(in.src[i], in.dst[i])) // 収入は距離
+	}
+	//log.Printf("readInput: N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
+	return &in, nil
 }
