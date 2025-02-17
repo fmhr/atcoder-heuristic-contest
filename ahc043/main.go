@@ -51,12 +51,19 @@ var buildCost = map[int16]int{
 }
 
 type Action struct {
-	Kind int16
-	Y, X int16
+	Kind    int16
+	Y, X    int16
+	comment string
 }
 
-func (a Action) String() string {
-	return fmt.Sprintf("%d %d %d", a.Kind, a.Y, a.X)
+func (a Action) String() (str string) {
+	if a.Kind == DO_NOTHING {
+		str = fmt.Sprintf("%d", a.Kind)
+	} else {
+		str = fmt.Sprintf("%d %d %d", a.Kind, a.Y, a.X)
+	}
+	str = a.comment + str + "\n"
+	return
 }
 
 type Field struct {
@@ -65,8 +72,12 @@ type Field struct {
 	uf       *UnionFind
 }
 
+func (f Field) cellType(pos Pos) string {
+	return railMap[f.cell[pos.Y][pos.X]]
+}
+
 func (f Field) cellString() string {
-	str := ""
+	str := "view cellString()\n"
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
 			str += railMap[f.cell[i][j]]
@@ -180,7 +191,6 @@ var dy = []int16{-1, 1, 0, 0}
 var dx = []int16{0, 0, -1, 1}
 
 // 2点間の最短経路を返す (a から b へ)
-// a, bを含む経路を返す
 func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 	// a から b への最短経路を返す
 	// field=EMPTY なら移動可能 それ以外は移動不可
@@ -212,9 +222,16 @@ func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 		}
 	}
 	if dist[int(b.Y)*50+int(b.X)] == 10000 {
+		log.Println(showGrid(dist))
+		log.Println("can't reach", a, b)
+		log.Println(dist[int(a.Y)*50+int(a.X)], dist[int(b.Y)*50+int(b.X)])
+		f.cell[a.Y][a.X] = 7
+		f.cell[b.Y][b.X] = 7
+		log.Println(f.cellString())
 		return nil
 	}
-	log.Printf("dist\n%s\n", showGrid(dist))
+	//log.Println(f.cellString())
+	//log.Println(showGrid(dist))
 
 	// b から a への経路を復元
 	path = append(path, b)
@@ -225,6 +242,10 @@ func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				continue
 			}
+			if y == a.Y && x == a.X {
+				path = append(path, Pos{Y: y, X: x})
+				break
+			}
 			if f.cell[y][x] != EMPTY {
 				continue
 			}
@@ -233,6 +254,9 @@ func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 				break
 			}
 		}
+	}
+	for i := 0; i < len(path)/2; i++ {
+		path[i], path[len(path)-1-i] = path[len(path)-1-i], path[i]
 	}
 	return path
 }
@@ -315,19 +339,22 @@ func (s *State) do(act Action, in Input) error {
 	if s.money < buildCost[act.Kind] {
 		return ErrNotEnoughMoney
 	}
-	s.field.build(act)
-	s.money -= buildCost[act.Kind]
-	s.turn++
-	s.actions = append(s.actions, act)
-	if act.Kind == STATION {
-		// income を更新
-		for i := 0; i < in.M; i++ {
-			if s.field.isConnected(in.src[i], in.dst[i]) {
-				s.income += in.income[i]
+	if act.Kind != DO_NOTHING {
+		s.field.build(act)
+		s.money -= buildCost[act.Kind]
+		if act.Kind == STATION {
+			s.income = 0
+			for i := 0; i < in.M; i++ {
+				if s.field.isConnected(in.src[i], in.dst[i]) {
+					s.income += in.income[i]
+				}
 			}
 		}
 	}
+	s.turn++
 	s.money += s.income
+	act.comment = fmt.Sprintf("#turn=%d, \n#money=%d, \n#income=%d\n", s.turn, s.money, s.income)
+	s.actions = append(s.actions, act)
 	return nil
 }
 
@@ -352,10 +379,9 @@ func greedy(in Input) {
 			}
 		}
 	}
-	log.Println(bestCover, bestPos)
+	//log.Println(bestCover, bestPos)
 	state.do(Action{Kind: STATION, Y: bestPos.Y, X: bestPos.X}, in)
-
-	log.Printf("\n%s", state.field.cellString())
+	//log.Printf("\n%s", state.field.cellString())
 	// 現在あるstationでカバーされている片方だけがカバーされていないケースを探す
 	uncoverd_home_workplace := make([]Pos, 0)
 	for i := 0; i < in.M; i++ {
@@ -385,45 +411,66 @@ func greedy(in Input) {
 		}
 	}
 	log.Println(len(uncoverd_home_workplace), "uncoverd_home_workplace=", uncoverd_home_workplace)
+	if len(uncoverd_home_workplace) == 0 {
+		panic("no uncoverd_home_workplace")
+	}
+	// 近い順に処理する
+	sort.Slice(uncoverd_home_workplace, func(i, j int) bool {
+		return distance(bestPos, uncoverd_home_workplace[i]) < distance(bestPos, uncoverd_home_workplace[j])
+	})
 
 	// uncoverd_home_workplace [0]を次にstationを置く場所とする
-	nextStation := uncoverd_home_workplace[0]
-	path := state.field.shortestPath(bestPos, nextStation)
-	if path == nil {
-		panic("no path")
-	}
-
-	log.Println("bestPos=", bestPos)
-	p := make([][2]int, in.M)
-	// income(駅館距離) が小さい順にソート
-	for i := 0; i < in.M; i++ {
-		p[i] = [2]int{i, int(in.income[i])}
-	}
-	sort.Slice(p, func(i, j int) bool {
-		return p[i][1] < p[j][1]
-	})
-	// 駅の配置
-	//path = make([]Pos, 0)
-	path = state.field.shortestPath(in.src[p[0][0]], in.dst[p[0][0]])
-	if path == nil {
-		panic("no path")
-	}
-	log.Println(path)
-	types := state.field.selectRails(path)
-	log.Println(types)
-	for i := 0; i < len(path); i++ {
-		act := Action{Kind: types[i], Y: path[i].Y, X: path[i].X}
-		state.do(act, in)
-	}
-	for t := 0; t < in.T; t++ {
-		if t < len(state.actions) {
-			fmt.Println(state.actions[t])
-		} else {
-			state.do(Action{Kind: DO_NOTHING}, in)
-			fmt.Println(DO_NOTHING)
+	for i := 0; i < len(uncoverd_home_workplace); i++ {
+		nextPos := uncoverd_home_workplace[0]
+		uncoverd_home_workplace = uncoverd_home_workplace[1:]
+		ss := state.field.collectStations(nextPos)
+		if len(ss) > 0 {
+			continue
+		}
+		// 一番近いstationに繋げる (すべての駅は繋がっていると仮定)
+		for _, st := range state.field.stations {
+			if distance(st, nextPos) < distance(bestPos, nextPos) {
+				bestPos = st
+			}
+		}
+		log.Println(bestPos, state.field.cellType(bestPos), "->", nextPos, state.field.cellType(nextPos))
+		path := state.field.shortestPath(bestPos, nextPos)
+		if path == nil {
+			log.Printf("no path from %v to %v\n", bestPos, nextPos)
+			log.Println(state.field.cell[bestPos.Y][bestPos.X], state.field.cell[nextPos.Y][nextPos.X])
+			continue
+			//panic("no path")
+		}
+		types := state.field.selectRails(path)
+		// 最初の一箇所だけ建設済み
+		for i := 1; i < len(path); {
+			act := Action{Kind: types[i], Y: path[i].Y, X: path[i].X}
+			err := state.do(act, in)
+			if err == ErrNotEnoughMoney {
+				// お金が足りない場合は何もしない
+				state.do(Action{Kind: DO_NOTHING}, in)
+			} else {
+				i++
+			}
+		}
+		if state.turn >= in.T {
+			break
 		}
 	}
-	log.Printf("income=%v money=%v\n", state.income, state.money)
+	log.Println(state.field.cellString())
+	var t int
+	for i, a := range state.actions {
+		fmt.Print(a)
+		t++
+		if i == 799 {
+			break
+		}
+	}
+	log.Println("turn=", t)
+	for t < 800 {
+		fmt.Println(DO_NOTHING)
+		t++
+	}
 }
 
 type Input struct {
@@ -514,12 +561,13 @@ func (uf *UnionFind) unite(x, y int) {
 }
 
 func showGrid(grid [2500]int16) (str string) {
+	str = "showGrid()\n"
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
 			if grid[i*50+j] == 10000 {
 				str += "## "
 			} else {
-				str += fmt.Sprintf("%02d ", grid[i*50+j])
+				str += fmt.Sprintf("%2d ", grid[i*50+j])
 			}
 		}
 		str += "\n"
