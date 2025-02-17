@@ -479,39 +479,58 @@ func greedy(in Input) {
 				bestPos = st
 			}
 		}
-		log.Println(bestPos, state.field.cellType(bestPos), "->", nextPos, state.field.cellType(nextPos))
 		path := state.field.shortestPath(bestPos, nextPos)
-		log.Println("path=", len(path), path)
 		if len(path) > in.T-state.turn {
+			// 建設するためのターンが足りない
 			break
 		}
-
 		if path == nil {
-			log.Printf("no path from %v to %v\n", bestPos, nextPos)
-			log.Println(state.field.cell[bestPos.Y][bestPos.X], state.field.cell[nextPos.Y][nextPos.X])
+			// 到達不可能
 			continue
-			//panic("no path")
 		}
 		types := state.field.selectRails(path)
 		cost := calCost((types[1:]))
 		needMoney := cost - state.money
+		doNotthingTurn := 0
 		if needMoney > 0 {
-			log.Println(state.turn, cost, state.money, state.income)
-			needWaitTurn := needMoney / state.income
-			if state.turn+needWaitTurn+len(path) > in.T {
-				break
+			if state.income == 0 {
+				// 収入がないので待っても無駄
+				continue
+			}
+			// 建設途中にDoNothingが入るターン数
+			doNotthingTurn = needMoney / state.income
+			if state.turn+doNotthingTurn+len(path) > in.T {
+				// 完成するまでに残りターンが足りない
+				continue
 			}
 		}
-		log.Println("cost=", cost)
+		// 建設にかかターン数
+		needTurn := len(path) + doNotthingTurn
+		// 建築完成のターン
+		endTurn := state.turn + needTurn
+		// 建築完了後の持ち金
+		money := state.money + state.income*(endTurn) - cost
+		// 建築完了後の収入
+		newIncome := state.income + len(path)
+		// t==in.Tでの資金
+		lastMoney := money + newIncome*(in.T-endTurn)
+		log.Println("lastMoney=", lastMoney, "money=", money, "income=", newIncome)
+		if lastMoney < state.money {
+			// 最終的な資金が減っている
+			continue
+		}
+
+		// ここから建築orWait
+		log.Println("cost=", cost, "path:", bestPos, "->", nextPos)
 		// 最初の一箇所だけ建設済み
-		for i := 1; i < len(path); {
-			act := Action{Kind: types[i], Y: path[i].Y, X: path[i].X}
+		for j := 1; j < len(path); {
+			act := Action{Kind: types[j], Y: path[j].Y, X: path[j].X}
 			err := state.do(act, in)
 			if err == ErrNotEnoughMoney {
 				// お金が足りない場合は何もしない
 				state.do(Action{Kind: DO_NOTHING}, in)
 			} else {
-				i++
+				j++
 			}
 		}
 		if state.turn > 500 {
