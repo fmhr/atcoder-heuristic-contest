@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -48,6 +49,13 @@ var buildCost = map[int16]int{
 	RAIL_RIGHT_UP:   COST_RAIL,
 	RAIL_RIGHT_DOWN: COST_RAIL,
 	7:               0, // other
+}
+
+func calCost(act []int16) (cost int) {
+	for _, a := range act {
+		cost += buildCost[a]
+	}
+	return
 }
 
 type Action struct {
@@ -462,7 +470,7 @@ func greedy(in Input) {
 	for i, a := range state.actions {
 		fmt.Print(a)
 		t++
-		if i == 799 {
+		if i == 400 {
 			break
 		}
 	}
@@ -500,6 +508,15 @@ func readInput(re *bufio.Reader) *Input {
 	return &in
 }
 
+func allNothing() {
+	var sb strings.Builder
+	sb.Grow(800 * len("-1\n")) // メモリ確保を最適化
+	for i := 0; i < 800; i++ {
+		fmt.Fprintln(&sb, DO_NOTHING)
+	}
+	fmt.Print(sb.String()) // 最後に一括出力
+}
+
 func main() {
 	startTime := time.Now()
 	log.SetFlags(log.Lshortfile)
@@ -507,7 +524,9 @@ func main() {
 	writer := bufio.NewWriter(os.Stdout)
 	defer writer.Flush()
 	in := readInput(reader)
-	greedy(*in)
+	_ = in
+	//greedy(*in)
+	allNothing()
 	//log.Printf("in=%+v\n", in)
 	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
