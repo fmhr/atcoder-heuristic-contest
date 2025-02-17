@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -443,6 +442,11 @@ func greedy(in Input) {
 		}
 		log.Println(bestPos, state.field.cellType(bestPos), "->", nextPos, state.field.cellType(nextPos))
 		path := state.field.shortestPath(bestPos, nextPos)
+		log.Println("path=", len(path), path)
+		if len(path) > in.T-state.turn {
+			break
+		}
+
 		if path == nil {
 			log.Printf("no path from %v to %v\n", bestPos, nextPos)
 			log.Println(state.field.cell[bestPos.Y][bestPos.X], state.field.cell[nextPos.Y][nextPos.X])
@@ -450,6 +454,16 @@ func greedy(in Input) {
 			//panic("no path")
 		}
 		types := state.field.selectRails(path)
+		cost := calCost((types[1:]))
+		needMoney := cost - state.money
+		if needMoney > 0 {
+			log.Println(state.turn, cost, state.money, state.income)
+			needWaitTurn := needMoney / state.income
+			if state.turn+needWaitTurn+len(path) > in.T {
+				break
+			}
+		}
+		log.Println("cost=", cost)
 		// 最初の一箇所だけ建設済み
 		for i := 1; i < len(path); {
 			act := Action{Kind: types[i], Y: path[i].Y, X: path[i].X}
@@ -461,6 +475,9 @@ func greedy(in Input) {
 				i++
 			}
 		}
+		if state.turn > 500 {
+			break
+		}
 		if state.turn >= in.T {
 			break
 		}
@@ -470,11 +487,11 @@ func greedy(in Input) {
 	for i, a := range state.actions {
 		fmt.Print(a)
 		t++
-		if i == 400 {
+		if i == in.T-1 {
 			break
 		}
 	}
-	log.Println("turn=", t)
+	log.Printf("turn=%d\n", t)
 	for t < 800 {
 		fmt.Println(DO_NOTHING)
 		t++
@@ -508,15 +525,6 @@ func readInput(re *bufio.Reader) *Input {
 	return &in
 }
 
-func allNothing() {
-	var sb strings.Builder
-	sb.Grow(800 * len("-1\n")) // メモリ確保を最適化
-	for i := 0; i < 800; i++ {
-		fmt.Fprintln(&sb, DO_NOTHING)
-	}
-	fmt.Print(sb.String()) // 最後に一括出力
-}
-
 func main() {
 	startTime := time.Now()
 	log.SetFlags(log.Lshortfile)
@@ -525,8 +533,7 @@ func main() {
 	defer writer.Flush()
 	in := readInput(reader)
 	_ = in
-	//greedy(*in)
-	allNothing()
+	greedy(*in)
 	//log.Printf("in=%+v\n", in)
 	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
