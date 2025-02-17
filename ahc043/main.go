@@ -79,6 +79,27 @@ type Field struct {
 	uf       *UnionFind
 }
 
+func (f *Field) Clone() *Field {
+	if f == nil {
+		return nil
+	}
+	newField := &Field{
+		cell:     [50][50]int16{},
+		stations: make([]Pos, len(f.stations)),
+		uf:       f.uf.Clone(),
+	}
+	for i := 0; i < 50; i++ {
+		for j := 0; j < 50; j++ {
+			newField.cell[i][j] = f.cell[i][j]
+		}
+	}
+	for i, pos := range f.stations {
+		newField.stations[i] = pos.Clone()
+	}
+	return newField
+}
+
+// cellType は、posのセルの種類を返す 表示用のレールの記号
 func (f Field) cellType(pos Pos) string {
 	return railMap[f.cell[pos.Y][pos.X]]
 }
@@ -335,6 +356,20 @@ type State struct {
 	actions []Action
 }
 
+func (s *State) Clone() *State {
+	newActions := make([]Action, len(s.actions))
+	copy(newActions, s.actions)
+
+	newState := &State{
+		field:   s.field.Clone(),
+		money:   s.money,
+		turn:    s.turn,
+		income:  s.income,
+		actions: newActions,
+	}
+	return newState
+}
+
 func NewState(in *Input) *State {
 	s := new(State)
 	s.field = NewField(in.N)
@@ -367,6 +402,10 @@ func (s *State) do(act Action, in Input) error {
 
 type Pos struct {
 	Y, X int16
+}
+
+func (p Pos) Clone() Pos {
+	return Pos{Y: p.Y, X: p.X}
 }
 
 func distance(a, b Pos) int16 {
@@ -554,6 +593,15 @@ func absInt(x int) int {
 
 type UnionFind struct {
 	par []int
+}
+
+func (uf *UnionFind) Clone() *UnionFind {
+	if uf == nil {
+		return nil
+	}
+	newUF := NewUnionFind(len(uf.par))
+	copy(newUF.par, uf.par)
+	return newUF
 }
 
 func NewUnionFind(n int) *UnionFind {
