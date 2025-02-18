@@ -496,6 +496,10 @@ var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 // ........│.└──┘.
 func constructRailway(in Input, stations []Pos) []Pos {
 	numStations := len(stations)
+	stationIndexMap := make(map[Pos]int)
+	for i, s := range stations {
+		stationIndexMap[s] = i
+	}
 	field := NewField(in.N)
 	for i := 0; i < numStations; i++ {
 		field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
@@ -525,6 +529,20 @@ func constructRailway(in Input, stations []Pos) []Pos {
 		//log.Println("path", path)
 		if path != nil {
 			types := field.selectRails(path)
+			// 途中に駅があるか確認
+			// ある場合は、その駅を新しいスタート地点にする
+			// またはゴールにする
+			// パスのサイクルが前半と後半のどちらにつながっているかわからないので,保留
+			for i := 1; i < len(path)-1; i++ {
+				if field.cell[path[i].Y][path[i].X] == STATION {
+					subStation := path[i]
+					a := stationIndexMap[path[0]]
+					b := stationIndexMap[path[1]]
+					c := stationIndexMap[path[len(path)-1]]
+					log.Println("subStation", subStation, uf.same(a, b), uf.same(b, c))
+				}
+			}
+
 			for i := 1; i < len(path)-1; i++ {
 				if field.cell[path[i].Y][path[i].X] == STATION {
 					continue
@@ -835,8 +853,8 @@ func (uf *UnionFind) root(x int) int {
 	return uf.par[x]
 }
 
-func (uf *UnionFind) same(x, y int) bool {
-	return uf.root(x) == uf.root(y)
+func (uf *UnionFind) same(ayx, byx int) bool {
+	return uf.root(ayx) == uf.root(byx)
 }
 
 func (uf *UnionFind) unite(x, y int) {
