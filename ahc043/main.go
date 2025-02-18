@@ -219,6 +219,7 @@ var dy = []int16{-1, 1, 0, 0}
 var dx = []int16{0, 0, -1, 1}
 
 // 2点間の最短経路を返す (a から b へ)
+// bはEMPTYであること
 func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 	// a から b への最短経路を返す
 	// field=EMPTY なら移動可能 それ以外は移動不可
@@ -250,12 +251,12 @@ func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 		}
 	}
 	if dist[int(b.Y)*50+int(b.X)] == 10000 {
-		log.Println(gridToString(dist))
-		log.Println("can't reach", a, b)
-		log.Println(dist[int(a.Y)*50+int(a.X)], dist[int(b.Y)*50+int(b.X)])
-		f.cell[a.Y][a.X] = 7
-		f.cell[b.Y][b.X] = 7
-		log.Println(f.cellString())
+		//log.Println(gridToString(dist))
+		//log.Println("can't reach", a, b)
+		//log.Println(dist[int(a.Y)*50+int(a.X)], dist[int(b.Y)*50+int(b.X)])
+		//f.cell[a.Y][a.X] = 7
+		//f.cell[b.Y][b.X] = 7
+		//log.Println(f.cellString())
 		return nil
 	}
 	//log.Println(f.cellString())
@@ -419,6 +420,32 @@ func distance(a, b Pos) int16 {
 // stationの周辺
 var ddy = [13]int16{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
 var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
+
+// すべての駅を繋ぐ鉄道を敷設する
+func constructRailway(in Input, stations []Pos) []Pos {
+	numStations := len(stations)
+	field := NewField(in.N)
+	for i := 0; i < numStations; i++ {
+		field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
+	}
+	//log.Println(field.cellString())
+	edges := []Edge{}
+	for i := 0; i < numStations; i++ {
+		for j := i + 1; j < numStations; j++ {
+			path := field.shortestPath(stations[i], stations[j])
+			if path == nil {
+				continue
+			}
+			dist := len(path)
+			edges = append(edges, Edge{From: i, To: j, Cost: dist})
+		}
+	}
+	sort.Slice(edges, func(i, j int) bool {
+		return edges[i].Cost < edges[j].Cost
+	})
+
+	return nil
+}
 
 // choseStationPosition は,駅の場所をあらかじめ決める
 // Inputからすべての家と職場の位置を所得して、その全てが駅から距離２以下になるように駅を配置する
@@ -733,4 +760,16 @@ func popcount(bits []bool) (count int) {
 		}
 	}
 	return count
+}
+
+// MST用
+type Edge struct {
+	From, To int
+	Cost     int
+	Path     []Pos
+}
+
+type Graph struct {
+	NumNodes int
+	Edges    []Edge
 }

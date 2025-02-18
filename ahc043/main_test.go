@@ -55,6 +55,16 @@ func TestShortestPaht(t *testing.T) {
 	}
 }
 
+func TestConstructRailway(t *testing.T) {
+	in, err := readInputFile("tools/in/0000.txt")
+	if err != nil {
+		t.Fatalf("failed to read input: %v", err)
+	}
+	stationPos := choseStationPosition(*in)
+	p := constructRailway(*in, stationPos)
+	t.Log(p)
+}
+
 func TestChoseStationPosition(t *testing.T) {
 	in, err := readInputFile("tools/in/0001.txt")
 	if err != nil {
