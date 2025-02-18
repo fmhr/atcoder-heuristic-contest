@@ -46,6 +46,7 @@ func TestShortestPaht(t *testing.T) {
 }
 
 func TestConstructRailway(t *testing.T) {
+	// go test -timeout 30s -run ^TestConstructRailway$ ahc043 -v
 	in, err := readInputFile("tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)

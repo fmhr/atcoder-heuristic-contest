@@ -401,7 +401,6 @@ func (f Field) canConnect(a, b Pos) []Pos {
 			}
 		}
 	}
-	path = append(path, a)
 	for i := 0; i < len(path)/2; i++ {
 		path[i], path[len(path)-1-i] = path[len(path)-1-i], path[i]
 	}
@@ -483,6 +482,18 @@ var ddy = [13]int16{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
 var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 
 // すべての駅を繋ぐ鉄道を敷設する
+// クラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
+// .............◎.............
+// ......................┌◎..........│....◎─┐│.└───◎◎
+// ........◎─┐.....┌◎───◎┘└─◎........│......││.......
+// ........│.◎──◎─┐│........│.◎┐..┌◎─◎─◎────◎◎──┐....
+// ........│......◎┘.....┌──◎─┘└─◎┘│...│........◎─┐..
+// ↓
+// .............◎.............
+// .............│........┌◎..........│....◎─┐│.└───◎◎
+// ........◎─┐..│..┌◎───◎┘└─◎........│......││.......
+// ........│.◎──◎─┐│........│.◎┐..┌◎─◎─◎────◎◎──┐....
+// ........│.└──┘.
 func constructRailway(in Input, stations []Pos) []Pos {
 	numStations := len(stations)
 	field := NewField(in.N)
@@ -505,9 +516,9 @@ func constructRailway(in Input, stations []Pos) []Pos {
 	uf := NewUnionFind(numStations)
 	// Kruskal法で最小全域木を求める
 	mstEdges := []Edge{}
-	existingRails := make(map[Pos]bool)
 	for _, edge := range edges {
-		if uf.same(edge.From, edge.To) {
+		//log.Println("edge", edge, uf.same(edge.From, edge.To), field.uf.same(edge.From, edge.To))
+		if uf.same(edge.From, edge.To) || field.uf.same(edge.From, edge.To) {
 			continue
 		}
 		path := field.canConnect(stations[edge.From], stations[edge.To])
@@ -524,13 +535,20 @@ func constructRailway(in Input, stations []Pos) []Pos {
 			edge.Path = path
 			mstEdges = append(mstEdges, edge)
 			//log.Println("connect", stations[edge.From], stations[edge.To], "cost=", edge.Cost)
-			for _, pos := range path {
-				existingRails[pos] = true
-			}
+			//log.Println(path)
+			//log.Println(field.cellString())
 		}
 	}
-	log.Println(len(mstEdges))
+	log.Println("Num of Stations", numStations)
+	log.Println("Num of Edges", len(mstEdges))
 	log.Println(field.cellString())
+	for i := 0; i < numStations; i++ {
+		for j := i + 1; j < numStations; j++ {
+			//a := int(stations[i].Y*50 + stations[i].X)
+			//b := int(stations[j].Y*50 + stations[j].X)
+			//log.Println(field.uf.same(a, b))
+		}
+	}
 
 	return nil
 }
