@@ -250,7 +250,7 @@ func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 		}
 	}
 	if dist[int(b.Y)*50+int(b.X)] == 10000 {
-		log.Println(showGrid(dist))
+		log.Println(gridToString(dist))
 		log.Println("can't reach", a, b)
 		log.Println(dist[int(a.Y)*50+int(a.X)], dist[int(b.Y)*50+int(b.X)])
 		f.cell[a.Y][a.X] = 7
@@ -404,6 +404,10 @@ type Pos struct {
 	Y, X int16
 }
 
+func (p Pos) add(a Pos) Pos {
+	return Pos{Y: p.Y + a.Y, X: p.X + a.X}
+}
+
 func (p Pos) Clone() Pos {
 	return Pos{Y: p.Y, X: p.X}
 }
@@ -411,6 +415,10 @@ func (p Pos) Clone() Pos {
 func distance(a, b Pos) int16 {
 	return absInt16(a.X-b.X) + absInt16(a.Y-b.Y)
 }
+
+// stationの周辺
+var ddy = [13]int16{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
+var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 
 // choseStationPosition は,駅の場所をあらかじめ決める
 // Inputからすべての家と職場の位置を所得して、その全てが駅から距離２以下になるように駅を配置する
@@ -422,6 +430,8 @@ func choseStationPosition(in Input) (poss []Pos) {
 		y, x = in.dst[i].Y, in.dst[i].X
 		grid[int(y)*50+int(x)] += 1
 	}
+	//log.Println(showGrid(grid))
+
 	return poss
 }
 
@@ -667,7 +677,7 @@ func (uf *UnionFind) unite(x, y int) {
 	uf.par[x] = y
 }
 
-func showGrid(grid [2500]int16) (str string) {
+func gridToString(grid [2500]int16) (str string) {
 	str = "showGrid()\n"
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
@@ -680,4 +690,13 @@ func showGrid(grid [2500]int16) (str string) {
 		str += "\n"
 	}
 	return str
+}
+
+func popcount(bits []bool) (count int) {
+	for _, b := range bits {
+		if b {
+			count++
+		}
+	}
+	return count
 }

@@ -51,8 +51,16 @@ func TestShortestPaht(t *testing.T) {
 		for j := 0; j < 50; j++ {
 			str += railMap[f.cell[i][j]] + " "
 		}
-		log.Printf("%02d %s\n", i, str)
+		//log.Printf("%02d %s\n", i, str)
 	}
+}
+
+func TestChoseStationPosition(t *testing.T) {
+	in, err := readInputFile("tools/in/0000.txt")
+	if err != nil {
+		t.Fatalf("failed to read input: %v", err)
+	}
+	choseStationPosition(*in)
 }
 
 func TestReadInput(t *testing.T) {
@@ -112,4 +120,18 @@ func readInputFile(filename string) (*Input, error) {
 	}
 	//log.Printf("readInput: N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
 	return &in, nil
+}
+
+func TestGridCalculation(t *testing.T) {
+	p := Pos{X: 10, Y: 10}
+	var grid [2500]int16
+	for i := int16(0); i < int16(len(ddy)); i++ {
+		next := p.add(Pos{Y: ddy[i], X: ddx[i]})
+		if next.Y < 0 || next.Y >= 50 || next.X < 0 || next.X >= 50 {
+			t.Log("out of range", next)
+		} else {
+			grid[next.Y*50+next.X] = i
+		}
+	}
+	t.Log("Grid result:" + gridToString(grid))
 }
