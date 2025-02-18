@@ -24,6 +24,7 @@ const (
 	RAIL_LEFT_UP    int16 = 4
 	RAIL_RIGHT_UP   int16 = 5
 	RAIL_RIGHT_DOWN int16 = 6
+	OTHER           int16 = 7 // テストの障害物として使う
 )
 
 var railMap = map[int16]string{
@@ -219,7 +220,7 @@ var dy = []int16{-1, 1, 0, 0}
 var dx = []int16{0, 0, -1, 1}
 
 // 2点間の最短経路を返す (a から b へ)
-// bはEMPTYであること
+// bはEMPTYまたはSTATION
 func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 	// a から b への最短経路を返す
 	// field=EMPTY なら移動可能 それ以外は移動不可
@@ -241,7 +242,7 @@ func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				continue
 			}
-			if f.cell[y][x] != EMPTY {
+			if f.cell[y][x] != EMPTY && f.cell[y][x] != STATION {
 				continue
 			}
 			if dist[int(y)*50+int(x)] > dist[int(p.Y)*50+int(p.X)]+1 {
@@ -249,13 +250,11 @@ func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 				que = append(que, Pos{Y: y, X: x})
 			}
 		}
+		//log.Println(len(que))
 	}
 	if dist[int(b.Y)*50+int(b.X)] == 10000 {
 		//log.Println(gridToString(dist))
-		//log.Println("can't reach", a, b)
-		//log.Println(dist[int(a.Y)*50+int(a.X)], dist[int(b.Y)*50+int(b.X)])
-		//f.cell[a.Y][a.X] = 7
-		//f.cell[b.Y][b.X] = 7
+		log.Println("can't reach", a, b)
 		//log.Println(f.cellString())
 		return nil
 	}
@@ -275,7 +274,7 @@ func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 				path = append(path, Pos{Y: y, X: x})
 				break
 			}
-			if f.cell[y][x] != EMPTY {
+			if f.cell[y][x] != EMPTY && f.cell[y][x] != STATION {
 				continue
 			}
 			if dist[int(y)*50+int(x)] == dist[int(p.Y)*50+int(p.X)]-1 {
@@ -428,7 +427,7 @@ func constructRailway(in Input, stations []Pos) []Pos {
 	for i := 0; i < numStations; i++ {
 		field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
 	}
-	//log.Println(field.cellString())
+	log.Println(field.cellString())
 	edges := []Edge{}
 	for i := 0; i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
