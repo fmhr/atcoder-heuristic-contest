@@ -46,7 +46,7 @@ func TestShortestPaht(t *testing.T) {
 }
 
 func TestConstructRailway(t *testing.T) {
-	in, err := readInputFile("tools/in/0000.txt")
+	in, err := readInputFile("tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}

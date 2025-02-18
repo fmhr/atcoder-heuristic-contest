@@ -80,6 +80,18 @@ type Field struct {
 	uf       *UnionFind
 }
 
+// n はUnionFindで使うノードの数
+func NewField(n int) *Field {
+	f := new(Field)
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			f.cell[i][j] = EMPTY
+		}
+	}
+	f.uf = NewUnionFind(n * n)
+	return f
+}
+
 func (f *Field) Clone() *Field {
 	if f == nil {
 		return nil
@@ -114,17 +126,6 @@ func (f Field) cellString() string {
 		str += "\n"
 	}
 	return str
-}
-
-func NewField(n int) *Field {
-	f := new(Field)
-	for i := 0; i < n; i++ {
-		for j := 0; j < n; j++ {
-			f.cell[i][j] = EMPTY
-		}
-	}
-	f.uf = NewUnionFind(n * n)
-	return f
 }
 
 func (f *Field) build(act Action) {
@@ -289,6 +290,8 @@ func (f *Field) shortestPath(a, b Pos) (path []Pos) {
 	return path
 }
 
+// 2点間の最短経路を返す (a から b へ)
+// paht[0]とpath[len(path)-1]は駅
 func (f *Field) selectRails(path []Pos) (types []int16) {
 	types = make([]int16, len(path))
 	types[0] = STATION
@@ -344,6 +347,65 @@ func (f Field) countSrcDst(pos Pos, in Input) (srcNum, dstNum int) {
 		}
 	}
 	return srcNum, dstNum
+}
+
+// 駅a, bが繋がることができるか、できないとき"-1",できるとき距離を返す
+func (f Field) canConnect(a, b Pos) []Pos {
+	var dist [2500]int16
+	for i := 0; i < 2500; i++ {
+		dist[i] = 10000
+	}
+	dist[int(a.Y)*50+int(a.X)] = 0
+	q := []Pos{a}
+	for len(q) > 0 {
+		p := q[0]
+		q = q[1:]
+		if p == b {
+			break
+		}
+		for d := 0; d < 4; d++ {
+			y, x := p.Y+dy[d], p.X+dx[d]
+			if y < 0 || y >= 50 || x < 0 || x >= 50 {
+				continue
+			}
+			if f.cell[y][x] == EMPTY || f.cell[y][x] == STATION {
+				if dist[int(y)*50+int(x)] > dist[int(p.Y)*50+int(p.X)]+1 {
+					dist[int(y)*50+int(x)] = dist[int(p.Y)*50+int(p.X)] + 1
+					q = append(q, Pos{Y: y, X: x})
+				}
+			}
+		}
+	}
+	if dist[int(b.Y)*50+int(b.X)] == 10000 {
+		return nil
+	}
+	// b から a への経路を復元
+	path := []Pos{b}
+	for path[len(path)-1] != a {
+		p := path[len(path)-1]
+		for d := 0; d < 4; d++ {
+			y, x := p.Y+dy[d], p.X+dx[d]
+			if y < 0 || y >= 50 || x < 0 || x >= 50 {
+				continue
+			}
+			if y == a.Y && x == a.X {
+				path = append(path, Pos{Y: y, X: x})
+				break
+			}
+			if f.cell[y][x] != EMPTY && f.cell[y][x] != STATION {
+				continue
+			}
+			if dist[int(y)*50+int(x)] == dist[int(p.Y)*50+int(p.X)]-1 {
+				path = append(path, Pos{Y: y, X: x})
+				break
+			}
+		}
+	}
+	path = append(path, a)
+	for i := 0; i < len(path)/2; i++ {
+		path[i], path[len(path)-1-i] = path[len(path)-1-i], path[i]
+	}
+	return path
 }
 
 var ErrNotEnoughMoney = fmt.Errorf("not enough money")
@@ -427,21 +489,48 @@ func constructRailway(in Input, stations []Pos) []Pos {
 	for i := 0; i < numStations; i++ {
 		field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
 	}
-	log.Println(field.cellString())
+	//log.Println(field.cellString())
 	edges := []Edge{}
 	for i := 0; i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
-			path := field.shortestPath(stations[i], stations[j])
-			if path == nil {
-				continue
-			}
-			dist := len(path)
+			dist := int(distance(stations[i], stations[j])) // 簡易距離
 			edges = append(edges, Edge{From: i, To: j, Cost: dist})
 		}
 	}
 	sort.Slice(edges, func(i, j int) bool {
 		return edges[i].Cost < edges[j].Cost
 	})
+
+	// UnionFindで連結成分を管理
+	uf := NewUnionFind(numStations)
+	// Kruskal法で最小全域木を求める
+	mstEdges := []Edge{}
+	existingRails := make(map[Pos]bool)
+	for _, edge := range edges {
+		if uf.same(edge.From, edge.To) {
+			continue
+		}
+		path := field.canConnect(stations[edge.From], stations[edge.To])
+		//log.Println("path", path)
+		if path != nil {
+			types := field.selectRails(path)
+			for i := 1; i < len(path)-1; i++ {
+				if field.cell[path[i].Y][path[i].X] == STATION {
+					continue
+				}
+				field.build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
+			}
+			uf.unite(edge.From, edge.To)
+			edge.Path = path
+			mstEdges = append(mstEdges, edge)
+			//log.Println("connect", stations[edge.From], stations[edge.To], "cost=", edge.Cost)
+			for _, pos := range path {
+				existingRails[pos] = true
+			}
+		}
+	}
+	log.Println(len(mstEdges))
+	log.Println(field.cellString())
 
 	return nil
 }
@@ -665,6 +754,10 @@ func readInput(re *bufio.Reader) *Input {
 	in.dst = dst
 	in.income = income
 	return &in
+}
+
+func init() {
+	log.SetFlags(log.Lshortfile)
 }
 
 func main() {
