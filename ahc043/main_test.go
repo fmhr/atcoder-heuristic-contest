@@ -56,11 +56,18 @@ func TestShortestPaht(t *testing.T) {
 }
 
 func TestChoseStationPosition(t *testing.T) {
-	in, err := readInputFile("tools/in/0000.txt")
+	in, err := readInputFile("tools/in/0001.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	choseStationPosition(*in)
+	stationPos := choseStationPosition(*in)
+	//t.Log(stationPos)
+	var grid [2500]int16
+	for _, p := range stationPos {
+		grid[p.Y*50+p.X] = 1
+	}
+	//t.Log("Grid result:" + gridToString(grid))
+	t.Log("number of station:", len(stationPos))
 }
 
 func TestReadInput(t *testing.T) {

@@ -430,7 +430,41 @@ func choseStationPosition(in Input) (poss []Pos) {
 		y, x = in.dst[i].Y, in.dst[i].X
 		grid[int(y)*50+int(x)] += 1
 	}
-	//log.Println(showGrid(grid))
+	uncoverd := make([]Pos, 0, in.M*2)
+	for i := 0; i < in.M; i++ {
+		uncoverd = append(uncoverd, in.src[i])
+		uncoverd = append(uncoverd, in.dst[i])
+	}
+	for len(uncoverd) > 0 {
+		bestPos := Pos{Y: 0, X: 0}
+		bestHit := 0
+		for i := 0; i < 50; i++ {
+			for j := 0; j < 50; j++ {
+				count := 0
+				y, x := int16(i), int16(j)
+				for _, u := range uncoverd {
+					if distance(u, Pos{Y: y, X: x}) <= 2 {
+						count++
+					}
+				}
+				if count > bestHit {
+					bestHit = count
+					bestPos = Pos{Y: y, X: x}
+				}
+			}
+		}
+		if bestHit == 0 {
+			panic("no station position")
+		}
+		poss = append(poss, bestPos)
+		newUncoverd := make([]Pos, 0, len(uncoverd))
+		for _, u := range uncoverd {
+			if distance(u, bestPos) > 2 {
+				newUncoverd = append(newUncoverd, u)
+			}
+		}
+		uncoverd = newUncoverd
+	}
 
 	return poss
 }
