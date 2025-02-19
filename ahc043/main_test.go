@@ -69,6 +69,14 @@ func TestConstructRailway(t *testing.T) {
 	}
 }
 
+func TestBeamSearch(t *testing.T) {
+	in, err := readInputFile("tools/in/0000.txt")
+	if err != nil {
+		t.Fatalf("failed to read input: %v", err)
+	}
+	beamSearch(*in)
+}
+
 func TestChoseStationPosition(t *testing.T) {
 	in, err := readInputFile("tools/in/0001.txt")
 	if err != nil {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"log"
 	"os"
@@ -414,6 +415,7 @@ type State struct {
 	money   int
 	turn    int
 	income  int
+	score   int // 最終ターンでの予想スコア
 	actions []Action
 }
 
@@ -426,6 +428,7 @@ func (s *State) Clone() *State {
 		money:   s.money,
 		turn:    s.turn,
 		income:  s.income,
+		score:   s.score,
 		actions: newActions,
 	}
 	return newState
@@ -456,7 +459,9 @@ func (s *State) do(act Action, in Input) error {
 	}
 	s.turn++
 	s.money += s.income
-	act.comment = fmt.Sprintf("#turn=%d, \n#money=%d, \n#income=%d\n", s.turn, s.money, s.income)
+	s.score = s.money + s.income*(in.T-s.turn)
+	act.comment = fmt.Sprintf("#turn=%d, \n#money=%d, \n#income=%d\n #Score=%d\n",
+		s.turn, s.money, s.income, s.score)
 	s.actions = append(s.actions, act)
 	return nil
 }
@@ -686,6 +691,65 @@ func choseStationPosition(in Input) (poss []Pos) {
 	}
 
 	return poss
+}
+
+type bsState struct {
+	state       State
+	score       int // 終了時に得られるスコア
+	restActions []uint
+}
+
+func newBsState(in *Input, numActions int) *bsState {
+	new := &bsState{
+		state:       *NewState(in),
+		score:       0,
+		restActions: make([]uint, numActions),
+	}
+	for i := 0; i < numActions; i++ {
+		new.restActions[i] = uint(i)
+	}
+	return new
+}
+
+func (s *bsState) Clone() *bsState {
+	clonedState := &bsState{
+		state:       *s.state.Clone(),
+		score:       s.score,
+		restActions: make([]uint, len(s.restActions)),
+	}
+	copy(clonedState.restActions, s.restActions)
+	return clonedState
+}
+
+type bsAction struct {
+	path []Pos
+	typ  []int16
+}
+
+// すべての駅の場所と、それらをつなぐエッジを行動にする
+func beamSearch(in Input) {
+	// 駅の位置を選ぶ
+	stations := choseStationPosition(in)
+	// 駅を繋ぐエッジを求める
+	edges := constructRailway(in, stations)
+
+	allAction := make([]bsAction, 0, len(stations)+len(edges))
+	for _, s := range stations {
+		allAction = append(allAction, bsAction{path: []Pos{s}, typ: []int16{STATION}})
+	}
+	for _, e := range edges {
+		allAction = append(allAction, bsAction{path: e.Path, typ: e.Rail})
+	}
+	log.Println(len(allAction))
+
+	initialState := newBsState(&in, len(allAction))
+	beamWidth := 100
+	beamStates := make([]*bsState, 0, beamWidth)
+	beamStates = append(beamStates, initialState)
+	for t := 0; t < len(allAction); t++ {
+
+	}
+
 }
 
 func greedy(in Input) {
@@ -969,4 +1033,54 @@ type Edge struct {
 type Graph struct {
 	NumNodes int
 	Edges    []Edge
+}
+
+// priorityQueue は、優先度付きキュー
+type Item struct {
+	value    bsState
+	priority int
+	index    int
+}
+
+type priorityQueue []*Item
+
+func (pq priorityQueue) Len() int { return len(pq) }
+
+// 今回はスコアは高い方が良い
+func (pq priorityQueue) Less(i, j int) bool {
+	return pq[i].priority < pq[j].priority
+}
+
+func (pq priorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
+}
+
+func (pq *priorityQueue) Push(x interface{}) {
+	n := len(*pq)
+	item := x.(*Item)
+	item.index = n
+	*pq = append(*pq, item)
+}
+
+// これは現在の最小のものを返すことに注意
+func (pq *priorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil
+	item.index = -1
+	*pq = old[0 : n-1]
+	return item
+}
+
+// 上位n個を超えた時に、最小のものを削除する
+func (pq *priorityQueue) ReSize(n int) {
+	if len(*pq) <= n {
+		return
+	}
+	for len(*pq) > n {
+		heap.Pop(pq)
+	}
 }
