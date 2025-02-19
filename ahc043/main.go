@@ -28,6 +28,10 @@ const (
 	OTHER           int16 = 7 // テストの障害物として使う
 )
 
+func isRail(kind int16) bool {
+	return kind >= RAIL_HORIZONTAL && kind <= RAIL_RIGHT_DOWN
+}
+
 var railMap = map[int16]string{
 	-1:              ".", // EMPTY
 	STATION:         "◎", // STATION
@@ -52,7 +56,7 @@ var buildCost = map[int16]int{
 	7:               0, // other
 }
 
-func calCost(act []int16) (cost int) {
+func calBuildCost(act []int16) (cost int) {
 	for _, a := range act {
 		cost += buildCost[a]
 	}
@@ -466,6 +470,22 @@ func (s *State) do(act Action, in Input) error {
 	return nil
 }
 
+// すべて建設可能な時は、建設にかかかる時間を返す
+// 時間とはlen(typs)+DO_NOTHINGの数
+// 800ターンのうちに建設不可能な時は-1を返す
+func (s State) canDo(typs []int16) int {
+	cost := calBuildCost(typs)
+	if s.money >= cost {
+		return len(typs)
+	} else if s.income > 0 {
+		waitTime := (cost - s.money) / s.income
+		if waitTime+s.turn <= 800 {
+			return waitTime + len(typs)
+		}
+	}
+	return -1
+}
+
 type Pos struct {
 	Y, X int16
 }
@@ -695,14 +715,12 @@ func choseStationPosition(in Input) (poss []Pos) {
 
 type bsState struct {
 	state       State
-	score       int // 終了時に得られるスコア
 	restActions []uint
 }
 
 func newBsState(in *Input, numActions int) *bsState {
 	new := &bsState{
 		state:       *NewState(in),
-		score:       0,
 		restActions: make([]uint, numActions),
 	}
 	for i := 0; i < numActions; i++ {
@@ -714,7 +732,6 @@ func newBsState(in *Input, numActions int) *bsState {
 func (s *bsState) Clone() *bsState {
 	clonedState := &bsState{
 		state:       *s.state.Clone(),
-		score:       s.score,
 		restActions: make([]uint, len(s.restActions)),
 	}
 	copy(clonedState.restActions, s.restActions)
@@ -740,16 +757,91 @@ func beamSearch(in Input) {
 	for _, e := range edges {
 		allAction = append(allAction, bsAction{path: e.Path, typ: e.Rail})
 	}
-	log.Println(len(allAction))
+	log.Println("actionNum", len(allAction))
 
 	initialState := newBsState(&in, len(allAction))
 	beamWidth := 100
-	beamStates := make([]*bsState, 0, beamWidth)
-	beamStates = append(beamStates, initialState)
-	for t := 0; t < len(allAction); t++ {
-
+	beamStates := make([]bsState, 0, beamWidth)
+	beamStates = append(beamStates, *initialState)
+	nextStates := make([]bsState, 0, beamWidth)
+	resultStates := make([]bsState, 0, beamWidth)
+	var loop int
+	for len(beamStates) > 0 {
+		for i := 0; i < min(beamWidth, len(beamStates)); i++ {
+			for j := 0; j < len(beamStates[i].restActions); j++ {
+				act := allAction[beamStates[i].restActions[j]]
+				// costの確認
+				// actionを精査（駅がすでにあるなら除く)
+				if len(act.path) != len(act.typ) {
+					panic("invalid action")
+				}
+				// 不要なactionをのぞいたp,tを作る
+				p := make([]Pos, 0, len(act.path))
+				t := make([]int16, 0, len(act.typ))
+				tmp := beamStates[i].state.field // これはcloneしていないので使わない
+				for i := 0; i < len(act.path); i++ {
+					if act.typ[i] == tmp.cell[act.path[i].Y][act.path[i].X] {
+						continue
+					}
+					if isRail(act.typ[i]) && tmp.cell[act.path[i].Y][act.path[i].X] == STATION {
+						continue
+					}
+					p = append(p, act.path[i])
+					t = append(t, act.typ[i])
+				}
+				//costMoney := calBuildCost(t) 純粋なコスト(money)
+				costTime := beamStates[i].state.canDo(t) // incomeを考慮したコスト
+				if costTime == -1 {
+					continue
+				}
+				//log.Println(len(p), "DoNothing", costTime-len(p))
+				// 残されたターン数で実行できない時
+				if 800-beamStates[i].state.turn < costTime {
+					continue
+				}
+				newState := beamStates[i].Clone()
+				// DO_NOTHINGで必要な分だけ待つ
+				if len(p) < costTime {
+					for j := 0; j < costTime-len(p); j++ {
+						err := newState.state.do(Action{Kind: DO_NOTHING}, in)
+						log.Println(err)
+					}
+				}
+				for j := 0; j < len(p); j++ {
+					err := newState.state.do(Action{Kind: t[j], Y: p[j].Y, X: p[j].X}, in)
+					if err != nil {
+						log.Println(err)
+					}
+				}
+				// delete action
+				newState.restActions = append(newState.restActions[:j], newState.restActions[j+1:]...)
+				if newState.state.income > 0 {
+					log.Println(newState.state.turn, newState.state.money, newState.state.income, newState.state.score)
+				}
+				nextStates = append(nextStates, *newState)
+			}
+		}
+		log.Println("nextStates", len(nextStates))
+		sort.Slice(nextStates, func(i, j int) bool {
+			return nextStates[i].state.score > nextStates[j].state.score
+		})
+		if len(nextStates) > 0 {
+			log.Println("score:", nextStates[0].state.score, nextStates[len(nextStates)-1].state.score)
+			log.Println("income:", nextStates[0].state.income, nextStates[len(nextStates)-1].state.income)
+		}
+		log.Println("loop", loop, "beamStates", len(beamStates), "resultStates", len(resultStates))
+		//if len(nextStates) > beamWidth {
+		//beamStates = nextStates[:beamWidth]
+		//} else {
+		beamStates = nextStates
+		//}
+		nextStates = make([]bsState, 0, beamWidth)
+		loop++
 	}
-
+	log.Println(len(resultStates))
+	for _, s := range resultStates {
+		log.Println(s.state.score)
+	}
 }
 
 func greedy(in Input) {
@@ -829,7 +921,7 @@ func greedy(in Input) {
 			continue
 		}
 		types := state.field.selectRails(path)
-		cost := calCost((types[1:]))
+		cost := calBuildCost((types[1:]))
 		needMoney := cost - state.money
 		doNotthingTurn := 0
 		if needMoney > 0 {
