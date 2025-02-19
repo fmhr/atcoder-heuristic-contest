@@ -56,6 +56,17 @@ func TestConstructRailway(t *testing.T) {
 	edges := constructRailway(*in, stationPos)
 
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
+	for i := 0; i < len(edges); i++ {
+		if len(edges[i].Rail) != len(edges[i].Path) {
+			// テスト失敗
+			t.Error("len(edges[i].Rail) != len(edges[i].Path)")
+		}
+		str := fmt.Sprintf("%d ", len(edges[i].Rail))
+		for j := 0; j < len(edges[i].Rail); j++ {
+			str += fmt.Sprintf(" %s", railMap[edges[i].Rail[j]])
+		}
+		t.Log(str)
+	}
 }
 
 func TestChoseStationPosition(t *testing.T) {
