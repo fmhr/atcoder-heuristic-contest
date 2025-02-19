@@ -47,14 +47,15 @@ func TestShortestPaht(t *testing.T) {
 
 func TestConstructRailway(t *testing.T) {
 	// go test -timeout 30s -run ^TestConstructRailway$ ahc043 -v
-	in, err := readInputFile("tools/in/0013.txt")
+	in, err := readInputFile("tools/in/0016.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
 	stationPos := choseStationPosition(*in)
 	t.Log("number of station:", len(stationPos))
-	p := constructRailway(*in, stationPos)
-	t.Log(p)
+	edges := constructRailway(*in, stationPos)
+
+	t.Log("stations=", len(stationPos), "edges=", len(edges))
 }
 
 func TestChoseStationPosition(t *testing.T) {

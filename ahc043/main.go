@@ -481,6 +481,66 @@ func distance(a, b Pos) int16 {
 var ddy = [13]int16{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
 var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 
+// shortestPathLimited gridのaからbまでで、movenableの範囲で最短経路を返す
+func shortestPathLimited(grid [2500]int16, a, b Pos, movenable int16) []Pos {
+	//log.Println(a, b, movenable)
+	var dist [2500]int16
+	for i := 0; i < 2500; i++ {
+		dist[i] = 1000
+	}
+	dist[a.Y*50+a.X] = 0
+	que := make([]Pos, 0, 2500)
+	que = append(que, a)
+	for len(que) > 0 {
+		p := que[0]
+		que = que[1:]
+		if p == b {
+			break
+		}
+		for i := 0; i < 4; i++ {
+			y, x := p.Y+dy[i], p.X+dx[i]
+			if y < 0 || y >= 50 || x < 0 || x >= 50 {
+				continue
+			}
+			if grid[y*50+x] == movenable || y == b.Y && x == b.X {
+				if dist[y*50+x] > dist[p.Y*50+p.X]+1 {
+					dist[y*50+x] = dist[p.Y*50+p.X] + 1
+					que = append(que, Pos{Y: y, X: x})
+				}
+			}
+		}
+	}
+	if dist[b.Y*50+b.X] == 1000 {
+		return nil
+	}
+	//log.Println(dist[a.Y*50+a.X], dist[b.Y*50+b.X])
+	// b から a への経路を復元
+	path := []Pos{b}
+	for path[len(path)-1] != a {
+		p := path[len(path)-1]
+		for i := 0; i < 4; i++ {
+			y, x := p.Y+dy[i], p.X+dx[i]
+			if y < 0 || y >= 50 || x < 0 || x >= 50 {
+				continue
+			}
+			if y == a.Y && x == a.X {
+				path = append(path, Pos{Y: y, X: x})
+				break
+			}
+			if (grid[y*50+x] == movenable || grid[y*50+x] == STATION) && dist[y*50+x] == dist[p.Y*50+p.X]-1 {
+				if dist[y*50+x] < dist[p.Y*50+p.X] {
+					path = append(path, Pos{Y: y, X: x})
+					break
+				}
+			}
+		}
+	}
+	for i := 0; i < len(path)/2; i++ {
+		path[i], path[len(path)-1-i] = path[len(path)-1-i], path[i]
+	}
+	return path
+}
+
 // すべての駅を繋ぐ鉄道を敷設する
 // クラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
 // .............◎.............
@@ -494,7 +554,7 @@ var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 // ........◎─┐..│..┌◎───◎┘└─◎........│......││.......
 // ........│.◎──◎─┐│........│.◎┐..┌◎─◎─◎────◎◎──┐....
 // ........│.└──┘.
-func constructRailway(in Input, stations []Pos) []Pos {
+func constructRailway(in Input, stations []Pos) []Edge {
 	numStations := len(stations)
 	stationIndexMap := make(map[Pos]int)
 	for i, s := range stations {
@@ -530,18 +590,7 @@ func constructRailway(in Input, stations []Pos) []Pos {
 		if path != nil {
 			types := field.selectRails(path)
 			// 途中に駅があるか確認
-			// ある場合は、その駅を新しいスタート地点にする
-			// またはゴールにする
-			// パスのサイクルが前半と後半のどちらにつながっているかわからないので,保留
-			for i := 1; i < len(path)-1; i++ {
-				if field.cell[path[i].Y][path[i].X] == STATION {
-					subStation := path[i]
-					a := stationIndexMap[path[0]]
-					b := stationIndexMap[path[1]]
-					c := stationIndexMap[path[len(path)-1]]
-					log.Println("subStation", subStation, uf.same(a, b), uf.same(b, c))
-				}
-			}
+			// サイクルを作らない場合もあるので消さない
 
 			for i := 1; i < len(path)-1; i++ {
 				if field.cell[path[i].Y][path[i].X] == STATION {
@@ -551,24 +600,43 @@ func constructRailway(in Input, stations []Pos) []Pos {
 			}
 			uf.unite(edge.From, edge.To)
 			edge.Path = path
+			edge.Rail = types
 			mstEdges = append(mstEdges, edge)
 			//log.Println("connect", stations[edge.From], stations[edge.To], "cost=", edge.Cost)
 			//log.Println(path)
 			//log.Println(field.cellString())
 		}
 	}
-	log.Println("Num of Stations", numStations)
-	log.Println("Num of Edges", len(mstEdges))
-	log.Println(field.cellString())
-	for i := 0; i < numStations; i++ {
-		for j := i + 1; j < numStations; j++ {
-			//a := int(stations[i].Y*50 + stations[i].X)
-			//b := int(stations[j].Y*50 + stations[j].X)
-			//log.Println(field.uf.same(a, b))
-		}
-	}
+	//log.Println("Num of Stations", numStations)
+	//log.Println("Num of Edges", len(mstEdges))
+	//log.Println(field.cellString())
+	// これをもとに、純粋なエッジ、駅、を分解する
+	// エッジに駅が含まれている時は再度typesを求めて含まれていないようにする
+	// 次に、src,dstを繋ぐエッジを探す
+	//　このときマンハッタン距離と、上の結果上を使うエッジのさが大きい時は、新しいエッジを作る
+	// 線路->駅は建築可能
+	//var grid [2500]int16
+	//for i := 0; i < 50; i++ {
+	//for j := 0; j < 50; j++ {
+	//grid[i*50+j] = field.cell[i][j]
+	//}
+	//}
+	//for i := 0; i < 50; i++ {
+	//fmt.Println(grid[i*50 : i*50+50])
+	//}
 
-	return nil
+	//for i := 0; i < in.M; i++ {
+	//src, dst := in.src[i], in.dst[i]
+	//dist0 := distance(src, dst)
+	//dest1 := shortestPathLimited(grid, src, dst, EMPTY)
+	//dist1 := shortestPathLimited(grid, src, dst, EMPTY)
+	//log.Println(src, "->", dst, dist0, len(dest1), len(dist1))
+	//}
+	//log.Println(len(mstEdges))
+	//for _, edge := range mstEdges {
+	//log.Println(edge.From, edge.To, edge.Cost, len(edge.Path), len(edge.Rail))
+	//}
+	return mstEdges
 }
 
 // choseStationPosition は,駅の場所をあらかじめ決める
@@ -845,25 +913,25 @@ func NewUnionFind(n int) *UnionFind {
 	return uf
 }
 
-func (uf *UnionFind) root(x int) int {
-	if uf.par[x] == x {
-		return x
+func (uf *UnionFind) root(a int) int {
+	if uf.par[a] == a {
+		return a
 	}
-	uf.par[x] = uf.root(uf.par[x])
-	return uf.par[x]
+	uf.par[a] = uf.root(uf.par[a])
+	return uf.par[a]
 }
 
-func (uf *UnionFind) same(ayx, byx int) bool {
-	return uf.root(ayx) == uf.root(byx)
+func (uf *UnionFind) same(a, b int) bool {
+	return uf.root(a) == uf.root(b)
 }
 
-func (uf *UnionFind) unite(x, y int) {
-	x = uf.root(x)
-	y = uf.root(y)
-	if x == y {
+func (uf *UnionFind) unite(a, b int) {
+	a = uf.root(a)
+	b = uf.root(b)
+	if a == b {
 		return
 	}
-	uf.par[x] = y
+	uf.par[a] = b
 }
 
 func gridToString(grid [2500]int16) (str string) {
@@ -895,6 +963,7 @@ type Edge struct {
 	From, To int
 	Cost     int
 	Path     []Pos
+	Rail     []int16
 }
 
 type Graph struct {
