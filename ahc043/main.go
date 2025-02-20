@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"container/heap"
 	"fmt"
 	"log"
 	"os"
@@ -1422,54 +1421,4 @@ type Edge struct {
 type Graph struct {
 	NumNodes int
 	Edges    []Edge
-}
-
-// priorityQueue は、優先度付きキュー
-type Item struct {
-	value    bsState
-	priority int
-	index    int
-}
-
-type priorityQueue []*Item
-
-func (pq priorityQueue) Len() int { return len(pq) }
-
-// 今回はスコアは高い方が良い
-func (pq priorityQueue) Less(i, j int) bool {
-	return pq[i].priority < pq[j].priority
-}
-
-func (pq priorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-	pq[i].index = i
-	pq[j].index = j
-}
-
-func (pq *priorityQueue) Push(x interface{}) {
-	n := len(*pq)
-	item := x.(*Item)
-	item.index = n
-	*pq = append(*pq, item)
-}
-
-// これは現在の最小のものを返すことに注意
-func (pq *priorityQueue) Pop() interface{} {
-	old := *pq
-	n := len(old)
-	item := old[n-1]
-	old[n-1] = nil
-	item.index = -1
-	*pq = old[0 : n-1]
-	return item
-}
-
-// 上位n個を超えた時に、最小のものを削除する
-func (pq *priorityQueue) ReSize(n int) {
-	if len(*pq) <= n {
-		return
-	}
-	for len(*pq) > n {
-		heap.Pop(pq)
-	}
 }
