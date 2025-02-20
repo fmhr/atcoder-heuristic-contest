@@ -76,7 +76,7 @@ var railMap = map[int16]string{
 	RAIL_LEFT_UP:    "┘", // RAIL_LEFT_UP
 	RAIL_RIGHT_UP:   "└", // RAIL_RIGHT_UP
 	RAIL_RIGHT_DOWN: "┌", // RAIL_RIGHT_DOWN
-	7:               "+", // other
+	OTHER:           "#", // other
 }
 
 var buildCost = map[int16]int{
@@ -397,6 +397,7 @@ func (f Field) countSrcDst(pos Pos, in Input) (srcNum, dstNum int) {
 }
 
 // 駅a, bが繋がることができるか、できないときnil,できるとき距離を返すpath
+// すでにある線路も活用できるようにする
 func (f Field) canConnect(a, b Pos) []Pos {
 	var dist [2500]int16
 	for i := 0; i < 2500; i++ {
@@ -719,18 +720,21 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	//}
 	///////////////////////////////////
 	// 全てに駅間を繋ぐエッジを作る
+	// TODO:線路の種類がMSTと違うルートがあるので要修正
 	field2 := NewField(in.N) // mstEdgesで使われている場所だけを使う
-	for i := 0; i < in.N; i++ {
-		for j := 0; j < in.N; j++ {
+	for i := 0; i < 50; i++ {
+		for j := 0; j < 50; j++ {
 			field2.cell[i][j] = OTHER
 		}
 	}
 	for _, edge := range mstEdges {
 		for _, p := range edge.Path {
-			field2.cell[p.Y][p.X] = EMPTY
+			if isRail(field.cell[p.Y][p.X]) || field.cell[p.Y][p.X] == STATION {
+				field2.cell[p.Y][p.X] = field.cell[p.Y][p.X]
+			}
 		}
 	}
-	//log.Println(field2.cellString())
+	log.Println(field2.cellString())
 	pathpath := make([][]Pos, 0, numStations)
 	for i := 0; i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
@@ -742,6 +746,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	log.Println("pathpath", len(pathpath))
 	///////////////////////////////////
 	// src,dstの対応する駅を探して、その間を繋ぐエッジを作る
+	// TODO:線路の種類がMSTと違うルートがあるので要修正
 	count := 0
 	unique := make(map[Pair]bool)
 	for i := 0; i < in.M; i++ {
