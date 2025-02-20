@@ -263,8 +263,9 @@ func (f Field) isConnected(a, b Pos) bool {
 	return false
 }
 
-var dy = []int16{-1, 1, 0, 0}
-var dx = []int16{0, 0, -1, 1}
+// UP, RIGHT, DOWN, LEFT
+var dy = []int16{-1, 0, 1, 0}
+var dx = []int16{0, 1, 0, -1}
 
 // 2点間の最短経路を返す (a から b へ)
 // bはEMPTYまたはSTATION
