@@ -201,6 +201,7 @@ func (f *Field) build(act Action) error {
 	if f.cell[act.Y][act.X] != EMPTY {
 		if !(act.Kind == STATION && f.cell[act.Y][act.X] >= 1 && f.cell[act.Y][act.X] <= 6) {
 			// 駅は線路の上に建てることができる
+			log.Println(f.cellString())
 			log.Printf("try to build: typ:%d Y:%d X:%d but already built %d\n", act.Kind, act.Y, act.X, f.cell[act.Y][act.X])
 			return fmt.Errorf("already built")
 		}
@@ -654,6 +655,8 @@ func (s *State) do(act Action, in Input) error {
 	if act.Kind != DO_NOTHING {
 		err := s.field.build(act)
 		if err != nil {
+			log.Println("acttype:", act.Kind, "pos:", act.Y, act.X)
+			log.Println("build error", err)
 			return err
 		}
 		s.money -= buildCost[act.Kind]
@@ -673,22 +676,6 @@ func (s *State) do(act Action, in Input) error {
 		s.turn, s.money, s.income, s.score)
 	s.actions = append(s.actions, act)
 	return nil
-}
-
-// すべて建設可能な時は、建設にかかかる時間を返す
-// 時間とはlen(typs)+DO_NOTHINGの数
-// 800ターンのうちに建設不可能な時は-1を返す
-func (s State) canDo(typs []int16) int {
-	cost := calBuildCost(typs)
-	if s.money >= cost {
-		return len(typs)
-	} else if s.income > 0 {
-		waitTime := (cost - s.money) / s.income
-		if waitTime+s.turn <= 800 {
-			return waitTime + len(typs)
-		}
-	}
-	return -1
 }
 
 type Pos struct {
@@ -916,7 +903,6 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	log.Println("pathpath", len(pathpath))
 	///////////////////////////////////
 	// src,dstの対応する駅を探して、その間を繋ぐエッジを作る
-	// TODO:線路の種類がMSTと違うルートがあるので要修正
 	count := 0
 	unique := make(map[Pair]bool)
 	for i := 0; i < in.M; i++ {
@@ -1056,7 +1042,7 @@ func beamSearch(in Input) {
 	}
 	log.Println("actionNum", len(allAction))
 	initialState := newBsState(&in, len(allAction))
-	beamWidth := 10000
+	beamWidth := 100
 	beamStates := make([]bsState, 0, beamWidth)
 	beamStates = append(beamStates, *initialState)
 	nextStates := make([]bsState, 0, beamWidth)
@@ -1064,6 +1050,20 @@ func beamSearch(in Input) {
 	var loop int
 	for len(beamStates) > 0 {
 		for i := 0; i < min(beamWidth, len(beamStates)); i++ {
+			if beamStates[i].state.turn > 800 {
+				if beamStates[i].state.score > bestState.state.score {
+					bestState = beamStates[i].Clone()
+				}
+				continue
+			}
+			// DO_NOTHINGの場合
+			//newState := beamStates[i].Clone()
+			//err := newState.state.do(Action{Kind: DO_NOTHING}, in)
+			//if err != nil {
+			//panic(err)
+			//}
+			//nextStates = append(nextStates, *newState)
+		NEWSTATE:
 			for j := 0; j < len(beamStates[i].restActions); j++ {
 				act := allAction[beamStates[i].restActions[j]]
 				// costの確認
@@ -1082,35 +1082,52 @@ func beamSearch(in Input) {
 					if isRail(act.typ[i]) && tmp.cell[act.path[i].Y][act.path[i].X] == STATION {
 						continue
 					}
+					if isRail(act.typ[i]) && isRail(tmp.cell[act.path[i].Y][act.path[i].X]) {
+						// 両方線路で種類が違う時
+						break NEWSTATE
+					}
 					p = append(p, act.path[i])
 					t = append(t, act.typ[i])
 				}
 				costMoney := calBuildCost(t) //純粋なコスト(money)
-				if beamStates[i].state.money < costMoney {
+				if beamStates[i].state.money < costMoney && beamStates[i].state.income == 0 {
+					// お金が足りない＋収入がない時はスキップ
 					continue
 				}
-				costTime := 0
 				// DO_NOTHINGで必要な分だけ待つ
-				//costTime := beamStates[i].state.canDo(t) // incomeを考慮したコスト
-				//if costTime == -1 {
-				//continue
-				//}
+				costTime := 0
+				if beamStates[i].state.income > 0 {
+					costTime = costMoney / beamStates[i].state.income // incomeを考慮したコスト
+				}
 				////log.Println(len(p), "DoNothing", costTime-len(p))
 				//// 残されたターン数で実行できない時
-				//if 800-beamStates[i].state.turn < costTime {
-				//continue
-				//}
+				if beamStates[i].state.turn+costTime > 800 {
+					continue
+				}
 				newState := beamStates[i].Clone()
-				// DO_NOTHINGで必要な分だけ待つ
-				if len(p) < costTime {
-					for j := 0; j < costTime-len(p); j++ {
-						err := newState.state.do(Action{Kind: DO_NOTHING}, in)
-						log.Println(err)
+				for costMoney > newState.state.money {
+					err := newState.state.do(Action{Kind: DO_NOTHING}, in)
+					if err != nil {
+						panic(err)
 					}
+					if newState.state.turn > 800 {
+						log.Println("over time 800:", newState.state.turn)
+						panic("over time")
+					}
+				}
+				if newState.state.money < costMoney {
+					log.Println("----------------------------")
+					log.Println("actions", railToString(t))
+					log.Println("costMoney", costMoney, "costTime", costTime)
+					log.Println("money", newState.state.money, "income", newState.state.income)
+					log.Println("turn", newState.state.turn)
+					panic("not enough money")
 				}
 				for j := 0; j < len(p); j++ {
 					err := newState.state.do(Action{Kind: t[j], Y: p[j].Y, X: p[j].X}, in)
 					if err != nil {
+						log.Println("actions", railToString(t))
+						log.Println("action", t[j], p[j])
 						panic(err)
 					}
 				}
@@ -1129,6 +1146,7 @@ func beamSearch(in Input) {
 		if len(nextStates) > 0 {
 			log.Println("score:", nextStates[0].state.score, nextStates[len(nextStates)-1].state.score)
 			log.Println("income:", nextStates[0].state.income, nextStates[len(nextStates)-1].state.income)
+			log.Println("0:", nextStates[0].state.score, "last:", nextStates[len(nextStates)-1].state.score)
 		}
 		log.Println("loop", loop, "beamStates", len(beamStates))
 		if len(nextStates) > beamWidth {
