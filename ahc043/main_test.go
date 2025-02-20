@@ -163,3 +163,54 @@ func TestGridCalculation(t *testing.T) {
 	}
 	//t.Log("Grid result:" + gridToString(grid))
 }
+
+func TestIsRailConnected(t *testing.T) {
+	tests := []struct {
+		railType  int16
+		direction int
+		isStart   bool
+		expected  bool
+	}{
+		// 上方向
+		{RAIL_HORIZONTAL, UP, true, false},
+		{RAIL_LEFT_DOWN, UP, true, false},
+		{RAIL_RIGHT_DOWN, UP, true, false},
+		{RAIL_VERTICAL, UP, true, true},
+		{RAIL_RIGHT_UP, UP, false, false},
+		{RAIL_LEFT_UP, UP, false, false},
+
+		// 下方向
+		{RAIL_HORIZONTAL, DOWN, true, false},
+		{RAIL_LEFT_UP, DOWN, true, false},
+		{RAIL_RIGHT_UP, DOWN, true, false},
+		{RAIL_VERTICAL, DOWN, true, true},
+		{RAIL_LEFT_DOWN, DOWN, false, false},
+		{RAIL_RIGHT_DOWN, DOWN, false, false},
+
+		// 右方向
+		{RAIL_VERTICAL, RIGHT, true, false},
+		{RAIL_LEFT_DOWN, RIGHT, true, false},
+		{RAIL_LEFT_UP, RIGHT, true, false},
+		{RAIL_HORIZONTAL, RIGHT, true, true},
+		{RAIL_RIGHT_DOWN, RIGHT, false, false},
+		{RAIL_RIGHT_UP, RIGHT, false, false},
+
+		// 左方向
+		{RAIL_VERTICAL, LEFT, true, false},
+		{RAIL_RIGHT_DOWN, LEFT, true, false},
+		{RAIL_RIGHT_UP, LEFT, true, false},
+		{RAIL_HORIZONTAL, LEFT, true, true},
+		{RAIL_LEFT_DOWN, LEFT, false, false},
+		{RAIL_LEFT_UP, LEFT, false, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(int16ToString(tt.railType), func(t *testing.T) {
+			result := isRailConnected(tt.railType, tt.direction, tt.isStart)
+			if result != tt.expected {
+				t.Errorf("isRailConnected(%s, %d, %t) = %t; expected %t",
+					int16ToString(tt.railType), tt.direction, tt.isStart, result, tt.expected)
+			}
+		})
+	}
+}
