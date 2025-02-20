@@ -136,7 +136,7 @@ func TestGridCalculation(t *testing.T) {
 			grid[next.Y*50+next.X] = i
 		}
 	}
-	t.Log("Grid result:" + gridToString(grid))
+	//t.Log("Grid result:" + gridToString(grid))
 }
 
 func TestIsRailConnected(t *testing.T) {
