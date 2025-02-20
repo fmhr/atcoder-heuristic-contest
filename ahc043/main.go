@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -111,6 +112,7 @@ func calBuildCost(act []int16) (cost int) {
 			cost += val
 		} else {
 			log.Printf("calBuildCost: invalid kind:%d\n", a)
+			panic("calBuildCost: invalid kind")
 		}
 	}
 	return
@@ -268,8 +270,8 @@ func (f Field) collectStations(pos Pos) (stations []Pos) {
 	return stations
 }
 
-// isConnected 駅,路線をつかって	、a,bがつながっているかを返す
-func (f Field) isConnected(a, b Pos) bool {
+// checkConnect 駅,路線をつかって、a,bがつながっているかを返す
+func (f Field) checkConnect(a, b Pos) bool {
 	stations0 := f.collectStations(a)
 	stations1 := f.collectStations(b)
 	for _, s0 := range stations0 {
@@ -284,7 +286,7 @@ func (f Field) isConnected(a, b Pos) bool {
 
 // 2点間の最短経路を返す (a から b へ)
 // bはEMPTYまたはSTATION
-func (f *Field) shortestPath(a, b Pos) (path []Pos) {
+func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 	// a から b への最短経路を返す
 	// field=EMPTY なら移動可能 それ以外は移動不可
 	var dist [2500]int16
@@ -438,25 +440,31 @@ func railDirection(rail int16) []int16 {
 // 繋がらなかった時はnilを返す
 // 繋がっているはずにnilになる場合はバグなので、呼び出し元でチェックする
 func (f Field) canConnect(a, b Pos) []Pos {
-	//log.Println(f.cellString())
+	if a.Y == 7 && a.X == 6 {
+		log.Println(a, b)
+		log.Println(f.cellString())
+	}
 	var dist [2500]int16
 	for i := 0; i < 2500; i++ {
 		dist[i] = 10000
 	}
 	dist[int(a.Y)*50+int(a.X)] = 0
 	q := []Pos{a}
+	log.Println(f.cell[7][7])
 	for len(q) > 0 {
 		p := q[0]
 		q = q[1:]
 		if p == b {
 			break
 		}
-		direct := railDirection(f.cell[p.Y][p.X])
-		if len(direct) == 0 {
+
+		direction := railDirection(f.cell[p.Y][p.X])
+
+		if len(direction) == 0 {
 			log.Println(f.cell[p.Y][p.X])
 			panic("invalid rail")
 		}
-		for _, d := range direct {
+		for _, d := range direction {
 			y, x := p.Y+dy[d], p.X+dx[d]
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				continue
@@ -466,6 +474,12 @@ func (f Field) canConnect(a, b Pos) []Pos {
 					dist[int(y)*50+int(x)] = dist[int(p.Y)*50+int(p.X)] + 1
 					q = append(q, Pos{Y: y, X: x})
 				}
+			}
+			if p.Y == 7 && p.X == 7 {
+				log.Println(f.cell[p.Y][p.X], direction, y, x, isRail(f.cell[y][x]))
+			}
+			if y == 6 && x == 7 {
+				log.Println("6, 7 prev:", p, f.cell[p.Y][p.X], "next:", y, x, f.cell[y][x])
 			}
 			if isRail(f.cell[y][x]) {
 				connect := false
@@ -496,6 +510,7 @@ func (f Field) canConnect(a, b Pos) []Pos {
 			}
 		}
 	}
+	log.Println(gridToString(dist))
 	//log.Println("dist", dist[int(b.Y)*50+int(b.X)])
 	if dist[int(b.Y)*50+int(b.X)] == 10000 {
 		log.Println("can't reach", a, b)
@@ -580,7 +595,7 @@ func (s *State) do(act Action, in Input) error {
 		if act.Kind == STATION {
 			s.income = 0
 			for i := 0; i < in.M; i++ {
-				if s.field.isConnected(in.src[i], in.dst[i]) {
+				if s.field.checkConnect(in.src[i], in.dst[i]) {
 					s.income += in.income[i]
 				}
 			}
@@ -720,18 +735,24 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	for i, s := range stations {
 		stationIndexMap[s] = i
 	}
+	// 決めておいた駅を建設する
 	field := NewField(in.N)
 	for i := 0; i < numStations; i++ {
 		field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
 	}
 	log.Println(field.cellString())
+
+	// マンハッタン距離を使って,全駅間の暫定距離を求める
 	edges := []Edge{}
 	for i := 0; i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
-			dist := int(distance(stations[i], stations[j])) // 簡易距離
+			dist := int(distance(stations[i], stations[j]))
 			edges = append(edges, Edge{From: i, To: j, Cost: dist})
 		}
 	}
+	// ここまで前処理
+	//////////////////////////
+	// MSTを求める
 	sort.Slice(edges, func(i, j int) bool {
 		return edges[i].Cost < edges[j].Cost
 	})
@@ -741,13 +762,24 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	// Kruskal法で最小全域木を求める
 	mstEdges := []Edge{}
 	for _, edge := range edges {
-		if uf.same(edge.From, edge.To) || field.uf.same(edge.From, edge.To) {
+		// すでに連結されている場合はスキップ
+		if uf.same(edge.From, edge.To) {
 			continue
 		}
+		// 連結可能か確認
 		path := field.canConnect(stations[edge.From], stations[edge.To])
 		// ここではフィールドを使っているので、path=nilの可能性もあり
+		if slices.Contains(path, Pos{Y: 6, X: 7}) {
+			log.Println(field.cellString())
+			log.Println("canConnect", path, "miniCost", edge.Cost)
+		}
 		if path != nil {
 			types := field.selectRails(path)
+			if slices.Contains(path, Pos{Y: 6, X: 7}) {
+				log.Println(path, types)
+				log.Println("selectRails", railToString(types))
+				panic("STOP")
+			}
 			// 途中に駅があるか確認
 			// サイクルを作らない場合もあるので消さない
 			for i := 1; i < len(path)-1; i++ {
@@ -1075,7 +1107,7 @@ func greedy(in Input) {
 	uncoverd_home_workplace := make([]Pos, 0)
 	for i := 0; i < in.M; i++ {
 		var a_coverd, b_coverd bool
-		if state.field.isConnected(in.src[i], in.dst[i]) {
+		if state.field.checkConnect(in.src[i], in.dst[i]) {
 			continue
 		}
 		for _, s := range state.field.stations {
@@ -1122,7 +1154,7 @@ func greedy(in Input) {
 				bestPos = st
 			}
 		}
-		path := state.field.shortestPath(bestPos, nextPos)
+		path := state.field.findShortestPath(bestPos, nextPos)
 		if len(path) > in.T-state.turn {
 			// 建設するためのターンが足りない
 			break

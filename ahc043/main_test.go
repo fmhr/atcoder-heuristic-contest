@@ -26,7 +26,7 @@ func TestShortestPaht(t *testing.T) {
 	f.cell[a.Y][a.X] = STATION
 	f.cell[b.Y][b.X] = STATION
 	//t.Log(f.cellString())
-	path := f.shortestPath(a, b)
+	path := f.findShortestPath(a, b)
 	t.Log(path)
 	if path == nil {
 		t.Error("no path")
@@ -54,7 +54,6 @@ func TestConstructRailway(t *testing.T) {
 	stationPos := choseStationPosition(*in)
 	t.Log("number of station:", len(stationPos))
 	edges := constructRailway(*in, stationPos)
-
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
 	for i := 0; i < len(edges); i++ {
 		if len(edges[i].Rail) != len(edges[i].Path) {
