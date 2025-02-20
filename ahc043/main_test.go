@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"strconv"
@@ -68,6 +69,30 @@ func TestConstructRailway(t *testing.T) {
 	}
 }
 
+func TestDebugBeamSearch(t *testing.T) {
+	// 線路上に駅を配置することができるのかを確認する
+	f, err := readGridFileToFild("test/t0000.txt")
+	if err != nil {
+		t.Fatalf("failed to read grid: %v", err)
+	}
+	for _, s := range f.stations {
+		t.Log(s)
+	}
+	for i := 0; i < 50; i++ {
+		for j := 0; j < 50; j++ {
+			if isRail(f.cell[i][j]) {
+				if rand.Intn(10) < 5 {
+					err := f.build(Action{Kind: STATION, X: int16(j), Y: int16(i)})
+					if err != nil {
+						t.Fatalf("failed to build: %v", err)
+					}
+				}
+			}
+		}
+	}
+	t.Log(f.cellString())
+}
+
 func TestBeamSearch(t *testing.T) {
 	in, err := readInputFile("tools/in/0000.txt")
 	if err != nil {
@@ -83,10 +108,10 @@ func TestChoseStationPosition(t *testing.T) {
 	}
 	stationPos := choseStationPosition(*in)
 	//t.Log(stationPos)
-	var grid [2500]int16
-	for _, p := range stationPos {
-		grid[p.Y*50+p.X] = 1
-	}
+	//var grid [2500]int16
+	//for _, p := range stationPos {
+	//grid[p.Y*50+p.X] = 1
+	//}
 	//t.Log("Grid result:" + gridToString(grid))
 	t.Log("number of station:", len(stationPos))
 }
@@ -100,56 +125,6 @@ func TestReadInput(t *testing.T) {
 	//log.Println(in)
 }
 
-// ファイルから入力を読み込む関数
-func readInputFile(filename string) (*Input, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %v", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	scanner.Scan()
-
-	// 最初の行をパース (N, M, K, T)
-	header := strings.Fields(scanner.Text())
-	if len(header) < 4 {
-		return nil, fmt.Errorf("invalid input format")
-	}
-
-	in := Input{}
-	in.N, _ = strconv.Atoi(header[0])
-	in.M, _ = strconv.Atoi(header[1])
-	in.K, _ = strconv.Atoi(header[2])
-	in.T, _ = strconv.Atoi(header[3])
-
-	in.src = make([]Pos, in.M)
-	in.dst = make([]Pos, in.M)
-	in.income = make([]int, in.M)
-
-	// M 行の (src.Y, src.X, dst.Y, dst.X) を読み込む
-	for i := 0; i < in.M; i++ {
-		if !scanner.Scan() {
-			return nil, fmt.Errorf("unexpected EOF while reading positions")
-		}
-		fields := strings.Fields(scanner.Text())
-		if len(fields) < 4 {
-			return nil, fmt.Errorf("invalid position format on line %d", i+2)
-		}
-
-		srcY, _ := strconv.Atoi(fields[0])
-		srcX, _ := strconv.Atoi(fields[1])
-		dstY, _ := strconv.Atoi(fields[2])
-		dstX, _ := strconv.Atoi(fields[3])
-
-		in.src[i] = Pos{X: int16(srcX), Y: int16(srcY)}
-		in.dst[i] = Pos{X: int16(dstX), Y: int16(dstY)}
-		in.income[i] = int(distance(in.src[i], in.dst[i])) // 収入は距離
-	}
-	//log.Printf("readInput: N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
-	return &in, nil
-}
-
 func TestGridCalculation(t *testing.T) {
 	p := Pos{X: 10, Y: 10}
 	var grid [2500]int16
@@ -161,7 +136,7 @@ func TestGridCalculation(t *testing.T) {
 			grid[next.Y*50+next.X] = i
 		}
 	}
-	//t.Log("Grid result:" + gridToString(grid))
+	t.Log("Grid result:" + gridToString(grid))
 }
 
 func TestIsRailConnected(t *testing.T) {
@@ -213,4 +188,130 @@ func TestIsRailConnected(t *testing.T) {
 			}
 		})
 	}
+}
+
+// テストに必要な補助関数
+
+// ファイルから入力を読み込む関数
+func readInputFile(filename string) (*Input, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Scan()
+
+	// 最初の行をパース (N, M, K, T)
+	header := strings.Fields(scanner.Text())
+	if len(header) < 4 {
+		return nil, fmt.Errorf("invalid input format")
+	}
+
+	in := Input{}
+	in.N, _ = strconv.Atoi(header[0])
+	in.M, _ = strconv.Atoi(header[1])
+	in.K, _ = strconv.Atoi(header[2])
+	in.T, _ = strconv.Atoi(header[3])
+
+	in.src = make([]Pos, in.M)
+	in.dst = make([]Pos, in.M)
+	in.income = make([]int, in.M)
+
+	// M 行の (src.Y, src.X, dst.Y, dst.X) を読み込む
+	for i := 0; i < in.M; i++ {
+		if !scanner.Scan() {
+			return nil, fmt.Errorf("unexpected EOF while reading positions")
+		}
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 4 {
+			return nil, fmt.Errorf("invalid position format on line %d", i+2)
+		}
+
+		srcY, _ := strconv.Atoi(fields[0])
+		srcX, _ := strconv.Atoi(fields[1])
+		dstY, _ := strconv.Atoi(fields[2])
+		dstX, _ := strconv.Atoi(fields[3])
+
+		in.src[i] = Pos{X: int16(srcX), Y: int16(srcY)}
+		in.dst[i] = Pos{X: int16(dstX), Y: int16(dstY)}
+		in.income[i] = int(distance(in.src[i], in.dst[i])) // 収入は距離
+	}
+	//log.Printf("readInput: N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
+	return &in, nil
+}
+
+func TestReadGridFile(t *testing.T) {
+	grid, err := readGridFile("test/t0000.txt")
+	if err != nil {
+		t.Fatalf("failed to read grid: %v", err)
+	}
+	f := NewField(50)
+	for i := 0; i < 50; i++ {
+		for j := 0; j < 50; j++ {
+			a := Action{Kind: grid[i][j], X: int16(j), Y: int16(i)}
+			err := f.build(a)
+			if err != nil {
+				t.Fatalf("failed to build: %v", err)
+			}
+		}
+	}
+}
+
+func readGridFileToFild(filename string) (*Field, error) {
+	grid, err := readGridFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read grid: %v", err)
+	}
+	f := NewField(50)
+	for i := 0; i < 50; i++ {
+		for j := 0; j < 50; j++ {
+			a := Action{Kind: grid[i][j], X: int16(j), Y: int16(i)}
+			err := f.build(a)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build: %v", err)
+			}
+		}
+	}
+	return f, nil
+}
+
+func readGridFile(filename string) ([][]int16, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	grid := make([][]int16, 50)
+	scanner := bufio.NewScanner(file)
+	for i := 0; i < 50; i++ {
+		scanner.Scan()
+		line := scanner.Text()
+		runes := []rune(line)
+		grid[i] = make([]int16, 50)
+		for j := 0; j < 50; j++ {
+			v, exit := reverseRailMap[string(runes[j])]
+			if !exit {
+				log.Println("invalid character", runes[j], string(runes[j]))
+				return nil, fmt.Errorf("invalid character")
+			}
+			grid[i][j] = v
+		}
+	}
+	return grid, nil
+}
+
+// reverseRailMap は、railMapの逆引き
+var reverseRailMap = map[string]int16{
+	".": EMPTY,
+	"◎": STATION,
+	"─": RAIL_HORIZONTAL,
+	"│": RAIL_VERTICAL,
+	"┐": RAIL_LEFT_DOWN,
+	"┘": RAIL_LEFT_UP,
+	"└": RAIL_RIGHT_UP,
+	"┌": RAIL_RIGHT_DOWN,
+	"#": OTHER,
 }

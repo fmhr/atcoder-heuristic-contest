@@ -138,8 +138,12 @@ type Field struct {
 	uf       *UnionFind
 }
 
-// n はUnionFindで使うノードの数
+// n == 50
+// 全マスをノードとして、UFをもつ
 func NewField(n int) *Field {
+	if n != 50 {
+		panic("n need to be 50")
+	}
 	f := new(Field)
 	for i := 0; i < n; i++ {
 		for j := 0; j < n; j++ {
