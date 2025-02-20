@@ -28,8 +28,43 @@ const (
 	OTHER           int16 = 7 // テストの障害物として使う
 )
 
+// int16ToString は、レールタイプのint16の種類を文字列に変換する
+// EMPTY = DO_NOTHING = -1 に注意
+func int16ToString(a int16) string {
+	switch a {
+	case EMPTY:
+		return "EMPTY"
+	case STATION:
+		return "STATION"
+	case RAIL_HORIZONTAL:
+		return "RAIL_HORIZONTAL"
+	case RAIL_VERTICAL:
+		return "RAIL_VERTICAL"
+	case RAIL_LEFT_DOWN:
+		return "RAIL_LEFT_DOWN"
+	case RAIL_LEFT_UP:
+		return "RAIL_LEFT_UP"
+	case RAIL_RIGHT_UP:
+		return "RAIL_RIGHT_UP"
+	case RAIL_RIGHT_DOWN:
+		return "RAIL_RIGHT_DOWN"
+	case OTHER:
+		return "OTHER"
+	}
+	return "UNKNOWN"
+}
+
 func isRail(kind int16) bool {
 	return kind >= RAIL_HORIZONTAL && kind <= RAIL_RIGHT_DOWN
+}
+
+// railToString は、[]int16のレールの種類を文字列に変換する
+func railToString(rails []int16) string {
+	str := ""
+	for j := 0; j < len(rails); j++ {
+		str += fmt.Sprintf(" %s", railMap[rails[j]])
+	}
+	return str
 }
 
 var railMap = map[int16]string{
@@ -133,15 +168,20 @@ func (f Field) cellString() string {
 	return str
 }
 
-func (f *Field) build(act Action) {
+func (f *Field) build(act Action) error {
 	if act.Kind == DO_NOTHING {
-		return
-	}
-	if f.cell[act.Y][act.X] != EMPTY {
-		panic("already built")
+		return nil
 	}
 	if act.Kind < 0 || act.Kind > 6 {
-		panic("invalid kind:" + fmt.Sprint(act.Kind))
+		//panic("invalid kind:" + fmt.Sprint(act.Kind))
+		return fmt.Errorf("invalid kind:%s", fmt.Sprint(act.Kind))
+	}
+	if f.cell[act.Y][act.X] != EMPTY {
+		if !(act.Kind == STATION && f.cell[act.Y][act.X] >= 1 && f.cell[act.Y][act.X] <= 6) {
+			// 駅は線路の上に建てることができる
+			log.Printf("try to build: typ:%d Y:%d X:%d but already built %d\n", act.Kind, act.Y, act.X, f.cell[act.Y][act.X])
+			return fmt.Errorf("already built")
+		}
 	}
 	if act.Kind == STATION {
 		f.stations = append(f.stations, Pos{Y: act.Y, X: act.X})
@@ -190,6 +230,7 @@ func (f *Field) build(act Action) {
 			}
 		}
 	}
+	return nil
 }
 
 // collectStationsは、posから距離２以内の駅の位置を返す
@@ -354,7 +395,7 @@ func (f Field) countSrcDst(pos Pos, in Input) (srcNum, dstNum int) {
 	return srcNum, dstNum
 }
 
-// 駅a, bが繋がることができるか、できないとき"-1",できるとき距離を返す
+// 駅a, bが繋がることができるか、できないときnil,できるとき距離を返すpath
 func (f Field) canConnect(a, b Pos) []Pos {
 	var dist [2500]int16
 	for i := 0; i < 2500; i++ {
@@ -450,7 +491,10 @@ func (s *State) do(act Action, in Input) error {
 		return ErrNotEnoughMoney
 	}
 	if act.Kind != DO_NOTHING {
-		s.field.build(act)
+		err := s.field.build(act)
+		if err != nil {
+			return err
+		}
 		s.money -= buildCost[act.Kind]
 		if act.Kind == STATION {
 			s.income = 0
@@ -500,6 +544,16 @@ func (p Pos) Clone() Pos {
 
 func distance(a, b Pos) int16 {
 	return absInt16(a.X-b.X) + absInt16(a.Y-b.Y)
+}
+
+type Pair [2]Pos
+
+// uniquePair は、p1, p2の順番を統一してのPairを返す
+func uniquePair(p1, p2 Pos) Pair {
+	if p1.Y < p2.Y || p1.Y == p2.Y && p1.X < p2.X {
+		return Pair{p1, p2}
+	}
+	return Pair{p2, p1}
 }
 
 // stationの周辺
@@ -632,6 +686,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			//log.Println(field.cellString())
 		}
 	}
+	log.Println(field.cellString())
 	//log.Println("Num of Stations", numStations)
 	//log.Println("Num of Edges", len(mstEdges))
 	//log.Println(field.cellString())
@@ -661,6 +716,72 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	//for _, edge := range mstEdges {
 	//log.Println(edge.From, edge.To, edge.Cost, len(edge.Path), len(edge.Rail))
 	//}
+	///////////////////////////////////
+	// 全てに駅間を繋ぐエッジを作る
+	field2 := NewField(in.N) // mstEdgesで使われている場所だけを使う
+	for i := 0; i < in.N; i++ {
+		for j := 0; j < in.N; j++ {
+			field2.cell[i][j] = OTHER
+		}
+	}
+	for _, edge := range mstEdges {
+		for _, p := range edge.Path {
+			field2.cell[p.Y][p.X] = EMPTY
+		}
+	}
+	//log.Println(field2.cellString())
+	pathpath := make([][]Pos, 0, numStations)
+	for i := 0; i < numStations; i++ {
+		for j := i + 1; j < numStations; j++ {
+			path := field2.canConnect(stations[i], stations[j])
+			pathpath = append(pathpath, path)
+		}
+	}
+	log.Println("stations", len(stations))
+	log.Println("pathpath", len(pathpath))
+	///////////////////////////////////
+	// src,dstの対応する駅を探して、その間を繋ぐエッジを作る
+	count := 0
+	unique := make(map[Pair]bool)
+	for i := 0; i < in.M; i++ {
+		src, dst := in.src[i], in.dst[i]
+		statinsSrc := make([]Pos, 0)
+		statinsDst := make([]Pos, 0)
+		for _, s := range stations {
+			if distance(s, src) <= 2 {
+				statinsSrc = append(statinsSrc, s)
+			}
+			if distance(s, dst) <= 2 {
+				statinsDst = append(statinsDst, s)
+			}
+
+		}
+		if len(statinsSrc) == 0 || len(statinsDst) == 0 {
+			// すべての家と職場は駅から距離２以内にある
+			panic("no station")
+		}
+		for _, s0 := range statinsSrc {
+			for _, s1 := range statinsDst {
+				if unique[uniquePair(s0, s1)] {
+					continue
+				}
+				if s0 == s1 {
+					continue
+				}
+				unique[uniquePair(s0, s1)] = true
+				path := field2.canConnect(s0, s1)
+				if path != nil {
+					types := field2.selectRails(path)
+					edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types}
+					mstEdges = append(mstEdges, edge)
+					count++
+				} else {
+					log.Fatal("can't connect", s0, s1)
+				}
+			}
+		}
+	}
+	log.Println("count", count, len(unique))
 	return mstEdges
 }
 
@@ -756,15 +877,15 @@ func beamSearch(in Input) {
 	}
 	for _, e := range edges {
 		allAction = append(allAction, bsAction{path: e.Path, typ: e.Rail})
+		//log.Println(railToString(e.Rail))
 	}
 	log.Println("actionNum", len(allAction))
-
 	initialState := newBsState(&in, len(allAction))
-	beamWidth := 100
+	beamWidth := 10000
 	beamStates := make([]bsState, 0, beamWidth)
 	beamStates = append(beamStates, *initialState)
 	nextStates := make([]bsState, 0, beamWidth)
-	resultStates := make([]bsState, 0, beamWidth)
+	bestState := initialState.Clone()
 	var loop int
 	for len(beamStates) > 0 {
 		for i := 0; i < min(beamWidth, len(beamStates)); i++ {
@@ -789,16 +910,21 @@ func beamSearch(in Input) {
 					p = append(p, act.path[i])
 					t = append(t, act.typ[i])
 				}
-				//costMoney := calBuildCost(t) 純粋なコスト(money)
-				costTime := beamStates[i].state.canDo(t) // incomeを考慮したコスト
-				if costTime == -1 {
+				costMoney := calBuildCost(t) //純粋なコスト(money)
+				if beamStates[i].state.money < costMoney {
 					continue
 				}
-				//log.Println(len(p), "DoNothing", costTime-len(p))
-				// 残されたターン数で実行できない時
-				if 800-beamStates[i].state.turn < costTime {
-					continue
-				}
+				costTime := 0
+				// DO_NOTHINGで必要な分だけ待つ
+				//costTime := beamStates[i].state.canDo(t) // incomeを考慮したコスト
+				//if costTime == -1 {
+				//continue
+				//}
+				////log.Println(len(p), "DoNothing", costTime-len(p))
+				//// 残されたターン数で実行できない時
+				//if 800-beamStates[i].state.turn < costTime {
+				//continue
+				//}
 				newState := beamStates[i].Clone()
 				// DO_NOTHINGで必要な分だけ待つ
 				if len(p) < costTime {
@@ -810,15 +936,15 @@ func beamSearch(in Input) {
 				for j := 0; j < len(p); j++ {
 					err := newState.state.do(Action{Kind: t[j], Y: p[j].Y, X: p[j].X}, in)
 					if err != nil {
-						log.Println(err)
+						panic(err)
 					}
 				}
 				// delete action
 				newState.restActions = append(newState.restActions[:j], newState.restActions[j+1:]...)
-				if newState.state.income > 0 {
-					log.Println(newState.state.turn, newState.state.money, newState.state.income, newState.state.score)
-				}
 				nextStates = append(nextStates, *newState)
+				if newState.state.score > bestState.state.score {
+					bestState = newState.Clone()
+				}
 			}
 		}
 		log.Println("nextStates", len(nextStates))
@@ -829,19 +955,18 @@ func beamSearch(in Input) {
 			log.Println("score:", nextStates[0].state.score, nextStates[len(nextStates)-1].state.score)
 			log.Println("income:", nextStates[0].state.income, nextStates[len(nextStates)-1].state.income)
 		}
-		log.Println("loop", loop, "beamStates", len(beamStates), "resultStates", len(resultStates))
-		//if len(nextStates) > beamWidth {
-		//beamStates = nextStates[:beamWidth]
-		//} else {
-		beamStates = nextStates
-		//}
+		log.Println("loop", loop, "beamStates", len(beamStates))
+		if len(nextStates) > beamWidth {
+			beamStates = nextStates[:beamWidth]
+		} else {
+			beamStates = nextStates
+		}
 		nextStates = make([]bsState, 0, beamWidth)
 		loop++
 	}
-	log.Println(len(resultStates))
-	for _, s := range resultStates {
-		log.Println(s.state.score)
-	}
+	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
+	log.Println(bestState.state.field.cellString())
+
 }
 
 func greedy(in Input) {
