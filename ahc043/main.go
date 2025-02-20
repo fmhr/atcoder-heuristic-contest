@@ -14,6 +14,17 @@ const (
 	COST_STATION = 5000
 	COST_RAIL    = 100
 )
+const (
+	// 0:UP, 1:RIGHT, 2:DOWN, 3:LEFT
+	UP    = 0
+	RIGHT = 1
+	DOWN  = 2
+	LEFT  = 3
+)
+
+// UP, RIGHT, DOWN, LEFT
+var dy = []int16{-1, 0, 1, 0}
+var dx = []int16{0, 1, 0, -1}
 
 const (
 	EMPTY           int16 = -1
@@ -263,10 +274,6 @@ func (f Field) isConnected(a, b Pos) bool {
 	return false
 }
 
-// UP, RIGHT, DOWN, LEFT
-var dy = []int16{-1, 0, 1, 0}
-var dx = []int16{0, 1, 0, -1}
-
 // 2点間の最短経路を返す (a から b へ)
 // bはEMPTYまたはSTATION
 func (f *Field) shortestPath(a, b Pos) (path []Pos) {
@@ -396,9 +403,34 @@ func (f Field) countSrcDst(pos Pos, in Input) (srcNum, dstNum int) {
 	return srcNum, dstNum
 }
 
+// railが繋がる向きを返す,dy,dxに対応
+// 0:UP, 1:RIGHT, 2:DOWN, 3:LEFT
+func railDirection(rail int16) []int16 {
+	switch rail {
+	case RAIL_HORIZONTAL:
+		return []int16{1, 3}
+	case RAIL_VERTICAL:
+		return []int16{0, 2}
+	case RAIL_LEFT_DOWN:
+		return []int16{3, 2}
+	case RAIL_LEFT_UP:
+		return []int16{0, 3}
+	case RAIL_RIGHT_UP:
+		return []int16{0, 1}
+	case RAIL_RIGHT_DOWN:
+		return []int16{1, 2}
+	case STATION, EMPTY:
+		return []int16{0, 1, 2, 3}
+	}
+	return nil
+}
+
 // 駅a, bが繋がることができるか、できないときnil,できるとき距離を返すpath
 // すでにある線路も活用できるようにする
+// 繋がらなかった時はnilを返す
+// 繋がっているはずにnilになる場合はバグなので、呼び出し元でチェックする
 func (f Field) canConnect(a, b Pos) []Pos {
+	//log.Println(f.cellString())
 	var dist [2500]int16
 	for i := 0; i < 2500; i++ {
 		dist[i] = 10000
@@ -411,7 +443,12 @@ func (f Field) canConnect(a, b Pos) []Pos {
 		if p == b {
 			break
 		}
-		for d := 0; d < 4; d++ {
+		direct := railDirection(f.cell[p.Y][p.X])
+		if len(direct) == 0 {
+			log.Println(f.cell[p.Y][p.X])
+			panic("invalid rail")
+		}
+		for _, d := range direct {
 			y, x := p.Y+dy[d], p.X+dx[d]
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				continue
@@ -422,26 +459,59 @@ func (f Field) canConnect(a, b Pos) []Pos {
 					q = append(q, Pos{Y: y, X: x})
 				}
 			}
+			if isRail(f.cell[y][x]) {
+				connect := false
+				switch d {
+				case UP:
+					if f.cell[y][x] == RAIL_VERTICAL || f.cell[y][x] == RAIL_LEFT_DOWN || f.cell[y][x] == RAIL_RIGHT_DOWN {
+						connect = true
+					}
+				case RIGHT:
+					if f.cell[y][x] == RAIL_HORIZONTAL || f.cell[y][x] == RAIL_LEFT_DOWN || f.cell[y][x] == RAIL_LEFT_UP {
+						connect = true
+					}
+				case DOWN:
+					if f.cell[y][x] == RAIL_VERTICAL || f.cell[y][x] == RAIL_LEFT_UP || f.cell[y][x] == RAIL_RIGHT_UP {
+						connect = true
+					}
+				case LEFT:
+					if f.cell[y][x] == RAIL_HORIZONTAL || f.cell[y][x] == RAIL_RIGHT_DOWN || f.cell[y][x] == RAIL_RIGHT_UP {
+						connect = true
+					}
+				}
+				if connect {
+					if dist[int(y)*50+int(x)] > dist[int(p.Y)*50+int(p.X)]+1 {
+						dist[int(y)*50+int(x)] = dist[int(p.Y)*50+int(p.X)] + 1
+						q = append(q, Pos{Y: y, X: x})
+					}
+				}
+			}
 		}
 	}
+	//log.Println("dist", dist[int(b.Y)*50+int(b.X)])
 	if dist[int(b.Y)*50+int(b.X)] == 10000 {
+		log.Println("can't reach", a, b)
 		return nil
 	}
+	//log.Println(f.cellString())
+	//log.Println(gridToString(dist))
+	//log.Println(dist[int(b.Y)*50+int(b.X)], dist[int(a.Y)*50+int(a.X)])
+	//log.Println(b, a)
 	// b から a への経路を復元
 	path := []Pos{b}
-	for path[len(path)-1] != a {
+MAKEPATH:
+	for {
 		p := path[len(path)-1]
 		for d := 0; d < 4; d++ {
 			y, x := p.Y+dy[d], p.X+dx[d]
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
+				// 場外
 				continue
 			}
 			if y == a.Y && x == a.X {
+				// 駅に到達
 				path = append(path, Pos{Y: y, X: x})
-				break
-			}
-			if f.cell[y][x] != EMPTY && f.cell[y][x] != STATION {
-				continue
+				break MAKEPATH
 			}
 			if dist[int(y)*50+int(x)] == dist[int(p.Y)*50+int(p.X)]-1 {
 				path = append(path, Pos{Y: y, X: x})
@@ -449,6 +519,7 @@ func (f Field) canConnect(a, b Pos) []Pos {
 			}
 		}
 	}
+	//log.Println("len(path)", len(path))
 	for i := 0; i < len(path)/2; i++ {
 		path[i], path[len(path)-1-i] = path[len(path)-1-i], path[i]
 	}
@@ -645,7 +716,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	for i := 0; i < numStations; i++ {
 		field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
 	}
-	//log.Println(field.cellString())
+	log.Println(field.cellString())
 	edges := []Edge{}
 	for i := 0; i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
@@ -662,17 +733,15 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	// Kruskal法で最小全域木を求める
 	mstEdges := []Edge{}
 	for _, edge := range edges {
-		//log.Println("edge", edge, uf.same(edge.From, edge.To), field.uf.same(edge.From, edge.To))
 		if uf.same(edge.From, edge.To) || field.uf.same(edge.From, edge.To) {
 			continue
 		}
 		path := field.canConnect(stations[edge.From], stations[edge.To])
-		//log.Println("path", path)
+		// ここではフィールドを使っているので、path=nilの可能性もあり
 		if path != nil {
 			types := field.selectRails(path)
 			// 途中に駅があるか確認
 			// サイクルを作らない場合もあるので消さない
-
 			for i := 1; i < len(path)-1; i++ {
 				if field.cell[path[i].Y][path[i].X] == STATION {
 					continue
@@ -739,6 +808,10 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	for i := 0; i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
 			path := field2.canConnect(stations[i], stations[j])
+			// すべての駅は繋がっているはずなので、nilはありえない
+			if path == nil {
+				log.Fatal("can't connect", i, stations[i], j, stations[j])
+			}
 			pathpath = append(pathpath, path)
 		}
 	}
@@ -776,14 +849,13 @@ func constructRailway(in Input, stations []Pos) []Edge {
 				}
 				unique[uniquePair(s0, s1)] = true
 				path := field2.canConnect(s0, s1)
-				if path != nil {
-					types := field2.selectRails(path)
-					edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types}
-					mstEdges = append(mstEdges, edge)
-					count++
-				} else {
+				if len(path) == 0 {
 					log.Fatal("can't connect", s0, s1)
 				}
+				types := field2.selectRails(path)
+				edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types}
+				mstEdges = append(mstEdges, edge)
+				count++
 			}
 		}
 	}
