@@ -79,19 +79,19 @@ func railToString(rails []int16) string {
 }
 
 var railMap = map[int16]string{
-	-1:              ".", // EMPTY
-	STATION:         "◎", // STATION
-	RAIL_HORIZONTAL: "─", // RAIL_HORIZONTAL
-	RAIL_VERTICAL:   "│", // RAIL_VERTICAL
-	RAIL_LEFT_DOWN:  "┐", // RAIL_LEFT_DOWN
-	RAIL_LEFT_UP:    "┘", // RAIL_LEFT_UP
-	RAIL_RIGHT_UP:   "└", // RAIL_RIGHT_UP
-	RAIL_RIGHT_DOWN: "┌", // RAIL_RIGHT_DOWN
-	OTHER:           "#", // other
+	EMPTY:           ".",
+	STATION:         "◎",
+	RAIL_HORIZONTAL: "─",
+	RAIL_VERTICAL:   "│",
+	RAIL_LEFT_DOWN:  "┐",
+	RAIL_LEFT_UP:    "┘",
+	RAIL_RIGHT_UP:   "└",
+	RAIL_RIGHT_DOWN: "┌",
+	OTHER:           "#",
 }
 
 var buildCost = map[int16]int{
-	-1:              0,            // EMPTY
+	EMPTY:           0,            // EMPTY
 	STATION:         COST_STATION, // STATION
 	RAIL_HORIZONTAL: COST_RAIL,
 	RAIL_VERTICAL:   COST_RAIL,
@@ -99,9 +99,10 @@ var buildCost = map[int16]int{
 	RAIL_LEFT_UP:    COST_RAIL,
 	RAIL_RIGHT_UP:   COST_RAIL,
 	RAIL_RIGHT_DOWN: COST_RAIL,
-	7:               0, // other
+	OTHER:           0, // other
 }
 
+// calBuildCost は、[]actの建設コストを計算する
 func calBuildCost(act []int16) (cost int) {
 	for _, a := range act {
 		cost += buildCost[a]
@@ -201,6 +202,7 @@ func (f *Field) build(act Action) error {
 	// 連結成分をつなげる
 	y, x := act.Y, act.X
 	kind := act.Kind
+	// 上下左右を確認して、線路が繋がっている場合は連結成分をつなげる
 	// 上
 	if y > 0 {
 		switch kind {
