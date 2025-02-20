@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -71,11 +72,12 @@ func isRail(kind int16) bool {
 
 // railToString は、[]int16のレールの種類を文字列に変換する
 func railToString(rails []int16) string {
-	str := ""
-	for j := 0; j < len(rails); j++ {
-		str += fmt.Sprintf(" %s", railMap[rails[j]])
+	var sb strings.Builder
+	for _, rail := range rails {
+		sb.WriteString(" ")
+		sb.WriteString(railMap[rail])
 	}
-	return str
+	return sb.String()
 }
 
 var railMap = map[int16]string{
@@ -105,7 +107,11 @@ var buildCost = map[int16]int{
 // calBuildCost は、[]actの建設コストを計算する
 func calBuildCost(act []int16) (cost int) {
 	for _, a := range act {
-		cost += buildCost[a]
+		if val, ok := buildCost[a]; ok {
+			cost += val
+		} else {
+			log.Printf("calBuildCost: invalid kind:%d\n", a)
+		}
 	}
 	return
 }
