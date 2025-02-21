@@ -207,7 +207,7 @@ func (f *Field) build(act Action) error {
 	if f.cell[act.Y][act.X] != EMPTY {
 		if !(act.Kind == STATION && f.cell[act.Y][act.X] >= 1 && f.cell[act.Y][act.X] <= 6) {
 			// 駅は線路の上に建てることができる
-			log.Println(f.cellString())
+			//log.Println(f.cellString())
 			log.Printf("try to build: typ:%d Y:%d X:%d but already built %d\n", act.Kind, act.Y, act.X, f.cell[act.Y][act.X])
 			return fmt.Errorf("already built")
 		}
@@ -1155,12 +1155,14 @@ func beamSearch(in Input) {
 		}
 		log.Println("nextStates", len(nextStates))
 		sort.Slice(nextStates, func(i, j int) bool {
+			if nextStates[i].state.turn == nextStates[j].state.turn {
+				return nextStates[i].state.income > nextStates[j].state.income
+			}
 			return nextStates[i].state.score > nextStates[j].state.score
 		})
 		if len(nextStates) > 0 {
 			log.Println("score:", nextStates[0].state.score, nextStates[len(nextStates)-1].state.score)
 			log.Println("income:", nextStates[0].state.income, nextStates[len(nextStates)-1].state.income)
-			log.Println("0:", nextStates[0].state.score, "last:", nextStates[len(nextStates)-1].state.score)
 		}
 		log.Println("loop", loop, "beamStates", len(beamStates))
 		if len(nextStates) > beamWidth {
