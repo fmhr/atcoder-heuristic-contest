@@ -11,6 +11,10 @@ import (
 )
 
 const (
+	N = 50
+)
+
+const (
 	COST_STATION = 5000
 	COST_RAIL    = 100
 )
@@ -163,19 +167,18 @@ func (f *Field) Clone() *Field {
 		stations: make([]Pos, len(f.stations)),
 		uf:       f.uf.Clone(),
 	}
+	copy(newField.stations, f.stations)
+	// 2次元配列のコピーを最適化
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
 			newField.cell[i][j] = f.cell[i][j]
 		}
 	}
-	for i, pos := range f.stations {
-		newField.stations[i] = pos.Clone()
-	}
 	return newField
 }
 
-// cellType は、posのセルの種類を返す 表示用のレールの記号
-func (f Field) cellType(pos Pos) string {
+// typeToString は、posのセルの種類を返す 表示用のレールの記号
+func (f Field) typeToString(pos Pos) string {
 	return railMap[f.cell[pos.Y][pos.X]]
 }
 
@@ -220,7 +223,7 @@ func (f *Field) build(act Action) error {
 		case STATION, RAIL_VERTICAL, RAIL_LEFT_UP, RAIL_RIGHT_UP:
 			switch f.cell[y-1][x] {
 			case STATION, RAIL_VERTICAL, RAIL_LEFT_DOWN, RAIL_RIGHT_DOWN:
-				f.uf.unite(int(y)*50+int(x), int(y-1)*50+int(x))
+				f.uf.unite((y*50 + x), ((y-1)*50 + x))
 			}
 		}
 	}
@@ -230,7 +233,7 @@ func (f *Field) build(act Action) error {
 		case STATION, RAIL_VERTICAL, RAIL_LEFT_DOWN, RAIL_RIGHT_DOWN:
 			switch f.cell[y+1][x] {
 			case STATION, RAIL_VERTICAL, RAIL_LEFT_UP, RAIL_RIGHT_UP:
-				f.uf.unite(int(y)*50+int(x), int(y+1)*50+int(x))
+				f.uf.unite(y*50+x, (y+1)*50+x)
 			}
 		}
 	}
@@ -240,7 +243,7 @@ func (f *Field) build(act Action) error {
 		case STATION, RAIL_HORIZONTAL, RAIL_LEFT_DOWN, RAIL_LEFT_UP:
 			switch f.cell[y][x-1] {
 			case STATION, RAIL_HORIZONTAL, RAIL_RIGHT_DOWN, RAIL_RIGHT_UP:
-				f.uf.unite(int(y)*50+int(x), int(y)*50+int(x-1))
+				f.uf.unite(y*50+x, y*50+(x-1))
 			}
 		}
 	}
@@ -250,7 +253,7 @@ func (f *Field) build(act Action) error {
 		case STATION, RAIL_HORIZONTAL, RAIL_RIGHT_DOWN, RAIL_RIGHT_UP:
 			switch f.cell[y][x+1] {
 			case STATION, RAIL_HORIZONTAL, RAIL_LEFT_DOWN, RAIL_LEFT_UP:
-				f.uf.unite(int(y)*50+int(x), int(y)*50+int(x+1))
+				f.uf.unite(y*50+x, y*50+(x+1))
 			}
 		}
 	}
@@ -275,7 +278,7 @@ func (f Field) collectStations(pos Pos) (stations []Pos) {
 
 // checkConnect 駅,路線をつかって、a,bがつながっているかを返す
 func (f Field) checkConnect(a, b Pos) bool {
-	if f.uf.same(int(a.Y)*50+int(a.X), int(b.Y)*50+int(b.X)) {
+	if f.uf.same(a.Y*50+a.X, b.Y*50+b.X) {
 		return true
 	}
 
@@ -289,7 +292,7 @@ func (f Field) checkConnect(a, b Pos) bool {
 	}
 	for _, s0 := range stations0 {
 		for _, s1 := range stations1 {
-			if f.uf.same(int(s0.Y)*50+int(s0.X), int(s1.Y)*50+int(s1.X)) {
+			if f.uf.same(s0.Y*50+s0.X, s1.Y*50+s1.X) {
 				return true
 			}
 		}
@@ -831,7 +834,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	mstEdges := []Edge{}
 	for _, edge := range edges {
 		// すでに連結されている場合はスキップ
-		if uf.same(edge.From, edge.To) {
+		if uf.same(int16(edge.From), int16(edge.To)) {
 			continue
 		}
 		// 連結可能か確認
@@ -847,7 +850,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 				}
 				field.build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
 			}
-			uf.unite(edge.From, edge.To)
+			uf.unite(int16(edge.From), int16(edge.To))
 			edge.Path = path
 			edge.Rail = types
 			mstEdges = append(mstEdges, edge)
@@ -1382,7 +1385,7 @@ func absInt(x int) int {
 }
 
 type UnionFind struct {
-	par [2500]int
+	par [2500]int16
 }
 
 func (uf *UnionFind) Clone() *UnionFind {
@@ -1398,13 +1401,13 @@ func (uf *UnionFind) Clone() *UnionFind {
 // 2500固定
 func NewUnionFind() *UnionFind {
 	uf := new(UnionFind)
-	for i := 0; i < 2500; i++ {
+	for i := int16(0); i < 2500; i++ {
 		uf.par[i] = i
 	}
 	return uf
 }
 
-func (uf *UnionFind) root(a int) int {
+func (uf *UnionFind) root(a int16) int16 {
 	if uf.par[a] == a {
 		return a
 	}
@@ -1412,11 +1415,11 @@ func (uf *UnionFind) root(a int) int {
 	return uf.par[a]
 }
 
-func (uf *UnionFind) same(a, b int) bool {
-	return uf.root(a) == uf.root(b)
+func (uf *UnionFind) same(a, b int16) bool {
+	return uf.root(int16(a)) == uf.root(int16(b))
 }
 
-func (uf *UnionFind) unite(a, b int) {
+func (uf *UnionFind) unite(a, b int16) {
 	a = uf.root(a)
 	b = uf.root(b)
 	if a == b {
