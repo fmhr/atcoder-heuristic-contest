@@ -628,25 +628,28 @@ MAKEPATH:
 var ErrNotEnoughMoney = fmt.Errorf("not enough money")
 
 type State struct {
-	field   *Field
-	money   int
-	turn    int
-	income  int
-	score   int // 最終ターンでの予想スコア
-	actions []Action
+	field     *Field
+	money     int
+	turn      int
+	income    int
+	score     int // 最終ターンでの予想スコア
+	actions   []Action
+	connected []bool // in.Mが接続済みかどうか
 }
 
 func (s *State) Clone() *State {
 	newActions := make([]Action, len(s.actions))
 	copy(newActions, s.actions)
-
+	newConnected := make([]bool, len(s.connected))
+	copy(newConnected, s.connected)
 	newState := &State{
-		field:   s.field.Clone(),
-		money:   s.money,
-		turn:    s.turn,
-		income:  s.income,
-		score:   s.score,
-		actions: newActions,
+		field:     s.field.Clone(),
+		money:     s.money,
+		turn:      s.turn,
+		income:    s.income,
+		score:     s.score,
+		actions:   newActions,
+		connected: newConnected,
 	}
 	return newState
 }
@@ -655,6 +658,7 @@ func NewState(in *Input) *State {
 	s := new(State)
 	s.field = NewField(in.N)
 	s.money = in.K
+	s.connected = make([]bool, in.M)
 	return s
 }
 
@@ -671,10 +675,12 @@ func (s *State) do(act Action, in Input) error {
 		}
 		s.money -= buildCost[act.Kind]
 		if act.Kind == STATION {
-			s.income = 0
 			for i := 0; i < in.M; i++ {
-				if s.field.checkConnect(in.src[i], in.dst[i]) {
-					s.income += in.income[i]
+				if !s.connected[i] {
+					if s.field.checkConnect(in.src[i], in.dst[i]) {
+						s.income += in.income[i]
+						s.connected[i] = true
+					}
 				}
 			}
 		}
@@ -1383,8 +1389,7 @@ func (uf *UnionFind) Clone() *UnionFind {
 	if uf == nil {
 		return nil
 	}
-	newUF := NewUnionFind()
-	//copy(newUF.par, uf.par)
+	newUF := new(UnionFind)
 	newUF.par = uf.par
 	return newUF
 }
@@ -1393,7 +1398,6 @@ func (uf *UnionFind) Clone() *UnionFind {
 // 2500固定
 func NewUnionFind() *UnionFind {
 	uf := new(UnionFind)
-	//uf.par = make([]int, n)
 	for i := 0; i < 2500; i++ {
 		uf.par[i] = i
 	}
@@ -1434,15 +1438,6 @@ func gridToString(grid [2500]int16) (str string) {
 		str += "\n"
 	}
 	return str
-}
-
-func popcount(bits []bool) (count int) {
-	for _, b := range bits {
-		if b {
-			count++
-		}
-	}
-	return count
 }
 
 // MST用
