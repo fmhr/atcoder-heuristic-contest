@@ -93,6 +93,10 @@ func TestDebugBeamSearch(t *testing.T) {
 	t.Log(f.cellString())
 }
 
+// ベンチマークの使い方
+// go test . -bench . -run ^TestBeamSearch$ -v -cpuprofile cpu.prof
+// go tool pprof -http=:8080 cpu.prof
+
 func TestBeamSearch(t *testing.T) {
 	in, err := readInputFile("tools/in/0000.txt")
 	if err != nil {
