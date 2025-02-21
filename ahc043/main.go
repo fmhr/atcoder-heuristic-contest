@@ -150,7 +150,7 @@ func NewField(n int) *Field {
 			f.cell[i][j] = EMPTY
 		}
 	}
-	f.uf = NewUnionFind(n * n)
+	f.uf = NewUnionFind()
 	return f
 }
 
@@ -275,8 +275,18 @@ func (f Field) collectStations(pos Pos) (stations []Pos) {
 
 // checkConnect 駅,路線をつかって、a,bがつながっているかを返す
 func (f Field) checkConnect(a, b Pos) bool {
+	if f.uf.same(int(a.Y)*50+int(a.X), int(b.Y)*50+int(b.X)) {
+		return true
+	}
+
 	stations0 := f.collectStations(a)
+	if len(stations0) == 0 {
+		return false
+	}
 	stations1 := f.collectStations(b)
+	if len(stations1) == 0 {
+		return false
+	}
 	for _, s0 := range stations0 {
 		for _, s1 := range stations1 {
 			if f.uf.same(int(s0.Y)*50+int(s0.X), int(s1.Y)*50+int(s1.X)) {
@@ -810,7 +820,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	})
 
 	// UnionFindで連結成分を管理
-	uf := NewUnionFind(numStations)
+	uf := NewUnionFind()
 	// Kruskal法で最小全域木を求める
 	mstEdges := []Edge{}
 	for _, edge := range edges {
@@ -1366,22 +1376,25 @@ func absInt(x int) int {
 }
 
 type UnionFind struct {
-	par []int
+	par [2500]int
 }
 
 func (uf *UnionFind) Clone() *UnionFind {
 	if uf == nil {
 		return nil
 	}
-	newUF := NewUnionFind(len(uf.par))
-	copy(newUF.par, uf.par)
+	newUF := NewUnionFind()
+	//copy(newUF.par, uf.par)
+	newUF.par = uf.par
 	return newUF
 }
 
-func NewUnionFind(n int) *UnionFind {
+// NewUnionFind は、UnionFindを初期化して返す
+// 2500固定
+func NewUnionFind() *UnionFind {
 	uf := new(UnionFind)
-	uf.par = make([]int, n)
-	for i := 0; i < n; i++ {
+	//uf.par = make([]int, n)
+	for i := 0; i < 2500; i++ {
 		uf.par[i] = i
 	}
 	return uf
