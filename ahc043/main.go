@@ -1154,7 +1154,6 @@ func beamSearch(in Input) {
 				if isolated && len(beamStates[i].state.field.stations) > 0 {
 					continue
 				}
-				log.Println("actions", railToString(t))
 
 				costMoney := calBuildCost(t) //純粋なコスト(money)
 				if beamStates[i].state.money < costMoney && beamStates[i].state.income == 0 {
