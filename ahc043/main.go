@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -637,17 +636,6 @@ func (s *State) do(act Action, in Input, last bool) error {
 						s.income += in.income[i]
 						s.connected[i] = true
 					}
-				}
-				a := s.connected[i]
-				b := s.field.coverd.Get(int(in.src[i].Y*50 + in.src[i].X))
-				c := s.field.coverd.Get(int(in.dst[i].Y*50 + in.dst[i].X))
-				if a != b && c {
-					log.Println(s.field.stations)
-					log.Println(act.String())
-					log.Println(s.field.cellString())
-					log.Println(a, b, c)
-					log.Println("src", in.src[i], "dst", in.dst[i])
-					return errors.New("unmatch connected")
 				}
 			}
 		}
