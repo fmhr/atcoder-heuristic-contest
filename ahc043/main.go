@@ -154,6 +154,7 @@ func NewField(n int) *Field {
 			f.cell[i][j] = EMPTY
 		}
 	}
+	f.stations = make([]Pos, 0, 50)
 	f.uf = NewUnionFind()
 	return f
 }
