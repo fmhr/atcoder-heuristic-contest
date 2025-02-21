@@ -198,16 +198,27 @@ func (f *Field) build(act Action) error {
 	if act.Kind == DO_NOTHING {
 		return nil
 	}
+	// 範囲外
 	if act.Kind < 0 || act.Kind > 6 {
 		//panic("invalid kind:" + fmt.Sprint(act.Kind))
 		return fmt.Errorf("invalid kind:%s", fmt.Sprint(act.Kind))
 	}
+	// すでに建っている
 	if f.cell[act.Y][act.X] != EMPTY {
 		if !(act.Kind == STATION && f.cell[act.Y][act.X] >= 1 && f.cell[act.Y][act.X] <= 6) {
 			// 駅は線路の上に建てることができる
 			log.Println(f.cellString())
 			log.Printf("try to build: typ:%d Y:%d X:%d but already built %d\n", act.Kind, act.Y, act.X, f.cell[act.Y][act.X])
 			return fmt.Errorf("already built")
+		}
+		if isRail(act.Kind) && f.cell[act.Y][act.X] == STATION {
+			panic("駅の上に線路を建てることはできません")
+		}
+		if isRail(act.Kind) && isRail(f.cell[act.Y][act.X]) && act.Kind != f.cell[act.Y][act.X] {
+			panic("線路の上に線路を建てることはできません")
+		}
+		if act.Kind == f.cell[act.Y][act.X] {
+			panic("同じ線路を建てることはできません")
 		}
 	}
 	if act.Kind == STATION {
