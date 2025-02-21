@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -140,6 +141,7 @@ type Field struct {
 	cell     [50][50]int16
 	stations []Pos
 	uf       *UnionFind
+	coverd   BitSet //駅によってカバーされた位置
 }
 
 // n == 50
@@ -169,12 +171,12 @@ func (f *Field) Clone() *Field {
 		uf:       f.uf.Clone(),
 	}
 	copy(newField.stations, f.stations)
-	// 2次元配列のコピーを最適化
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
 			newField.cell[i][j] = f.cell[i][j]
 		}
 	}
+	newField.coverd = f.coverd
 	return newField
 }
 
@@ -186,6 +188,7 @@ func (f Field) typeToString(pos Pos) string {
 func (f Field) cellString() string {
 	str := "view cellString()\n"
 	for i := 0; i < 50; i++ {
+		str += fmt.Sprintf("%2d ", i)
 		for j := 0; j < 50; j++ {
 			str += railMap[f.cell[i][j]]
 		}
@@ -221,12 +224,19 @@ func (f *Field) build(act Action) error {
 			panic("同じ線路を建てることはできません")
 		}
 	}
+	// 建設
+	f.cell[act.Y][act.X] = act.Kind
+
 	// 駅のチェック
 	if act.Kind == STATION {
 		f.stations = append(f.stations, Pos{Y: act.Y, X: act.X})
+		for d := 0; d < 13; d++ {
+			y, x := act.Y+ddy[d], act.X+ddx[d]
+			if y >= 0 && y < 50 && x >= 0 && x < 50 {
+				f.coverd.Set(int(y*50 + x))
+			}
+		}
 	}
-	// 建設
-	f.cell[act.Y][act.X] = act.Kind
 	// 連結成分をつなげる
 	y, x := act.Y, act.X
 	kind := act.Kind
@@ -285,11 +295,8 @@ func (f Field) collectStations(pos Pos) (stations []Pos) {
 }
 
 // checkConnect 駅,路線をつかって、a,bがつながっているかを返す
+// a, b　はHOME, WORKSPACE
 func (f Field) checkConnect(a, b Pos) bool {
-	if f.uf.same(a.Y*50+a.X, b.Y*50+b.X) {
-		return true
-	}
-
 	stations0 := f.collectStations(a)
 	if len(stations0) == 0 {
 		return false
@@ -673,7 +680,7 @@ func NewState(in *Input) *State {
 	return s
 }
 
-func (s *State) do(act Action, in Input) error {
+func (s *State) do(act Action, in Input, last bool) error {
 	if s.money < buildCost[act.Kind] {
 		return ErrNotEnoughMoney
 	}
@@ -685,12 +692,26 @@ func (s *State) do(act Action, in Input) error {
 			return err
 		}
 		s.money -= buildCost[act.Kind]
+		// 駅が建築された時に、隣接するsrc,dstが追加されて収入が増える
 		if act.Kind == STATION {
 			for i := 0; i < in.M; i++ {
 				if !s.connected[i] {
 					if s.field.checkConnect(in.src[i], in.dst[i]) {
 						s.income += in.income[i]
 						s.connected[i] = true
+					}
+				}
+				if last {
+					a := s.connected[i]
+					b := s.field.coverd.Get(int(in.src[i].Y*50 + in.src[i].X))
+					c := s.field.coverd.Get(int(in.dst[i].Y*50 + in.dst[i].X))
+					if a != b && c {
+						log.Println(s.field.stations)
+						log.Println(act.String())
+						log.Println(s.field.cellString())
+						log.Println(a, b, c)
+						log.Println("src", in.src[i], "dst", in.dst[i])
+						return errors.New("unmatch connected")
 					}
 				}
 			}
@@ -1092,30 +1113,49 @@ func beamSearch(in Input) {
 			//nextStates = append(nextStates, *newState)
 		NEWSTATE:
 			for j := 0; j < len(beamStates[i].restActions); j++ {
-				act := allAction[beamStates[i].restActions[j]]
+				acts := allAction[beamStates[i].restActions[j]]
 				// costの確認
 				// actionを精査（駅がすでにあるなら除く)
-				if len(act.path) != len(act.typ) {
+				if len(acts.path) != len(acts.typ) {
 					panic("invalid action")
 				}
 				// 不要なactionをのぞいたp,tを作る
-				p := make([]Pos, 0, len(act.path))
-				t := make([]int16, 0, len(act.typ))
+				p := make([]Pos, 0, len(acts.path))
+				t := make([]int16, 0, len(acts.typ))
 				tmp := beamStates[i].state.field // これはcloneしていないので使わない
-				for i := 0; i < len(act.path); i++ {
-					if act.typ[i] == tmp.cell[act.path[i].Y][act.path[i].X] {
+				for k := 0; k < len(acts.path); k++ {
+					if acts.typ[k] == tmp.cell[acts.path[k].Y][acts.path[k].X] {
 						continue
 					}
-					if isRail(act.typ[i]) && tmp.cell[act.path[i].Y][act.path[i].X] == STATION {
+					if isRail(acts.typ[k]) && tmp.cell[acts.path[k].Y][acts.path[k].X] == STATION {
 						continue
 					}
-					if isRail(act.typ[i]) && isRail(tmp.cell[act.path[i].Y][act.path[i].X]) {
+					if isRail(acts.typ[k]) && isRail(tmp.cell[acts.path[k].Y][acts.path[k].X]) {
 						// 両方線路で種類が違う時
 						break NEWSTATE
 					}
-					p = append(p, act.path[i])
-					t = append(t, act.typ[i])
+					p = append(p, acts.path[k])
+					t = append(t, acts.typ[k])
 				}
+				// 孤立するのは作らない
+				isolated := true
+				for l := 0; l < len(p); l++ {
+					for d := 0; d < 5; d++ {
+						y, x := p[l].Y+ddy[d], p[l].X+ddx[d]
+						if y < 0 || y >= 50 || x < 0 || x >= 50 {
+							continue
+						}
+						if beamStates[i].state.field.cell[y][x] != EMPTY {
+							isolated = false
+							break
+						}
+					}
+				}
+				if isolated && len(beamStates[i].state.field.stations) > 0 {
+					continue
+				}
+				log.Println("actions", railToString(t))
+
 				costMoney := calBuildCost(t) //純粋なコスト(money)
 				if beamStates[i].state.money < costMoney && beamStates[i].state.income == 0 {
 					// お金が足りない＋収入がない時はスキップ
@@ -1133,7 +1173,8 @@ func beamSearch(in Input) {
 				}
 				newState := beamStates[i].Clone()
 				for costMoney > newState.state.money {
-					err := newState.state.do(Action{Kind: DO_NOTHING}, in)
+					// 必要なお金が貯まるまで待つ
+					err := newState.state.do(Action{Kind: DO_NOTHING}, in, false)
 					if err != nil {
 						panic(err)
 					}
@@ -1151,9 +1192,15 @@ func beamSearch(in Input) {
 					panic("not enough money")
 				}
 				for j := 0; j < len(p); j++ {
-					err := newState.state.do(Action{Kind: t[j], Y: p[j].Y, X: p[j].X}, in)
+					last := false
+					if j == len(p)-1 {
+						last = true
+					}
+					err := newState.state.do(Action{Kind: t[j], Y: p[j].Y, X: p[j].X}, in, last)
 					if err != nil {
+						log.Println("j", j)
 						log.Println("actions", railToString(t))
+						log.Println("posision", p[j])
 						log.Println("action", t[j], p[j])
 						panic(err)
 					}
@@ -1203,7 +1250,7 @@ func greedy(in Input) {
 		}
 	}
 	//log.Println(bestCover, bestPos)
-	state.do(Action{Kind: STATION, Y: bestPos.Y, X: bestPos.X}, in)
+	state.do(Action{Kind: STATION, Y: bestPos.Y, X: bestPos.X}, in, false)
 	//log.Printf("\n%s", state.field.cellString())
 	// 現在あるstationでカバーされている片方だけがカバーされていないケースを探す
 	uncoverd_home_workplace := make([]Pos, 0)
@@ -1302,10 +1349,10 @@ func greedy(in Input) {
 		// 最初の一箇所だけ建設済み
 		for j := 1; j < len(path); {
 			act := Action{Kind: types[j], Y: path[j].Y, X: path[j].X}
-			err := state.do(act, in)
+			err := state.do(act, in, false)
 			if err == ErrNotEnoughMoney {
 				// お金が足りない場合は何もしない
-				state.do(Action{Kind: DO_NOTHING}, in)
+				state.do(Action{Kind: DO_NOTHING}, in, false)
 			} else {
 				j++
 			}
@@ -1462,4 +1509,33 @@ type Edge struct {
 type Graph struct {
 	NumNodes int
 	Edges    []Edge
+}
+
+// BitSet は 2500個の bool を uint64 で管理する構造体
+type BitSet struct {
+	bits [40]uint64 // 2500 / 64 = 40
+}
+
+// Set 指定したインデックスのビットを 1 (true) にする
+func (b *BitSet) Set(index int) {
+	if index < 0 || index >= 2500 {
+		panic("index out of range")
+	}
+	b.bits[index/64] |= (1 << (index % 64))
+}
+
+// Clear 指定したインデックスのビットを 0 (false) にする
+func (b *BitSet) Clear(index int) {
+	if index < 0 || index >= 2500 {
+		panic("index out of range")
+	}
+	b.bits[index/64] &^= (1 << (index % 64))
+}
+
+// Get 指定したインデックスのビットの状態を取得する
+func (b *BitSet) Get(index int) bool {
+	if index < 0 || index >= 2500 {
+		panic("index out of range")
+	}
+	return (b.bits[index/64] & (1 << (index % 64))) != 0
 }
