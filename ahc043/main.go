@@ -140,7 +140,6 @@ func (a Action) String() (str string) {
 type Field struct {
 	cell     [50][50]int16
 	stations []Pos
-	uf       *UnionFind
 	coverd   BitSet //駅によってカバーされた位置
 }
 
@@ -157,7 +156,6 @@ func NewField(n int) *Field {
 		}
 	}
 	f.stations = make([]Pos, 0, 50)
-	f.uf = NewUnionFind()
 	return f
 }
 
@@ -168,7 +166,6 @@ func (f *Field) Clone() *Field {
 	newField := &Field{
 		cell:     [50][50]int16{},
 		stations: make([]Pos, len(f.stations)),
-		uf:       f.uf.Clone(),
 	}
 	copy(newField.stations, f.stations)
 	for i := 0; i < 50; i++ {
@@ -238,49 +235,8 @@ func (f *Field) build(act Action) error {
 		}
 	}
 	// 連結成分をつなげる
-	y, x := act.Y, act.X
-	kind := act.Kind
 	// 上下左右を確認して、線路が繋がっている場合は連結成分をつなげる
 	// 上
-	if y > 0 {
-		switch kind {
-		case STATION, RAIL_VERTICAL, RAIL_LEFT_UP, RAIL_RIGHT_UP:
-			switch f.cell[y-1][x] {
-			case STATION, RAIL_VERTICAL, RAIL_LEFT_DOWN, RAIL_RIGHT_DOWN:
-				f.uf.unite((y*50 + x), ((y-1)*50 + x))
-			}
-		}
-	}
-	// 下
-	if y < 49 {
-		switch kind {
-		case STATION, RAIL_VERTICAL, RAIL_LEFT_DOWN, RAIL_RIGHT_DOWN:
-			switch f.cell[y+1][x] {
-			case STATION, RAIL_VERTICAL, RAIL_LEFT_UP, RAIL_RIGHT_UP:
-				f.uf.unite(y*50+x, (y+1)*50+x)
-			}
-		}
-	}
-	// 左
-	if x > 0 {
-		switch kind {
-		case STATION, RAIL_HORIZONTAL, RAIL_LEFT_DOWN, RAIL_LEFT_UP:
-			switch f.cell[y][x-1] {
-			case STATION, RAIL_HORIZONTAL, RAIL_RIGHT_DOWN, RAIL_RIGHT_UP:
-				f.uf.unite(y*50+x, y*50+(x-1))
-			}
-		}
-	}
-	// 右
-	if x < 49 {
-		switch kind {
-		case STATION, RAIL_HORIZONTAL, RAIL_RIGHT_DOWN, RAIL_RIGHT_UP:
-			switch f.cell[y][x+1] {
-			case STATION, RAIL_HORIZONTAL, RAIL_LEFT_DOWN, RAIL_LEFT_UP:
-				f.uf.unite(y*50+x, y*50+(x+1))
-			}
-		}
-	}
 	return nil
 }
 
@@ -297,22 +253,7 @@ func (f Field) collectStations(pos Pos) (stations []Pos) {
 // checkConnect 駅,路線をつかって、a,bがつながっているかを返す
 // a, b　はHOME, WORKSPACE
 func (f Field) checkConnect(a, b Pos) bool {
-	stations0 := f.collectStations(a)
-	if len(stations0) == 0 {
-		return false
-	}
-	stations1 := f.collectStations(b)
-	if len(stations1) == 0 {
-		return false
-	}
-	for _, s0 := range stations0 {
-		for _, s1 := range stations1 {
-			if f.uf.same(s0.Y*50+s0.X, s1.Y*50+s1.X) {
-				return true
-			}
-		}
-	}
-	return false
+	return f.coverd.Get(int(a.Y*50+a.X)) && f.coverd.Get(int(b.Y*50+b.X))
 }
 
 // 2点間の最短経路を返す (a から b へ)
