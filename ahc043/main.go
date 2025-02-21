@@ -577,10 +577,6 @@ MAKEPATH:
 			}
 		}
 	}
-	//log.Println("len(path)", len(path))
-	for i := 0; i < len(path)/2; i++ {
-		path[i], path[len(path)-1-i] = path[len(path)-1-i], path[i]
-	}
 	return path
 }
 
@@ -634,7 +630,7 @@ func (s *State) do(act Action, in Input, last bool) error {
 		}
 		s.money -= buildCost[act.Kind]
 		// 駅が建築された時に、隣接するsrc,dstが追加されて収入が増える
-		if act.Kind == STATION {
+		if act.Kind == STATION && last {
 			for i := 0; i < in.M; i++ {
 				if !s.connected[i] {
 					if s.field.checkConnect(in.src[i], in.dst[i]) {
@@ -642,18 +638,16 @@ func (s *State) do(act Action, in Input, last bool) error {
 						s.connected[i] = true
 					}
 				}
-				if last {
-					a := s.connected[i]
-					b := s.field.coverd.Get(int(in.src[i].Y*50 + in.src[i].X))
-					c := s.field.coverd.Get(int(in.dst[i].Y*50 + in.dst[i].X))
-					if a != b && c {
-						log.Println(s.field.stations)
-						log.Println(act.String())
-						log.Println(s.field.cellString())
-						log.Println(a, b, c)
-						log.Println("src", in.src[i], "dst", in.dst[i])
-						return errors.New("unmatch connected")
-					}
+				a := s.connected[i]
+				b := s.field.coverd.Get(int(in.src[i].Y*50 + in.src[i].X))
+				c := s.field.coverd.Get(int(in.dst[i].Y*50 + in.dst[i].X))
+				if a != b && c {
+					log.Println(s.field.stations)
+					log.Println(act.String())
+					log.Println(s.field.cellString())
+					log.Println(a, b, c)
+					log.Println("src", in.src[i], "dst", in.dst[i])
+					return errors.New("unmatch connected")
 				}
 			}
 		}
@@ -1114,6 +1108,8 @@ func beamSearch(in Input) {
 				if beamStates[i].state.turn+costTime > 800 {
 					continue
 				}
+				// 駅からつくるとincame
+
 				newState := beamStates[i].Clone()
 				for costMoney > newState.state.money {
 					// 必要なお金が貯まるまで待つ
@@ -1178,7 +1174,9 @@ func beamSearch(in Input) {
 	}
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
 	log.Println(bestState.state.field.cellString())
-
+	for _, act := range bestState.state.actions {
+		fmt.Print(act.String())
+	}
 }
 
 func greedy(in Input) {
@@ -1365,7 +1363,8 @@ func main() {
 	defer writer.Flush()
 	in := readInput(reader)
 	_ = in
-	greedy(*in)
+	//greedy(*in)
+	beamSearch(*in)
 	//log.Printf("in=%+v\n", in)
 	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
