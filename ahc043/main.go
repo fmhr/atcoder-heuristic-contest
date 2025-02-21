@@ -1096,7 +1096,6 @@ func beamSearch(in Input) {
 				if beamStates[i].state.turn+costTime > 800 {
 					continue
 				}
-				// 駅からつくるとincame
 
 				newState := beamStates[i].Clone()
 				for costMoney > newState.state.money {
@@ -1164,6 +1163,9 @@ func beamSearch(in Input) {
 	log.Println(bestState.state.field.cellString())
 	for _, act := range bestState.state.actions {
 		fmt.Print(act.String())
+	}
+	for i := len(bestState.state.actions); i < in.T; i++ {
+		fmt.Println(DO_NOTHING)
 	}
 }
 
