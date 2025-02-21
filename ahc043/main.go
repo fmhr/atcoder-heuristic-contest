@@ -408,6 +408,9 @@ func railDirection(rail int16) []int16 {
 
 // isRailConnected はレールの接続ルールを判定する
 func isRailConnected(railType int16, direction int, isStart bool) bool {
+	if railType == STATION {
+		return true
+	}
 	switch direction {
 	case UP:
 		if isStart {
@@ -1066,12 +1069,12 @@ func beamSearch(in Input) {
 				// 孤立するのは作らない
 				isolated := true
 				for l := 0; l < len(p); l++ {
-					for d := 0; d < 5; d++ {
-						y, x := p[l].Y+ddy[d], p[l].X+ddx[d]
+					for d := 0; d < 4; d++ {
+						y, x := p[l].Y+dy[d], p[l].X+dx[d]
 						if y < 0 || y >= 50 || x < 0 || x >= 50 {
 							continue
 						}
-						if beamStates[i].state.field.cell[y][x] != EMPTY {
+						if isRailConnected(tmp.cell[p[l].Y][p[l].X], d, true) && isRailConnected(tmp.cell[y][x], d, false) {
 							isolated = false
 							break
 						}

@@ -1534,1705 +1534,1549 @@
  #Score=47542
 -1
 #turn=308, 
-#money=6606, 
+#money=6706, 
 #income=83
- #Score=47442
-6 7 38
+ #Score=47542
+-1
 #turn=309, 
-#money=6589, 
+#money=6789, 
 #income=83
- #Score=47342
-1 7 39
+ #Score=47542
+-1
 #turn=310, 
-#money=6572, 
+#money=6872, 
 #income=83
- #Score=47242
-1 7 40
+ #Score=47542
+-1
 #turn=311, 
-#money=6555, 
+#money=6955, 
 #income=83
- #Score=47142
-1 7 41
+ #Score=47542
+-1
 #turn=312, 
-#money=6538, 
+#money=7038, 
 #income=83
- #Score=47042
-3 7 42
+ #Score=47542
+-1
 #turn=313, 
-#money=6521, 
+#money=7121, 
 #income=83
- #Score=46942
-4 8 42
+ #Score=47542
+-1
 #turn=314, 
-#money=6504, 
+#money=7204, 
 #income=83
- #Score=46842
-6 8 41
+ #Score=47542
+-1
 #turn=315, 
-#money=6487, 
+#money=7287, 
 #income=83
- #Score=46742
-2 9 41
+ #Score=47542
+-1
 #turn=316, 
-#money=6470, 
+#money=7370, 
 #income=83
- #Score=46642
-2 10 41
+ #Score=47542
+-1
 #turn=317, 
-#money=6453, 
+#money=7453, 
 #income=83
- #Score=46542
-2 11 41
+ #Score=47542
+-1
 #turn=318, 
-#money=6436, 
+#money=7536, 
 #income=83
- #Score=46442
-5 12 41
+ #Score=47542
+-1
 #turn=319, 
-#money=6419, 
+#money=7619, 
 #income=83
- #Score=46342
-4 12 42
+ #Score=47542
+-1
 #turn=320, 
-#money=6402, 
+#money=7702, 
 #income=83
- #Score=46242
-2 11 42
+ #Score=47542
+-1
 #turn=321, 
-#money=6385, 
+#money=7785, 
 #income=83
- #Score=46142
-6 10 42
+ #Score=47542
+-1
 #turn=322, 
-#money=6368, 
+#money=7868, 
 #income=83
- #Score=46042
-1 10 43
+ #Score=47542
+-1
 #turn=323, 
-#money=6351, 
+#money=7951, 
 #income=83
- #Score=45942
-1 10 44
+ #Score=47542
+-1
 #turn=324, 
-#money=1484, 
-#income=133
- #Score=64792
-0 10 45
+#money=8034, 
+#income=83
+ #Score=47542
+-1
 #turn=325, 
-#money=1617, 
-#income=133
- #Score=64792
+#money=8117, 
+#income=83
+ #Score=47542
 -1
 #turn=326, 
-#money=1750, 
-#income=133
- #Score=64792
+#money=8200, 
+#income=83
+ #Score=47542
 -1
 #turn=327, 
-#money=1883, 
-#income=133
- #Score=64792
+#money=8283, 
+#income=83
+ #Score=47542
 -1
 #turn=328, 
-#money=2016, 
-#income=133
- #Score=64792
+#money=8366, 
+#income=83
+ #Score=47542
 -1
 #turn=329, 
-#money=2149, 
-#income=133
- #Score=64792
+#money=8449, 
+#income=83
+ #Score=47542
 -1
 #turn=330, 
-#money=2282, 
-#income=133
- #Score=64792
+#money=8532, 
+#income=83
+ #Score=47542
 -1
 #turn=331, 
-#money=2415, 
-#income=133
- #Score=64792
+#money=8615, 
+#income=83
+ #Score=47542
 -1
 #turn=332, 
-#money=2548, 
-#income=133
- #Score=64792
+#money=8698, 
+#income=83
+ #Score=47542
 -1
 #turn=333, 
-#money=2681, 
-#income=133
- #Score=64792
+#money=8781, 
+#income=83
+ #Score=47542
 -1
 #turn=334, 
-#money=2814, 
-#income=133
- #Score=64792
+#money=8864, 
+#income=83
+ #Score=47542
 -1
 #turn=335, 
-#money=2947, 
-#income=133
- #Score=64792
+#money=8947, 
+#income=83
+ #Score=47542
 -1
 #turn=336, 
-#money=3080, 
-#income=133
- #Score=64792
+#money=9030, 
+#income=83
+ #Score=47542
 -1
 #turn=337, 
-#money=3213, 
-#income=133
- #Score=64792
+#money=9113, 
+#income=83
+ #Score=47542
 -1
 #turn=338, 
-#money=3346, 
-#income=133
- #Score=64792
+#money=9196, 
+#income=83
+ #Score=47542
 -1
 #turn=339, 
-#money=3479, 
-#income=133
- #Score=64792
+#money=9279, 
+#income=83
+ #Score=47542
 -1
 #turn=340, 
-#money=3612, 
-#income=133
- #Score=64792
+#money=9362, 
+#income=83
+ #Score=47542
 -1
 #turn=341, 
-#money=3745, 
-#income=133
- #Score=64792
+#money=9445, 
+#income=83
+ #Score=47542
 -1
 #turn=342, 
-#money=3878, 
-#income=133
- #Score=64792
+#money=9528, 
+#income=83
+ #Score=47542
 -1
 #turn=343, 
-#money=4011, 
-#income=133
- #Score=64792
+#money=9611, 
+#income=83
+ #Score=47542
 -1
 #turn=344, 
-#money=4144, 
-#income=133
- #Score=64792
+#money=9694, 
+#income=83
+ #Score=47542
 -1
 #turn=345, 
-#money=4277, 
-#income=133
- #Score=64792
+#money=9777, 
+#income=83
+ #Score=47542
 -1
 #turn=346, 
-#money=4410, 
-#income=133
- #Score=64792
+#money=9860, 
+#income=83
+ #Score=47542
 -1
 #turn=347, 
-#money=4543, 
-#income=133
- #Score=64792
+#money=9943, 
+#income=83
+ #Score=47542
 -1
 #turn=348, 
-#money=4676, 
-#income=133
- #Score=64792
+#money=10026, 
+#income=83
+ #Score=47542
 -1
 #turn=349, 
-#money=4809, 
-#income=133
- #Score=64792
+#money=10109, 
+#income=83
+ #Score=47542
 -1
 #turn=350, 
-#money=4942, 
-#income=133
- #Score=64792
+#money=10192, 
+#income=83
+ #Score=47542
 -1
 #turn=351, 
-#money=5075, 
-#income=133
- #Score=64792
+#money=10275, 
+#income=83
+ #Score=47542
 -1
 #turn=352, 
-#money=257, 
-#income=182
- #Score=81793
-0 25 9
+#money=10358, 
+#income=83
+ #Score=47542
+-1
 #turn=353, 
-#money=439, 
-#income=182
- #Score=81793
+#money=10441, 
+#income=83
+ #Score=47542
 -1
 #turn=354, 
-#money=621, 
-#income=182
- #Score=81793
+#money=10524, 
+#income=83
+ #Score=47542
 -1
 #turn=355, 
-#money=803, 
-#income=182
- #Score=81793
+#money=10607, 
+#income=83
+ #Score=47542
 -1
 #turn=356, 
-#money=985, 
-#income=182
- #Score=81793
+#money=10690, 
+#income=83
+ #Score=47542
 -1
 #turn=357, 
-#money=1167, 
-#income=182
- #Score=81793
+#money=10773, 
+#income=83
+ #Score=47542
 -1
 #turn=358, 
-#money=1349, 
-#income=182
- #Score=81793
+#money=10856, 
+#income=83
+ #Score=47542
 -1
 #turn=359, 
-#money=1531, 
-#income=182
- #Score=81793
+#money=10939, 
+#income=83
+ #Score=47542
 -1
 #turn=360, 
-#money=1713, 
-#income=182
- #Score=81793
+#money=11022, 
+#income=83
+ #Score=47542
 -1
 #turn=361, 
-#money=1895, 
-#income=182
- #Score=81793
+#money=11105, 
+#income=83
+ #Score=47542
 -1
 #turn=362, 
-#money=2077, 
-#income=182
- #Score=81793
+#money=11188, 
+#income=83
+ #Score=47542
 -1
 #turn=363, 
-#money=2259, 
-#income=182
- #Score=81793
+#money=11271, 
+#income=83
+ #Score=47542
 -1
 #turn=364, 
-#money=2441, 
-#income=182
- #Score=81793
+#money=11354, 
+#income=83
+ #Score=47542
 -1
 #turn=365, 
-#money=2623, 
-#income=182
- #Score=81793
+#money=11437, 
+#income=83
+ #Score=47542
 -1
 #turn=366, 
-#money=2805, 
-#income=182
- #Score=81793
+#money=11520, 
+#income=83
+ #Score=47542
 -1
 #turn=367, 
-#money=2987, 
-#income=182
- #Score=81793
+#money=11603, 
+#income=83
+ #Score=47542
 -1
 #turn=368, 
-#money=3169, 
-#income=182
- #Score=81793
--1
+#money=6686, 
+#income=83
+ #Score=42542
+0 25 9
 #turn=369, 
-#money=3351, 
-#income=182
- #Score=81793
--1
+#money=6669, 
+#income=83
+ #Score=42442
+6 7 38
 #turn=370, 
-#money=3533, 
-#income=182
- #Score=81793
--1
+#money=6652, 
+#income=83
+ #Score=42342
+1 7 39
 #turn=371, 
-#money=3715, 
-#income=182
- #Score=81793
--1
+#money=6635, 
+#income=83
+ #Score=42242
+1 7 40
 #turn=372, 
-#money=3897, 
-#income=182
- #Score=81793
--1
+#money=6618, 
+#income=83
+ #Score=42142
+1 7 41
 #turn=373, 
-#money=4079, 
-#income=182
- #Score=81793
--1
+#money=6601, 
+#income=83
+ #Score=42042
+3 7 42
 #turn=374, 
-#money=4261, 
-#income=182
- #Score=81793
--1
+#money=6584, 
+#income=83
+ #Score=41942
+4 8 42
 #turn=375, 
-#money=4443, 
-#income=182
- #Score=81793
--1
+#money=6567, 
+#income=83
+ #Score=41842
+6 8 41
 #turn=376, 
-#money=4625, 
-#income=182
- #Score=81793
--1
+#money=6550, 
+#income=83
+ #Score=41742
+2 9 41
 #turn=377, 
-#money=4807, 
-#income=182
- #Score=81793
--1
+#money=6533, 
+#income=83
+ #Score=41642
+2 10 41
 #turn=378, 
-#money=4989, 
-#income=182
- #Score=81793
--1
+#money=6516, 
+#income=83
+ #Score=41542
+2 11 41
 #turn=379, 
-#money=5171, 
-#income=182
- #Score=81793
--1
+#money=6499, 
+#income=83
+ #Score=41442
+5 12 41
 #turn=380, 
-#money=5353, 
-#income=182
- #Score=81793
--1
+#money=6482, 
+#income=83
+ #Score=41342
+4 12 42
 #turn=381, 
-#money=5535, 
-#income=182
- #Score=81793
--1
+#money=6465, 
+#income=83
+ #Score=41242
+2 11 42
 #turn=382, 
-#money=5717, 
-#income=182
- #Score=81793
--1
+#money=6448, 
+#income=83
+ #Score=41142
+6 10 42
 #turn=383, 
-#money=5899, 
-#income=182
- #Score=81793
--1
+#money=6431, 
+#income=83
+ #Score=41042
+1 10 43
 #turn=384, 
-#money=6081, 
-#income=182
- #Score=81793
--1
+#money=6414, 
+#income=83
+ #Score=40942
+1 10 44
 #turn=385, 
-#money=6263, 
+#money=1596, 
 #income=182
- #Score=81793
--1
+ #Score=77126
+0 10 45
 #turn=386, 
-#money=6445, 
+#money=1778, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=387, 
-#money=6627, 
+#money=1960, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=388, 
-#money=6809, 
+#money=2142, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=389, 
-#money=6991, 
+#money=2324, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=390, 
-#money=7173, 
+#money=2506, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=391, 
-#money=7355, 
+#money=2688, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=392, 
-#money=7537, 
+#money=2870, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=393, 
-#money=7719, 
+#money=3052, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=394, 
-#money=7901, 
+#money=3234, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=395, 
-#money=8083, 
+#money=3416, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=396, 
-#money=8265, 
+#money=3598, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=397, 
-#money=8447, 
+#money=3780, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=398, 
-#money=8629, 
+#money=3962, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=399, 
-#money=8811, 
+#money=4144, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=400, 
-#money=8993, 
+#money=4326, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=401, 
-#money=9175, 
+#money=4508, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=402, 
-#money=9357, 
+#money=4690, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=403, 
-#money=9539, 
+#money=4872, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=404, 
-#money=9721, 
+#money=5054, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=405, 
-#money=9903, 
+#money=5236, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=406, 
-#money=10085, 
+#money=5418, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=407, 
-#money=10267, 
+#money=5600, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=408, 
-#money=10449, 
+#money=5782, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=409, 
-#money=10631, 
+#money=5964, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=410, 
-#money=10813, 
+#money=6146, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=411, 
-#money=10995, 
+#money=6328, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=412, 
-#money=11177, 
+#money=6510, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=413, 
-#money=11359, 
+#money=6692, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=414, 
-#money=11541, 
+#money=6874, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=415, 
-#money=11723, 
+#money=7056, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=416, 
-#money=11905, 
+#money=7238, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=417, 
-#money=12087, 
+#money=7420, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=418, 
-#money=12269, 
+#money=7602, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=419, 
-#money=12451, 
+#money=7784, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=420, 
-#money=12633, 
+#money=7966, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=421, 
-#money=12815, 
+#money=8148, 
 #income=182
- #Score=81793
+ #Score=77126
 -1
 #turn=422, 
-#money=7997, 
+#money=8330, 
 #income=182
- #Score=76793
-0 3 7
+ #Score=77126
+-1
 #turn=423, 
-#money=8079, 
+#money=8512, 
 #income=182
- #Score=76693
-2 4 7
+ #Score=77126
+-1
 #turn=424, 
-#money=8161, 
+#money=8694, 
 #income=182
- #Score=76593
-2 5 7
+ #Score=77126
+-1
 #turn=425, 
-#money=8243, 
+#money=8876, 
 #income=182
- #Score=76493
-4 6 7
+ #Score=77126
+-1
 #turn=426, 
-#money=8325, 
+#money=9058, 
 #income=182
- #Score=76393
-6 6 6
+ #Score=77126
+-1
 #turn=427, 
-#money=8407, 
+#money=9240, 
 #income=182
- #Score=76293
-5 7 6
+ #Score=77126
+-1
 #turn=428, 
-#money=8489, 
+#money=9422, 
 #income=182
- #Score=76193
-1 7 7
+ #Score=77126
+-1
 #turn=429, 
-#money=8571, 
+#money=9604, 
 #income=182
- #Score=76093
-1 7 8
+ #Score=77126
+-1
 #turn=430, 
-#money=8653, 
+#money=9786, 
 #income=182
- #Score=75993
-1 7 9
+ #Score=77126
+-1
 #turn=431, 
-#money=8735, 
+#money=9968, 
 #income=182
- #Score=75893
-1 7 10
+ #Score=77126
+-1
 #turn=432, 
-#money=8817, 
+#money=10150, 
 #income=182
- #Score=75793
-1 7 11
+ #Score=77126
+-1
 #turn=433, 
-#money=8899, 
+#money=10332, 
 #income=182
- #Score=75693
-3 7 12
+ #Score=77126
+-1
 #turn=434, 
-#money=8981, 
+#money=10514, 
 #income=182
- #Score=75593
-2 8 12
+ #Score=77126
+-1
 #turn=435, 
-#money=9063, 
+#money=10696, 
 #income=182
- #Score=75493
-2 9 12
+ #Score=77126
+-1
 #turn=436, 
-#money=9145, 
+#money=10878, 
 #income=182
- #Score=75393
-2 10 12
+ #Score=77126
+-1
 #turn=437, 
-#money=9227, 
+#money=11060, 
 #income=182
- #Score=75293
-2 11 12
+ #Score=77126
+-1
 #turn=438, 
-#money=9309, 
+#money=11242, 
 #income=182
- #Score=75193
-5 12 12
+ #Score=77126
+-1
 #turn=439, 
-#money=9391, 
+#money=11424, 
 #income=182
- #Score=75093
-3 12 13
+ #Score=77126
+-1
 #turn=440, 
-#money=9473, 
+#money=11606, 
 #income=182
- #Score=74993
-2 13 13
+ #Score=77126
+-1
 #turn=441, 
-#money=9555, 
+#money=11788, 
 #income=182
- #Score=74893
-2 14 13
+ #Score=77126
+-1
 #turn=442, 
-#money=9637, 
+#money=11970, 
 #income=182
- #Score=74793
-2 15 13
+ #Score=77126
+-1
 #turn=443, 
-#money=9719, 
+#money=12152, 
 #income=182
- #Score=74693
-2 16 13
+ #Score=77126
+-1
 #turn=444, 
-#money=9801, 
+#money=12334, 
 #income=182
- #Score=74593
-5 17 13
+ #Score=77126
+-1
 #turn=445, 
-#money=9883, 
+#money=12516, 
 #income=182
- #Score=74493
-4 17 14
+ #Score=77126
+-1
 #turn=446, 
-#money=9965, 
+#money=12698, 
 #income=182
- #Score=74393
-6 16 14
+ #Score=77126
+-1
 #turn=447, 
-#money=10047, 
+#money=12880, 
 #income=182
- #Score=74293
-1 16 15
+ #Score=77126
+-1
 #turn=448, 
-#money=10129, 
+#money=13062, 
 #income=182
- #Score=74193
-1 16 16
+ #Score=77126
+-1
 #turn=449, 
-#money=10211, 
+#money=8244, 
 #income=182
- #Score=74093
-1 16 17
+ #Score=72126
+0 2 8
 #turn=450, 
-#money=10293, 
+#money=8326, 
 #income=182
- #Score=73993
-1 16 18
+ #Score=72026
+6 2 7
 #turn=451, 
-#money=5599, 
-#income=306
- #Score=112393
-0 7 42
+#money=8408, 
+#income=182
+ #Score=71926
+2 3 7
 #turn=452, 
-#money=969, 
-#income=370
- #Score=129729
-0 22 17
+#money=8490, 
+#income=182
+ #Score=71826
+2 4 7
 #turn=453, 
-#money=1339, 
-#income=370
- #Score=129729
--1
+#money=8572, 
+#income=182
+ #Score=71726
+2 5 7
 #turn=454, 
-#money=1709, 
-#income=370
- #Score=129729
--1
+#money=8654, 
+#income=182
+ #Score=71626
+4 6 7
 #turn=455, 
-#money=2079, 
-#income=370
- #Score=129729
--1
+#money=8736, 
+#income=182
+ #Score=71526
+6 6 6
 #turn=456, 
-#money=2449, 
-#income=370
- #Score=129729
--1
+#money=8818, 
+#income=182
+ #Score=71426
+5 7 6
 #turn=457, 
-#money=2819, 
-#income=370
- #Score=129729
--1
+#money=8900, 
+#income=182
+ #Score=71326
+1 7 7
 #turn=458, 
-#money=3189, 
-#income=370
- #Score=129729
--1
+#money=8982, 
+#income=182
+ #Score=71226
+1 7 8
 #turn=459, 
-#money=3559, 
-#income=370
- #Score=129729
--1
+#money=9064, 
+#income=182
+ #Score=71126
+1 7 9
 #turn=460, 
-#money=3929, 
-#income=370
- #Score=129729
--1
+#money=9146, 
+#income=182
+ #Score=71026
+1 7 10
 #turn=461, 
-#money=4299, 
-#income=370
- #Score=129729
--1
+#money=9228, 
+#income=182
+ #Score=70926
+1 7 11
 #turn=462, 
-#money=4669, 
-#income=370
- #Score=129729
--1
+#money=9310, 
+#income=182
+ #Score=70826
+3 7 12
 #turn=463, 
-#money=5039, 
-#income=370
- #Score=129729
--1
+#money=9392, 
+#income=182
+ #Score=70726
+2 8 12
 #turn=464, 
-#money=5409, 
-#income=370
- #Score=129729
--1
+#money=9474, 
+#income=182
+ #Score=70626
+2 9 12
 #turn=465, 
-#money=5679, 
-#income=370
- #Score=129629
-5 3 6
+#money=9556, 
+#income=182
+ #Score=70526
+2 10 12
 #turn=466, 
-#money=5949, 
-#income=370
- #Score=129529
-2 2 6
+#money=9638, 
+#income=182
+ #Score=70426
+2 11 12
 #turn=467, 
-#money=6219, 
-#income=370
- #Score=129429
-2 1 6
+#money=9720, 
+#income=182
+ #Score=70326
+5 12 12
 #turn=468, 
-#money=6489, 
-#income=370
- #Score=129329
-3 0 6
+#money=9802, 
+#income=182
+ #Score=70226
+3 12 13
 #turn=469, 
-#money=1906, 
-#income=417
- #Score=139933
-0 0 5
+#money=9884, 
+#income=182
+ #Score=70126
+2 13 13
 #turn=470, 
-#money=2323, 
-#income=417
- #Score=139933
--1
+#money=9966, 
+#income=182
+ #Score=70026
+2 14 13
 #turn=471, 
-#money=2740, 
-#income=417
- #Score=139933
--1
+#money=10048, 
+#income=182
+ #Score=69926
+2 15 13
 #turn=472, 
-#money=3157, 
-#income=417
- #Score=139933
--1
+#money=10130, 
+#income=182
+ #Score=69826
+2 16 13
 #turn=473, 
-#money=3574, 
-#income=417
- #Score=139933
--1
+#money=10212, 
+#income=182
+ #Score=69726
+5 17 13
 #turn=474, 
-#money=3991, 
-#income=417
- #Score=139933
--1
+#money=10294, 
+#income=182
+ #Score=69626
+4 17 14
 #turn=475, 
-#money=4408, 
-#income=417
- #Score=139933
--1
+#money=10376, 
+#income=182
+ #Score=69526
+6 16 14
 #turn=476, 
-#money=4825, 
-#income=417
- #Score=139933
--1
+#money=10458, 
+#income=182
+ #Score=69426
+1 16 15
 #turn=477, 
-#money=5242, 
-#income=417
- #Score=139933
--1
+#money=10540, 
+#income=182
+ #Score=69326
+1 16 16
 #turn=478, 
-#money=729, 
-#income=487
- #Score=157543
-0 7 34
+#money=10622, 
+#income=182
+ #Score=69226
+1 16 17
 #turn=479, 
-#money=1216, 
-#income=487
- #Score=157543
--1
+#money=10704, 
+#income=182
+ #Score=69126
+1 16 18
 #turn=480, 
-#money=1703, 
-#income=487
- #Score=157543
--1
+#money=6010, 
+#income=306
+ #Score=103930
+0 7 42
 #turn=481, 
-#money=2190, 
-#income=487
- #Score=157543
--1
+#money=1352, 
+#income=342
+ #Score=110450
+0 22 17
 #turn=482, 
-#money=2677, 
-#income=487
- #Score=157543
+#money=1694, 
+#income=342
+ #Score=110450
 -1
 #turn=483, 
-#money=3164, 
-#income=487
- #Score=157543
+#money=2036, 
+#income=342
+ #Score=110450
 -1
 #turn=484, 
-#money=3651, 
-#income=487
- #Score=157543
+#money=2378, 
+#income=342
+ #Score=110450
 -1
 #turn=485, 
-#money=4138, 
-#income=487
- #Score=157543
+#money=2720, 
+#income=342
+ #Score=110450
 -1
 #turn=486, 
-#money=4625, 
-#income=487
- #Score=157543
+#money=3062, 
+#income=342
+ #Score=110450
 -1
 #turn=487, 
-#money=5112, 
-#income=487
- #Score=157543
+#money=3404, 
+#income=342
+ #Score=110450
 -1
 #turn=488, 
-#money=637, 
-#income=525
- #Score=164437
-0 7 10
+#money=3746, 
+#income=342
+ #Score=110450
+-1
 #turn=489, 
-#money=1162, 
-#income=525
- #Score=164437
+#money=4088, 
+#income=342
+ #Score=110450
 -1
 #turn=490, 
-#money=1687, 
-#income=525
- #Score=164437
+#money=4430, 
+#income=342
+ #Score=110450
 -1
 #turn=491, 
-#money=2212, 
-#income=525
- #Score=164437
+#money=4772, 
+#income=342
+ #Score=110450
 -1
 #turn=492, 
-#money=2737, 
-#income=525
- #Score=164437
+#money=5114, 
+#income=342
+ #Score=110450
 -1
 #turn=493, 
-#money=3262, 
-#income=525
- #Score=164437
+#money=5456, 
+#income=342
+ #Score=110450
 -1
 #turn=494, 
-#money=3787, 
-#income=525
- #Score=164437
+#money=5798, 
+#income=342
+ #Score=110450
 -1
 #turn=495, 
-#money=4312, 
-#income=525
- #Score=164437
+#money=6140, 
+#income=342
+ #Score=110450
 -1
 #turn=496, 
-#money=4837, 
-#income=525
- #Score=164437
+#money=6482, 
+#income=342
+ #Score=110450
 -1
 #turn=497, 
-#money=5362, 
-#income=525
- #Score=164437
+#money=6824, 
+#income=342
+ #Score=110450
 -1
 #turn=498, 
-#money=5887, 
-#income=525
- #Score=164437
+#money=7166, 
+#income=342
+ #Score=110450
 -1
 #turn=499, 
-#money=6412, 
-#income=525
- #Score=164437
+#money=7508, 
+#income=342
+ #Score=110450
 -1
 #turn=500, 
-#money=6937, 
-#income=525
- #Score=164437
+#money=7850, 
+#income=342
+ #Score=110450
 -1
 #turn=501, 
-#money=7462, 
-#income=525
- #Score=164437
+#money=8192, 
+#income=342
+ #Score=110450
 -1
 #turn=502, 
-#money=7987, 
-#income=525
- #Score=164437
+#money=8534, 
+#income=342
+ #Score=110450
 -1
 #turn=503, 
-#money=8512, 
-#income=525
- #Score=164437
+#money=8876, 
+#income=342
+ #Score=110450
 -1
 #turn=504, 
-#money=9037, 
-#income=525
- #Score=164437
+#money=9218, 
+#income=342
+ #Score=110450
 -1
 #turn=505, 
-#money=9562, 
-#income=525
- #Score=164437
+#money=9560, 
+#income=342
+ #Score=110450
 -1
 #turn=506, 
-#money=10087, 
-#income=525
- #Score=164437
+#money=9902, 
+#income=342
+ #Score=110450
 -1
 #turn=507, 
-#money=10612, 
-#income=525
- #Score=164437
+#money=10244, 
+#income=342
+ #Score=110450
 -1
 #turn=508, 
-#money=6137, 
-#income=525
- #Score=159437
-0 14 43
+#money=10586, 
+#income=342
+ #Score=110450
+-1
 #turn=509, 
-#money=6562, 
-#income=525
- #Score=159337
-2 13 43
+#money=5928, 
+#income=342
+ #Score=105450
+0 3 7
 #turn=510, 
-#money=6987, 
-#income=525
- #Score=159237
-3 12 43
+#money=6170, 
+#income=342
+ #Score=105350
+5 3 6
 #turn=511, 
-#money=2594, 
-#income=607
- #Score=178017
-0 12 42
+#money=6412, 
+#income=342
+ #Score=105250
+2 2 6
 #turn=512, 
-#money=3201, 
-#income=607
- #Score=178017
--1
+#money=6654, 
+#income=342
+ #Score=105150
+2 1 6
 #turn=513, 
-#money=3808, 
-#income=607
- #Score=178017
--1
+#money=6896, 
+#income=342
+ #Score=105050
+3 0 6
 #turn=514, 
-#money=4415, 
-#income=607
- #Score=178017
--1
+#money=2313, 
+#income=417
+ #Score=121575
+0 0 5
 #turn=515, 
-#money=5022, 
-#income=607
- #Score=178017
+#money=2730, 
+#income=417
+ #Score=121575
 -1
 #turn=516, 
-#money=5629, 
-#income=607
- #Score=178017
+#money=3147, 
+#income=417
+ #Score=121575
 -1
 #turn=517, 
-#money=6136, 
-#income=607
- #Score=177917
-5 28 8
-#turn=518, 
-#money=6643, 
-#income=607
- #Score=177817
-3 27 8
-#turn=519, 
-#money=7150, 
-#income=607
- #Score=177717
-1 27 7
-#turn=520, 
-#money=7657, 
-#income=607
- #Score=177617
-1 27 6
-#turn=521, 
-#money=3318, 
-#income=661
- #Score=187737
-0 27 5
-#turn=522, 
-#money=3979, 
-#income=661
- #Score=187737
+#money=3564, 
+#income=417
+ #Score=121575
 -1
+#turn=518, 
+#money=3981, 
+#income=417
+ #Score=121575
+-1
+#turn=519, 
+#money=4398, 
+#income=417
+ #Score=121575
+-1
+#turn=520, 
+#money=4815, 
+#income=417
+ #Score=121575
+-1
+#turn=521, 
+#money=5232, 
+#income=417
+ #Score=121575
+-1
+#turn=522, 
+#money=719, 
+#income=487
+ #Score=136105
+0 7 34
 #turn=523, 
-#money=4640, 
-#income=661
- #Score=187737
+#money=1206, 
+#income=487
+ #Score=136105
 -1
 #turn=524, 
-#money=5301, 
-#income=661
- #Score=187737
+#money=1693, 
+#income=487
+ #Score=136105
 -1
 #turn=525, 
-#money=5962, 
-#income=661
- #Score=187737
+#money=2180, 
+#income=487
+ #Score=136105
 -1
 #turn=526, 
-#money=6623, 
-#income=661
- #Score=187737
+#money=2667, 
+#income=487
+ #Score=136105
 -1
 #turn=527, 
-#money=7284, 
-#income=661
- #Score=187737
+#money=3154, 
+#income=487
+ #Score=136105
 -1
 #turn=528, 
-#money=7945, 
-#income=661
- #Score=187737
+#money=3641, 
+#income=487
+ #Score=136105
 -1
 #turn=529, 
-#money=8606, 
-#income=661
- #Score=187737
+#money=4128, 
+#income=487
+ #Score=136105
 -1
 #turn=530, 
-#money=9267, 
-#income=661
- #Score=187737
+#money=4615, 
+#income=487
+ #Score=136105
 -1
 #turn=531, 
-#money=9928, 
-#income=661
- #Score=187737
+#money=5102, 
+#income=487
+ #Score=136105
 -1
 #turn=532, 
-#money=10589, 
-#income=661
- #Score=187737
--1
+#money=627, 
+#income=525
+ #Score=141327
+0 7 10
 #turn=533, 
-#money=11250, 
-#income=661
- #Score=187737
+#money=1152, 
+#income=525
+ #Score=141327
 -1
 #turn=534, 
-#money=11911, 
-#income=661
- #Score=187737
+#money=1677, 
+#income=525
+ #Score=141327
 -1
 #turn=535, 
-#money=12572, 
-#income=661
- #Score=187737
+#money=2202, 
+#income=525
+ #Score=141327
 -1
 #turn=536, 
-#money=13233, 
-#income=661
- #Score=187737
+#money=2727, 
+#income=525
+ #Score=141327
 -1
 #turn=537, 
-#money=13894, 
-#income=661
- #Score=187737
+#money=3252, 
+#income=525
+ #Score=141327
 -1
 #turn=538, 
-#money=9555, 
-#income=661
- #Score=182737
-0 23 39
+#money=3777, 
+#income=525
+ #Score=141327
+-1
 #turn=539, 
-#money=10116, 
-#income=661
- #Score=182637
-3 22 39
+#money=4302, 
+#income=525
+ #Score=141327
+-1
 #turn=540, 
-#money=10677, 
-#income=661
- #Score=182537
-1 22 38
+#money=4827, 
+#income=525
+ #Score=141327
+-1
 #turn=541, 
-#money=11238, 
-#income=661
- #Score=182437
-1 22 37
+#money=5352, 
+#income=525
+ #Score=141327
+-1
 #turn=542, 
-#money=11799, 
-#income=661
- #Score=182337
-1 22 36
+#money=5877, 
+#income=525
+ #Score=141327
+-1
 #turn=543, 
-#money=12360, 
-#income=661
- #Score=182237
-1 22 35
+#money=6402, 
+#income=525
+ #Score=141327
+-1
 #turn=544, 
-#money=12921, 
-#income=661
- #Score=182137
-1 22 34
+#money=6927, 
+#income=525
+ #Score=141327
+-1
 #turn=545, 
-#money=13482, 
-#income=661
- #Score=182037
-5 22 33
+#money=7452, 
+#income=525
+ #Score=141327
+-1
 #turn=546, 
-#money=14043, 
-#income=661
- #Score=181937
-2 21 33
+#money=7977, 
+#income=525
+ #Score=141327
+-1
 #turn=547, 
-#money=14604, 
-#income=661
- #Score=181837
-2 20 33
+#money=8502, 
+#income=525
+ #Score=141327
+-1
 #turn=548, 
-#money=15165, 
-#income=661
- #Score=181737
-2 19 33
+#money=9027, 
+#income=525
+ #Score=141327
+-1
 #turn=549, 
-#money=15726, 
-#income=661
- #Score=181637
-6 18 33
+#money=9552, 
+#income=525
+ #Score=141327
+-1
 #turn=550, 
-#money=16287, 
-#income=661
- #Score=181537
-1 18 34
+#money=10077, 
+#income=525
+ #Score=141327
+-1
 #turn=551, 
-#money=16848, 
-#income=661
- #Score=181437
-1 18 35
+#money=10602, 
+#income=525
+ #Score=141327
+-1
 #turn=552, 
-#money=17409, 
-#income=661
- #Score=181337
-4 18 36
+#money=6127, 
+#income=525
+ #Score=136327
+0 14 43
 #turn=553, 
-#money=17970, 
-#income=661
- #Score=181237
-2 17 36
+#money=6552, 
+#income=525
+ #Score=136227
+2 13 43
 #turn=554, 
-#money=18531, 
-#income=661
- #Score=181137
-2 16 36
+#money=6977, 
+#income=525
+ #Score=136127
+3 12 43
 #turn=555, 
-#money=19092, 
-#income=661
- #Score=181037
-2 15 36
+#money=2584, 
+#income=607
+ #Score=151299
+0 12 42
 #turn=556, 
-#money=19653, 
-#income=661
- #Score=180937
-2 14 36
+#money=3191, 
+#income=607
+ #Score=151299
+-1
 #turn=557, 
-#money=20214, 
-#income=661
- #Score=180837
-3 13 36
+#money=3798, 
+#income=607
+ #Score=151299
+-1
 #turn=558, 
-#money=20775, 
-#income=661
- #Score=180737
-5 13 35
+#money=4405, 
+#income=607
+ #Score=151299
+-1
 #turn=559, 
-#money=21336, 
-#income=661
- #Score=180637
-3 12 35
+#money=5012, 
+#income=607
+ #Score=151299
+-1
 #turn=560, 
-#money=21897, 
-#income=661
- #Score=180537
-1 12 34
+#money=5619, 
+#income=607
+ #Score=151299
+-1
 #turn=561, 
-#money=22458, 
-#income=661
- #Score=180437
-1 12 33
+#money=6226, 
+#income=607
+ #Score=151299
+-1
 #turn=562, 
-#money=23019, 
-#income=661
- #Score=180337
-1 12 32
+#money=6833, 
+#income=607
+ #Score=151299
+-1
 #turn=563, 
-#money=23580, 
-#income=661
- #Score=180237
-1 12 31
+#money=7440, 
+#income=607
+ #Score=151299
+-1
 #turn=564, 
-#money=24141, 
-#income=661
- #Score=180137
-2 29 9
+#money=8047, 
+#income=607
+ #Score=151299
+-1
 #turn=565, 
-#money=24702, 
-#income=661
- #Score=180037
-2 30 9
+#money=8654, 
+#income=607
+ #Score=151299
+-1
 #turn=566, 
-#money=25263, 
-#income=661
- #Score=179937
-2 31 9
+#money=9261, 
+#income=607
+ #Score=151299
+-1
 #turn=567, 
-#money=25824, 
-#income=661
- #Score=179837
-2 32 9
+#money=9868, 
+#income=607
+ #Score=151299
+-1
 #turn=568, 
-#money=26385, 
-#income=661
- #Score=179737
-4 33 9
+#money=10475, 
+#income=607
+ #Score=151299
+-1
 #turn=569, 
-#money=26946, 
-#income=661
- #Score=179637
-1 33 8
-#turn=570, 
-#money=27507, 
-#income=661
- #Score=179537
-6 33 7
-#turn=571, 
-#money=28068, 
-#income=661
- #Score=179437
-2 34 7
-#turn=572, 
-#money=28629, 
-#income=661
- #Score=179337
-2 35 7
-#turn=573, 
-#money=29190, 
-#income=661
- #Score=179237
-2 36 7
-#turn=574, 
-#money=29751, 
-#income=661
- #Score=179137
-2 37 7
-#turn=575, 
-#money=30312, 
-#income=661
- #Score=179037
-2 38 7
-#turn=576, 
-#money=26060, 
-#income=748
- #Score=193612
-0 39 7
-#turn=577, 
-#money=21828, 
-#income=768
- #Score=193092
-0 14 24
-#turn=578, 
-#money=17596, 
-#income=768
- #Score=188092
+#money=6082, 
+#income=607
+ #Score=146299
 0 17 14
-#turn=579, 
-#money=18264, 
-#income=768
- #Score=187992
+#turn=570, 
+#money=6589, 
+#income=607
+ #Score=146199
 4 18 14
-#turn=580, 
-#money=18932, 
-#income=768
- #Score=187892
+#turn=571, 
+#money=7096, 
+#income=607
+ #Score=146099
 1 18 13
-#turn=581, 
-#money=19600, 
-#income=768
- #Score=187792
+#turn=572, 
+#money=7603, 
+#income=607
+ #Score=145999
 1 18 12
-#turn=582, 
-#money=20268, 
-#income=768
- #Score=187692
+#turn=573, 
+#money=8110, 
+#income=607
+ #Score=145899
 1 18 11
-#turn=583, 
-#money=16075, 
-#income=807
- #Score=191194
+#turn=574, 
+#money=3756, 
+#income=646
+ #Score=149752
 0 18 10
+#turn=575, 
+#money=4402, 
+#income=646
+ #Score=149752
+-1
+#turn=576, 
+#money=5048, 
+#income=646
+ #Score=149752
+-1
+#turn=577, 
+#money=5694, 
+#income=646
+ #Score=149752
+-1
+#turn=578, 
+#money=6340, 
+#income=646
+ #Score=149752
+-1
+#turn=579, 
+#money=6986, 
+#income=646
+ #Score=149752
+-1
+#turn=580, 
+#money=7632, 
+#income=646
+ #Score=149752
+-1
+#turn=581, 
+#money=8278, 
+#income=646
+ #Score=149752
+-1
+#turn=582, 
+#money=8924, 
+#income=646
+ #Score=149752
+-1
+#turn=583, 
+#money=9570, 
+#income=646
+ #Score=149752
+-1
 #turn=584, 
-#money=16782, 
-#income=807
- #Score=191094
-1 10 46
+#money=10216, 
+#income=646
+ #Score=149752
+-1
 #turn=585, 
-#money=17489, 
-#income=807
- #Score=190994
-4 10 47
+#money=10862, 
+#income=646
+ #Score=149752
+-1
 #turn=586, 
-#money=18196, 
-#income=807
- #Score=190894
-2 9 47
+#money=11508, 
+#income=646
+ #Score=149752
+-1
 #turn=587, 
-#money=18903, 
-#income=807
- #Score=190794
-2 8 47
+#money=7154, 
+#income=646
+ #Score=144752
+0 7 6
 #turn=588, 
-#money=19610, 
-#income=807
- #Score=190694
-2 7 47
-#turn=589, 
-#money=20317, 
-#income=807
- #Score=190594
-6 6 47
-#turn=590, 
-#money=16173, 
-#income=856
- #Score=195933
-0 6 48
-#turn=591, 
-#money=12029, 
-#income=856
- #Score=190933
-0 33 12
-#turn=592, 
-#money=12785, 
-#income=856
- #Score=190833
-1 33 11
-#turn=593, 
-#money=13541, 
-#income=856
- #Score=190733
-1 33 10
-#turn=594, 
-#money=9475, 
-#income=934
- #Score=201879
-0 33 9
-#turn=595, 
-#money=10309, 
-#income=934
- #Score=201779
+#money=7700, 
+#income=646
+ #Score=144652
 2 6 42
-#turn=596, 
-#money=11143, 
-#income=934
- #Score=201679
+#turn=589, 
+#money=8246, 
+#income=646
+ #Score=144552
 2 5 42
-#turn=597, 
-#money=11977, 
-#income=934
- #Score=201579
+#turn=590, 
+#money=8792, 
+#income=646
+ #Score=144452
 6 4 42
-#turn=598, 
-#money=12811, 
-#income=934
- #Score=201479
+#turn=591, 
+#money=9338, 
+#income=646
+ #Score=144352
 1 4 43
+#turn=592, 
+#money=9884, 
+#income=646
+ #Score=144252
+4 4 44
+#turn=593, 
+#money=10430, 
+#income=646
+ #Score=144152
+2 3 44
+#turn=594, 
+#money=10976, 
+#income=646
+ #Score=144052
+2 2 44
+#turn=595, 
+#money=11522, 
+#income=646
+ #Score=143952
+2 1 44
+#turn=596, 
+#money=12068, 
+#income=646
+ #Score=143852
+3 0 44
+#turn=597, 
+#money=12614, 
+#income=646
+ #Score=143752
+1 0 43
+#turn=598, 
+#money=13160, 
+#income=646
+ #Score=143652
+1 0 42
 #turn=599, 
 #money=8852, 
-#income=1041
- #Score=218093
-0 4 44
+#income=692
+ #Score=147944
+0 0 41
 #turn=600, 
-#money=9893, 
-#income=1041
- #Score=218093
+#money=9544, 
+#income=692
+ #Score=147944
 -1
 #turn=601, 
-#money=10934, 
-#income=1041
- #Score=218093
+#money=10236, 
+#income=692
+ #Score=147944
 -1
 #turn=602, 
-#money=6975, 
-#income=1041
- #Score=213093
-0 22 33
+#money=10928, 
+#income=692
+ #Score=147944
+-1
 #turn=603, 
-#money=3043, 
-#income=1068
- #Score=213439
-0 18 36
+#money=6620, 
+#income=692
+ #Score=142944
+0 33 9
 #turn=604, 
-#money=4111, 
-#income=1068
- #Score=213439
--1
+#money=7212, 
+#income=692
+ #Score=142844
+2 32 9
 #turn=605, 
-#money=5179, 
-#income=1068
- #Score=213439
--1
+#money=7804, 
+#income=692
+ #Score=142744
+2 31 9
 #turn=606, 
-#money=6247, 
-#income=1068
- #Score=213439
--1
+#money=8396, 
+#income=692
+ #Score=142644
+2 30 9
 #turn=607, 
-#money=7215, 
-#income=1068
- #Score=213339
-1 33 13
+#money=8988, 
+#income=692
+ #Score=142544
+2 29 9
 #turn=608, 
-#money=8183, 
-#income=1068
- #Score=213239
-3 33 14
-#turn=609, 
-#money=9151, 
-#income=1068
- #Score=213139
-2 34 14
-#turn=610, 
-#money=10119, 
-#income=1068
- #Score=213039
-2 35 14
-#turn=611, 
-#money=11087, 
-#income=1068
- #Score=212939
-2 36 14
-#turn=612, 
-#money=12055, 
-#income=1068
- #Score=212839
-2 37 14
-#turn=613, 
-#money=8183, 
-#income=1128
- #Score=219119
-0 38 14
-#turn=614, 
-#money=9311, 
-#income=1128
- #Score=219119
+#money=4798, 
+#income=810
+ #Score=160318
+0 4 44
 -1
-#turn=615, 
-#money=10439, 
-#income=1128
- #Score=219119
 -1
-#turn=616, 
-#money=11567, 
-#income=1128
- #Score=219119
 -1
-#turn=617, 
-#money=7695, 
-#income=1128
- #Score=214119
-0 2 8
-#turn=618, 
-#money=8723, 
-#income=1128
- #Score=214019
-6 2 7
-#turn=619, 
-#money=9751, 
-#income=1128
- #Score=213919
-1 14 44
-#turn=620, 
-#money=10779, 
-#income=1128
- #Score=213819
-1 14 45
-#turn=621, 
-#money=11807, 
-#income=1128
- #Score=213719
-1 14 46
-#turn=622, 
-#money=12835, 
-#income=1128
- #Score=213619
-1 14 47
-#turn=623, 
-#money=9039, 
-#income=1204
- #Score=222147
-0 14 48
-#turn=624, 
-#money=10143, 
-#income=1204
- #Score=222047
-1 38 15
-#turn=625, 
-#money=11247, 
-#income=1204
- #Score=221947
-1 38 16
-#turn=626, 
-#money=12351, 
-#income=1204
- #Score=221847
-1 38 17
-#turn=627, 
-#money=13455, 
-#income=1204
- #Score=221747
-1 38 18
-#turn=628, 
-#money=14559, 
-#income=1204
- #Score=221647
-3 38 19
-#turn=629, 
-#money=15663, 
-#income=1204
- #Score=221547
-2 39 19
-#turn=630, 
-#money=11919, 
-#income=1256
- #Score=225439
-0 40 19
-#turn=631, 
-#money=8175, 
-#income=1256
- #Score=220439
-0 17 43
-#turn=632, 
-#money=9331, 
-#income=1256
- #Score=220339
-2 16 43
-#turn=633, 
-#money=10487, 
-#income=1256
- #Score=220239
-2 15 43
-#turn=634, 
-#money=11643, 
-#income=1256
- #Score=220139
-4 40 20
-#turn=635, 
-#money=12799, 
-#income=1256
- #Score=220039
-2 39 20
-#turn=636, 
-#money=13955, 
-#income=1256
- #Score=219939
-2 38 20
-#turn=637, 
-#money=15111, 
-#income=1256
- #Score=219839
-2 37 20
-#turn=638, 
-#money=16267, 
-#income=1256
- #Score=219739
-6 36 20
-#turn=639, 
-#money=17423, 
-#income=1256
- #Score=219639
-1 36 21
-#turn=640, 
-#money=18579, 
-#income=1256
- #Score=219539
-1 36 22
-#turn=641, 
-#money=14923, 
-#income=1344
- #Score=228619
-0 36 23
-#turn=642, 
-#money=16167, 
-#income=1344
- #Score=228519
-2 5 48
-#turn=643, 
-#money=17411, 
-#income=1344
- #Score=228419
-2 4 48
-#turn=644, 
-#money=18655, 
-#income=1344
- #Score=228319
-2 3 48
-#turn=645, 
-#money=19899, 
-#income=1344
- #Score=228219
-2 2 48
-#turn=646, 
-#money=21143, 
-#income=1344
- #Score=228119
-2 1 48
-#turn=647, 
-#money=17529, 
-#income=1386
- #Score=229587
-0 0 48
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
+-1
 -1
 -1
 -1
