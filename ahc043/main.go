@@ -1068,22 +1068,23 @@ func beamSearch(in Input) {
 				}
 				// 孤立するのは作らない
 				isolated := true
-				for l := 0; l < len(p); l++ {
-					for d := 0; d < 4; d++ {
-						y, x := p[l].Y+dy[d], p[l].X+dx[d]
-						if y < 0 || y >= 50 || x < 0 || x >= 50 {
-							continue
-						}
-						if checkConnec(tmp.cell[p[l].Y][p[l].X], d, true) && checkConnec(tmp.cell[y][x], d, false) {
-							isolated = false
-							break
+				if len(beamStates[i].state.field.stations) > 0 {
+					for l := 0; l < len(p) && isolated; l++ {
+						for d := 0; d < 4; d++ {
+							y, x := p[l].Y+dy[d], p[l].X+dx[d]
+							if y < 0 || y >= 50 || x < 0 || x >= 50 {
+								continue
+							}
+							if checkConnec(tmp.cell[p[l].Y][p[l].X], d, true) && checkConnec(tmp.cell[y][x], d, false) {
+								isolated = false
+								break
+							}
 						}
 					}
+					if isolated {
+						continue
+					}
 				}
-				if isolated && len(beamStates[i].state.field.stations) > 0 {
-					continue
-				}
-
 				costMoney := calBuildCost(t) //純粋なコスト(money)
 				if beamStates[i].state.money < costMoney && beamStates[i].state.income == 0 {
 					// お金が足りない＋収入がない時はスキップ
