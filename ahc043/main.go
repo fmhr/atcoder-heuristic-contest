@@ -203,7 +203,7 @@ func (f *Field) build(act Action) error {
 		//panic("invalid kind:" + fmt.Sprint(act.Kind))
 		return fmt.Errorf("invalid kind:%s", fmt.Sprint(act.Kind))
 	}
-	// すでに建っている
+	// すでになにか立っていて、問題がある
 	if f.cell[act.Y][act.X] != EMPTY {
 		if !(act.Kind == STATION && f.cell[act.Y][act.X] >= 1 && f.cell[act.Y][act.X] <= 6) {
 			// 駅は線路の上に建てることができる
@@ -221,9 +221,11 @@ func (f *Field) build(act Action) error {
 			panic("同じ線路を建てることはできません")
 		}
 	}
+	// 駅のチェック
 	if act.Kind == STATION {
 		f.stations = append(f.stations, Pos{Y: act.Y, X: act.X})
 	}
+	// 建設
 	f.cell[act.Y][act.X] = act.Kind
 	// 連結成分をつなげる
 	y, x := act.Y, act.X
@@ -274,18 +276,12 @@ func (f *Field) build(act Action) error {
 
 // collectStationsは、posから距離２以内の駅の位置を返す
 func (f Field) collectStations(pos Pos) (stations []Pos) {
-	for dy := -2; dy <= 2; dy++ {
-		for dx := -2; dx <= 2; dx++ {
-			if absInt(dy)+absInt(dx) > 2 {
-				continue
-			}
-			y, x := pos.Y+int16(dy), pos.X+int16(dx)
-			if y >= 0 && y < 50 && x >= 0 && x < 50 && f.cell[y][x] == STATION {
-				stations = append(stations, Pos{Y: y, X: x})
-			}
+	for _, s := range f.stations {
+		if distance(s, pos) <= 2 {
+			stations = append(stations, s)
 		}
 	}
-	return stations
+	return
 }
 
 // checkConnect 駅,路線をつかって、a,bがつながっているかを返す
