@@ -1078,6 +1078,9 @@ func beamSearch(in Input) {
 					p = append(p, acts.path[k])
 					t = append(t, acts.typ[k])
 				}
+				if len(p) == 0 {
+					continue
+				}
 				// 孤立するのは作らない
 				isolated := true
 				for l := 0; l < len(p); l++ {
