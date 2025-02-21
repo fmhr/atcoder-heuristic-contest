@@ -406,8 +406,8 @@ func railDirection(rail int16) []int16 {
 	return nil
 }
 
-// isRailConnected はレールの接続ルールを判定する
-func isRailConnected(railType int16, direction int, isStart bool) bool {
+// checkConnec はレールの接続ルールを判定する
+func checkConnec(railType int16, direction int, isStart bool) bool {
 	if railType == STATION {
 		return true
 	}
@@ -468,13 +468,13 @@ func (f Field) canMove(a, b Pos) bool {
 	}
 	// aのレールが繋がっていなかったらfalse
 	if isRail(f.cell[a.Y][a.X]) {
-		if !isRailConnected(f.cell[a.Y][a.X], direction, true) {
+		if !checkConnec(f.cell[a.Y][a.X], direction, true) {
 			return false
 		}
 	}
 	// bのレールが繋がっていなかったらfalse
 	if isRail(f.cell[b.Y][b.X]) {
-		if !isRailConnected(f.cell[b.Y][b.X], direction, false) {
+		if !checkConnec(f.cell[b.Y][b.X], direction, false) {
 			return false
 		}
 	}
@@ -1074,7 +1074,7 @@ func beamSearch(in Input) {
 						if y < 0 || y >= 50 || x < 0 || x >= 50 {
 							continue
 						}
-						if isRailConnected(tmp.cell[p[l].Y][p[l].X], d, true) && isRailConnected(tmp.cell[y][x], d, false) {
+						if checkConnec(tmp.cell[p[l].Y][p[l].X], d, true) && checkConnec(tmp.cell[y][x], d, false) {
 							isolated = false
 							break
 						}

@@ -185,7 +185,7 @@ func TestIsRailConnected(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(int16ToString(tt.railType), func(t *testing.T) {
-			result := isRailConnected(tt.railType, tt.direction, tt.isStart)
+			result := checkConnec(tt.railType, tt.direction, tt.isStart)
 			if result != tt.expected {
 				t.Errorf("isRailConnected(%s, %d, %t) = %t; expected %t",
 					int16ToString(tt.railType), tt.direction, tt.isStart, result, tt.expected)
