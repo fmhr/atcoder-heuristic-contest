@@ -107,7 +107,7 @@ func TestDebugBeamSearch(t *testing.T) {
 // go tool pprof -http=:8080 cpu.prof
 
 func TestBeamSearch(t *testing.T) {
-	in, err := readInputFile("tools/in/0000.txt")
+	in, err := readInputFile("tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}

@@ -891,13 +891,6 @@ func constructRailway(in Input, stations []Pos) []Edge {
 // choseStationPosition は,駅の場所をあらかじめ決める
 // Inputからすべての家と職場の位置を所得して、その全てが駅から距離２以下になるように駅を配置する
 func choseStationPosition(in Input) (poss []Pos) {
-	var grid [2500]int16
-	for i := 0; i < in.M; i++ {
-		y, x := in.src[i].Y, in.src[i].X
-		grid[int(y)*50+int(x)] += 1
-		y, x = in.dst[i].Y, in.dst[i].X
-		grid[int(y)*50+int(x)] += 1
-	}
 	uncoverd := make([]Pos, 0, in.M*2)
 	for i := 0; i < in.M; i++ {
 		uncoverd = append(uncoverd, in.src[i])
@@ -933,7 +926,6 @@ func choseStationPosition(in Input) (poss []Pos) {
 		}
 		uncoverd = newUncoverd
 	}
-
 	return poss
 }
 
@@ -1149,6 +1141,8 @@ func beamSearch(in Input) {
 	}
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
 	log.Println(bestState.state.field.cellString())
+
+	return
 	for _, act := range bestState.state.actions {
 		fmt.Print(act.String())
 	}
