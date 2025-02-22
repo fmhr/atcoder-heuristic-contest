@@ -16,6 +16,33 @@ const (
 	N = 50
 )
 
+var startTime time.Time
+var ATCODER bool
+var frand *rand.Rand
+
+func init() {
+	log.SetFlags(log.Lshortfile)
+	frand = rand.New(rand.NewSource(1))
+}
+
+func main() {
+	if os.Getenv("ATCODER") == "1" {
+		ATCODER = true
+		log.Println("on AtCoder")
+		log.SetOutput(io.Discard)
+	}
+	startTime = time.Now()
+	log.SetFlags(log.Lshortfile)
+	reader := bufio.NewReader(os.Stdin)
+	writer := bufio.NewWriter(os.Stdout)
+	defer writer.Flush()
+	in := readInput(reader)
+	_ = in
+	beamSearch(*in)
+	//log.Printf("in=%+v\n", in)
+	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
+}
+
 const (
 	COST_STATION = 5000
 	COST_RAIL    = 100
@@ -506,7 +533,7 @@ MAKEPATH:
 		p := path[len(path)-1]
 		direction := [4]int{0, 1, 2, 3}
 		// このシャッフルで多様性を持たせる
-		rand.Shuffle(4, func(i, j int) { direction[i], direction[j] = direction[j], direction[i] })
+		randShuffle(4, func(i, j int) { direction[i], direction[j] = direction[j], direction[i] })
 		for _, d := range direction {
 			y, x := p.Y+dy[d], p.X+dx[d]
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
@@ -1136,7 +1163,7 @@ func beamSearch(in Input) {
 		}
 		nextStates = make([]bsState, 0, beamWidth)
 		loop++
-		if (loop+1)%10 == 0 {
+		if ATCODER && (loop+1)%10 == 0 {
 			elpstime := time.Since(startTime)
 			if elpstime > time.Millisecond*2800 {
 				timeout = true
@@ -1187,34 +1214,6 @@ func readInput(re *bufio.Reader) *Input {
 	in.dst = dst
 	in.income = income
 	return &in
-}
-
-var startTime time.Time
-var ATCODER bool
-
-func init() {
-	log.SetFlags(log.Lshortfile)
-}
-
-func main() {
-	if os.Getenv("ATCODER") == "1" {
-		ATCODER = true
-		log.Println("on AtCoder")
-		log.SetOutput(io.Discard)
-	}
-	//rand.Seed(1)
-	//log.Println("rand test:", rand.Int())
-	startTime = time.Now()
-	log.SetFlags(log.Lshortfile)
-	reader := bufio.NewReader(os.Stdin)
-	writer := bufio.NewWriter(os.Stdout)
-	defer writer.Flush()
-	in := readInput(reader)
-	_ = in
-	//greedy(*in)
-	beamSearch(*in)
-	//log.Printf("in=%+v\n", in)
-	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
 
 func absInt16(x int16) int16 {
@@ -1331,4 +1330,11 @@ func minInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func randShuffle(n int, swap func(i int, j int)) {
+	for i := 0; i < n; i++ {
+		j := frand.Intn(n)
+		swap(i, j)
+	}
 }
