@@ -333,36 +333,35 @@ var reverseRailMap = map[string]int16{
 
 // CanReach は、グラフ内でノード a からノード b に到達可能かどうかを判断します。
 func CanReach(a, b int, g []Edge) bool {
-	visited := make(map[int]bool) // 訪問済みのノードを追跡します
-	queue := []int{a}             // 幅優先探索(BFS)で使用するキュー
+	visited := make(map[int]bool)
+	queue := []int{a}
 
-	visited[a] = true // 開始ノードを訪問済みにします
+	visited[a] = true
 
 	for len(queue) > 0 {
-		currentNode := queue[0] // キューから最初のノードを取り出します
-		queue = queue[1:]       // キューの先頭を削除します
+		currentNode := queue[0]
+		queue = queue[1:]
 
 		if currentNode == b {
-			return true // 目的ノードに到達しました
+			return true
 		}
 
-		// 現在のノードから到達可能なすべての隣接ノードを見つけます
 		for _, edge := range g {
 			if edge.From == currentNode {
 				neighbor := edge.To
-				if !visited[neighbor] { // まだ訪問していない隣接ノードの場合
-					visited[neighbor] = true        // 訪問済みにします
-					queue = append(queue, neighbor) // キューに追加します
+				if !visited[neighbor] {
+					visited[neighbor] = true
+					queue = append(queue, neighbor)
 				}
 			} else if edge.To == currentNode {
 				neighbor := edge.From
-				if !visited[neighbor] { // まだ訪問していない隣接ノードの場合
-					visited[neighbor] = true        // 訪問済みにします
-					queue = append(queue, neighbor) // キューに追加します
+				if !visited[neighbor] {
+					visited[neighbor] = true
+					queue = append(queue, neighbor)
 				}
 			}
 		}
 	}
 
-	return false // 目的ノードに到達できませんでした
+	return false
 }
