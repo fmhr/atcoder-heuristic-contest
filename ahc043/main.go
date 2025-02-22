@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"sort"
 	"strings"
@@ -564,7 +565,10 @@ func (f Field) canConnect(a, b Pos) ([]Pos, error) {
 MAKEPATH:
 	for {
 		p := path[len(path)-1]
-		for d := 0; d < 4; d++ {
+		direction := [4]int{0, 1, 2, 3}
+		// このシャッフルで多様性を持たせる
+		rand.Shuffle(4, func(i, j int) { direction[i], direction[j] = direction[j], direction[i] })
+		for _, d := range direction {
 			y, x := p.Y+dy[d], p.X+dx[d]
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				// 場外
