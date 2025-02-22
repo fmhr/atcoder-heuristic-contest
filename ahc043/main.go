@@ -789,6 +789,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	}
 	//////////////////////////
 	// MSTを求める
+	// コストが小さい順にソート
 	sort.Slice(edges, func(i, j int) bool {
 		return edges[i].Cost < edges[j].Cost
 	})
