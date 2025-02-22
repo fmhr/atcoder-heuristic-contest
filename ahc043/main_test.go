@@ -114,6 +114,16 @@ func TestBeamSearch(t *testing.T) {
 	beamSearch(*in)
 }
 
+func BenchmarkBeamSearch(b *testing.B) {
+	in, err := readInputFile("tools/in/0013.txt")
+	if err != nil {
+		b.Fatalf("failed to read input: %v", err)
+	}
+	for i := 0; i < b.N; i++ {
+		beamSearch(*in)
+	}
+}
+
 func TestChoseStationPosition(t *testing.T) {
 	in, err := readInputFile("tools/in/0001.txt")
 	if err != nil {
