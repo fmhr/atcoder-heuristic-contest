@@ -35,7 +35,8 @@ func main() {
 	defer writer.Flush()
 	in := readInput(reader)
 	_ = in
-	beamSearch(*in)
+	ans := beamSearch(*in)
+	_, _ = fmt.Fprintln(writer, ans)
 	//log.Printf("in=%+v\n", in)
 	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
@@ -999,7 +1000,7 @@ type bsAction struct {
 }
 
 // すべての駅の場所と、それらをつなぐエッジを行動にする
-func beamSearch(in Input) {
+func beamSearch(in Input) string {
 	// 駅の位置を選ぶ
 	stations := choseStationPositionFast(in)
 	log.Printf("stations=%v\n", len(stations))
@@ -1181,13 +1182,14 @@ func beamSearch(in Input) {
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
 	log.Println(bestState.state.field.cellString())
 
-	//return
+	sb := strings.Builder{}
 	for _, act := range bestState.state.actions {
-		fmt.Print(act.String())
+		sb.WriteString(act.String())
 	}
 	for i := len(bestState.state.actions); i < in.T; i++ {
-		fmt.Println(DO_NOTHING)
+		sb.WriteString("-1\n")
 	}
+	return sb.String()
 }
 
 type Input struct {

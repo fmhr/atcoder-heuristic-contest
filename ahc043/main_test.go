@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -114,7 +115,10 @@ func TestBeamSearch(t *testing.T) {
 	beamSearch(*in)
 }
 
+// go test -bench=BenchmarkBeamSearch -benchtime=10s -cpuprofile cpu.prof -memprofile mem.prof -v .
 func BenchmarkBeamSearch(b *testing.B) {
+	ATCODER = true
+	log.SetOutput(io.Discard)
 	in, err := readInputFile("tools/in/0013.txt")
 	if err != nil {
 		b.Fatalf("failed to read input: %v", err)
