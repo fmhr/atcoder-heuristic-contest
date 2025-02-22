@@ -1125,14 +1125,14 @@ func beamSearch(in Input) {
 		}
 		nextStates = make([]bsState, 0, beamWidth)
 		loop++
-		if (loop+1)%10 == 0 {
-			elpstime := time.Since(startTime)
-			if elpstime > time.Millisecond*2800 {
-				timeout = true
-				log.Println("time out")
-				break
-			}
-		}
+		//if (loop+1)%10 == 0 {
+		//elpstime := time.Since(startTime)
+		//if elpstime > time.Millisecond*2800 {
+		//timeout = true
+		//log.Println("time out")
+		//break
+		//}
+		//}
 	}
 	if timeout {
 		log.Printf("TO=1\n")
@@ -1142,13 +1142,12 @@ func beamSearch(in Input) {
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
 	log.Println(bestState.state.field.cellString())
 
-	return
-	for _, act := range bestState.state.actions {
-		fmt.Print(act.String())
-	}
-	for i := len(bestState.state.actions); i < in.T; i++ {
-		fmt.Println(DO_NOTHING)
-	}
+	//for _, act := range bestState.state.actions {
+	//fmt.Print(act.String())
+	//}
+	//for i := len(bestState.state.actions); i < in.T; i++ {
+	//fmt.Println(DO_NOTHING)
+	//}
 }
 
 func greedy(in Input) {
