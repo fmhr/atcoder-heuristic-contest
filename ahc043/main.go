@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sort"
@@ -764,7 +765,12 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	// 決めておいた駅を建設する
 	field := NewField(in.N)
 	for i := 0; i < numStations; i++ {
-		field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
+		err := field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
+		if err != nil {
+			log.Println("fatal build station:", stations[i])
+			log.Println("station build error", err)
+			panic(err)
+		}
 	}
 	log.Println(field.cellString())
 
@@ -794,24 +800,23 @@ func constructRailway(in Input, stations []Pos) []Edge {
 		}
 		// 連結可能か確認
 		path := field.canConnect(stations[edge.From], stations[edge.To])
-		// ここではフィールドを使っているので、path=nilの可能性もあり
+		// ここではフィールドを使っているので、path=nilの可能性もある
 		if path != nil {
 			types := field.selectRails(path)
-			// 途中に駅があるか確認
-			// サイクルを作らない場合もあるので消さない
+			// すでに建築済みまたは駅がある場合はスキップ
 			for i := 1; i < len(path)-1; i++ {
-				if field.cell[path[i].Y][path[i].X] == STATION {
+				if field.cell[path[i].Y][path[i].X] == STATION || field.cell[path[i].Y][path[i].X] == types[i] {
 					continue
 				}
-				field.build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
+				err := field.build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
+				if err != nil {
+					panic(err)
+				}
 			}
 			uf.unite(int16(edge.From), int16(edge.To))
 			edge.Path = path
 			edge.Rail = types
 			mstEdges = append(mstEdges, edge)
-			//log.Println("connect", stations[edge.From], stations[edge.To], "cost=", edge.Cost)
-			//log.Println(path)
-			//log.Println(field.cellString())
 		}
 	}
 	log.Println(field.cellString())
@@ -1016,14 +1021,14 @@ func beamSearch(in Input) {
 	}
 	log.Println("actionNum", len(allAction))
 	initialState := newBsState(&in, len(allAction))
-	beamWidth := 100
+	beamWidth := 5
 	beamStates := make([]bsState, 0, beamWidth)
 	beamStates = append(beamStates, *initialState)
 	nextStates := make([]bsState, 0, beamWidth)
 	bestState := initialState.Clone()
 	var loop int
 	for len(beamStates) > 0 {
-		for i := 0; i < min(beamWidth, len(beamStates)); i++ {
+		for i := 0; i < minInt(beamWidth, len(beamStates)); i++ {
 			if beamStates[i].state.turn > 800 {
 				if beamStates[i].state.score > bestState.state.score {
 					bestState = beamStates[i].Clone()
@@ -1142,6 +1147,7 @@ func beamSearch(in Input) {
 					bestState = newState.Clone()
 				}
 			}
+
 		}
 		log.Println("nextStates", len(nextStates))
 		sort.Slice(nextStates, func(i, j int) bool {
@@ -1162,6 +1168,13 @@ func beamSearch(in Input) {
 		}
 		nextStates = make([]bsState, 0, beamWidth)
 		loop++
+		if (loop+1)%10 == 0 {
+			elpstime := time.Since(startTime)
+			if elpstime > time.Millisecond*2800 {
+				log.Println("time out")
+				break
+			}
+		}
 	}
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
 	log.Println(bestState.state.field.cellString())
@@ -1302,9 +1315,12 @@ func greedy(in Input) {
 		}
 	}
 	log.Println(state.field.cellString())
+	var sb strings.Builder
+	sb.Grow(4000)
 	var t int
 	for i, a := range state.actions {
-		fmt.Print(a)
+		//fmt.Print(a)
+		sb.WriteString(a.String())
 		t++
 		if i == in.T-1 {
 			break
@@ -1312,10 +1328,12 @@ func greedy(in Input) {
 	}
 	log.Printf("turn=%d\n", t)
 	for t < 800 {
-		fmt.Println(DO_NOTHING)
+		//fmt.Println(DO_NOTHING)
+		sb.WriteString("-1\n")
 		t++
 	}
 	log.Printf("stations=%d\n", len(state.field.stations))
+	fmt.Print(sb.String())
 }
 
 type Input struct {
@@ -1345,12 +1363,19 @@ func readInput(re *bufio.Reader) *Input {
 	return &in
 }
 
+var startTime time.Time
+
 func init() {
 	log.SetFlags(log.Lshortfile)
 }
 
 func main() {
-	startTime := time.Now()
+	if os.Getenv("ATCODER") == "1" {
+		log.Println("on AtCoder")
+		log.SetOutput(io.Discard)
+	}
+
+	startTime = time.Now()
 	log.SetFlags(log.Lshortfile)
 	reader := bufio.NewReader(os.Stdin)
 	writer := bufio.NewWriter(os.Stdout)
@@ -1477,3 +1502,14 @@ func (b *BitSet) Get(index int) bool {
 	}
 	return (b.bits[index/64] & (1 << (index % 64))) != 0
 }
+
+// utils
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// デバッグ用 別に debug.goが必要
+func debugLog(format string, v ...interface{}) {}
