@@ -23,6 +23,7 @@ clear:
 
 seed:
 	seq 0 10000 > tools/seed.txt
+	cd tools && cargo run -r --bin gen seed.txt
 
 profile: build
 	$(RUN_CMD) -cpuprofile cpu.prof < tools/in/0008.txt > 8.out

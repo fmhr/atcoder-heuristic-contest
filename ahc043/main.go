@@ -647,8 +647,10 @@ func (s *State) do(act Action, in Input, last bool) error {
 	s.turn++
 	s.money += s.income
 	s.score = s.money + s.income*(in.T-s.turn)
-	act.comment = fmt.Sprintf("#turn=%d, \n#money=%d, \n#income=%d\n #Score=%d\n",
-		s.turn, s.money, s.income, s.score)
+	if !ATCODER {
+		act.comment = fmt.Sprintf("#turn=%d, \n#money=%d, \n#income=%d\n #Score=%d\n",
+			s.turn, s.money, s.income, s.score)
+	}
 	s.actions = append(s.actions, act)
 	return nil
 }
@@ -1027,6 +1029,7 @@ func beamSearch(in Input) {
 	nextStates := make([]bsState, 0, beamWidth)
 	bestState := initialState.Clone()
 	var loop int
+	var timeout bool
 	for len(beamStates) > 0 {
 		for i := 0; i < minInt(beamWidth, len(beamStates)); i++ {
 			if beamStates[i].state.turn > 800 {
@@ -1171,9 +1174,15 @@ func beamSearch(in Input) {
 		if (loop+1)%10 == 0 {
 			elpstime := time.Since(startTime)
 			if elpstime > time.Millisecond*2800 {
+				timeout = true
 				log.Println("time out")
 				break
 			}
+		}
+		if timeout {
+			log.Printf("TO=1\n")
+		} else {
+			log.Printf("TO=0\n")
 		}
 	}
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
@@ -1364,6 +1373,7 @@ func readInput(re *bufio.Reader) *Input {
 }
 
 var startTime time.Time
+var ATCODER bool
 
 func init() {
 	log.SetFlags(log.Lshortfile)
@@ -1371,6 +1381,7 @@ func init() {
 
 func main() {
 	if os.Getenv("ATCODER") == "1" {
+		ATCODER = true
 		log.Println("on AtCoder")
 		log.SetOutput(io.Discard)
 	}
