@@ -241,16 +241,6 @@ func (f *Field) build(act Action) error {
 	return nil
 }
 
-// collectStationsは、posから距離２以内の駅の位置を返す
-func (f Field) collectStations(pos Pos) (stations []Pos) {
-	for _, s := range f.stations {
-		if distance(s, pos) <= 2 {
-			stations = append(stations, s)
-		}
-	}
-	return
-}
-
 // checkConnect 駅,路線をつかって、a,bがつながっているかを返す
 // a, b　はHOME, WORKSPACE
 func (f Field) checkConnect(a, b Pos) bool {
@@ -350,36 +340,6 @@ func (f *Field) selectRails(path []Pos) (types []int16) {
 		}
 	}
 	return
-}
-
-// countSrcDst は、posから距離２以内のsrc,dstの数を返す ただしすでに駅がある場合はカウントしない
-// 駅を想定
-func (f Field) countSrcDst(pos Pos, in Input) (srcNum, dstNum int) {
-	for dy := -2; dy <= 2; dy++ {
-		for dx := -2; dx <= 2; dx++ {
-			if absInt(dy)+absInt(dx) > 2 {
-				continue
-			}
-			y, x := pos.Y+int16(dy), pos.X+int16(dx)
-			if y >= 0 && y < 50 && x >= 0 && x < 50 {
-			NEXT:
-				for i := 0; i < in.M; i++ {
-					for _, s := range f.stations {
-						if distance(s, Pos{Y: y, X: x}) <= 2 {
-							break NEXT
-						}
-					}
-					if in.src[i].Y == y && in.src[i].X == x {
-						srcNum++
-					}
-					if in.dst[i].Y == y && in.dst[i].X == x {
-						dstNum++
-					}
-				}
-			}
-		}
-	}
-	return srcNum, dstNum
 }
 
 // railが繋がる向きを返す,dy,dxに対応
@@ -1371,11 +1331,4 @@ func minInt(a, b int) int {
 		return a
 	}
 	return b
-}
-
-func absInt(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
 }
