@@ -747,21 +747,8 @@ func constructRailway(in Input, stations []Pos) []Edge {
 		}
 	}
 	log.Println(field2.cellString())
-	//return mstEdges
-	pathpath := make([][]Pos, 0, numStations)
-	for i := int16(0); i < numStations; i++ {
-		for j := i + 1; j < numStations; j++ {
-			path, err := field2.canConnect(stations[i], stations[j])
-			// すべての駅は繋がっているはずなので、nilはありえない
-			if err != nil {
-				panic(err)
-			}
-			pathpath = append(pathpath, path)
-		}
-	}
-	log.Println("stations", len(stations))
-	log.Println("pathpath", len(pathpath))
 	///////////////////////////////////
+	// MST木の上で、すべての家と職場を繋ぐ駅のエッジを作る
 	// src,dstの対応する駅を探して、その間を繋ぐエッジを作る
 	count := 0
 	unique := make(map[Pair]bool)
@@ -790,7 +777,6 @@ func constructRailway(in Input, stations []Pos) []Edge {
 				if s0 == s1 {
 					continue
 				}
-				unique[uniquePair(s0, s1)] = true
 				path, err := field2.canConnect(s0, s1)
 				if err != nil {
 					panic(err)
@@ -799,6 +785,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 				edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types}
 				mstEdges = append(mstEdges, edge)
 				count++
+				unique[uniquePair(s0, s1)] = true
 			}
 		}
 	}
