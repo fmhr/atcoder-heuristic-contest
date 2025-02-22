@@ -929,6 +929,57 @@ func choseStationPosition(in Input) (poss []Pos) {
 	return poss
 }
 
+func choseStationPositionFast(in Input) (poss []Pos) {
+	sumPoints := in.M * 2
+	var grid [2500]int
+	for i := 0; i < in.M; i++ {
+		grid[in.src[i].Y*50+in.src[i].X]++
+		grid[in.dst[i].Y*50+in.dst[i].X]++
+	}
+	var coverd [2500]bool
+	coverdPoints := 0
+
+	for coverdPoints < sumPoints {
+		bestPos := Pos{Y: 0, X: 0}
+		bestHit := 0
+		for i := 0; i < 50; i++ {
+			for j := 0; j < 50; j++ {
+				hit := 0
+				if coverd[i*50+j] {
+					continue
+				}
+				for k := 0; k < 13; k++ {
+					y, x := int16(i)+ddy[k], int16(j)+ddx[k]
+					if y < 0 || y >= 50 || x < 0 || x >= 50 {
+						continue
+					}
+					if coverd[y*50+x] {
+						continue
+					}
+					hit += grid[y*50+x]
+				}
+				if hit > bestHit {
+					bestHit = hit
+					bestPos = Pos{Y: int16(i), X: int16(j)}
+				}
+			}
+		}
+		if bestHit == 0 {
+			panic("no station position")
+		}
+		poss = append(poss, bestPos)
+		coverdPoints += bestHit
+		for k := 0; k < 13; k++ {
+			y, x := bestPos.Y+ddy[k], bestPos.X+ddx[k]
+			if y < 0 || y >= 50 || x < 0 || x >= 50 {
+				continue
+			}
+			coverd[y*50+x] = true
+		}
+	}
+	return poss
+}
+
 type bsState struct {
 	state       State
 	restActions []uint
@@ -962,7 +1013,7 @@ type bsAction struct {
 // すべての駅の場所と、それらをつなぐエッジを行動にする
 func beamSearch(in Input) {
 	// 駅の位置を選ぶ
-	stations := choseStationPosition(in)
+	stations := choseStationPositionFast(in)
 	log.Printf("stations=%v\n", len(stations))
 	// 駅を繋ぐエッジを求める
 	edges := constructRailway(in, stations)
