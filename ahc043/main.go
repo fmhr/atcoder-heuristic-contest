@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"sort"
 	"strings"
@@ -287,7 +288,6 @@ func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 				que = append(que, Pos{Y: y, X: x})
 			}
 		}
-		//log.Println(len(que))
 	}
 	if dist[int(b.Y)*50+int(b.X)] == 10000 {
 		//log.Println(gridToString(dist))
@@ -295,9 +295,6 @@ func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 		//log.Println(f.cellString())
 		return nil
 	}
-	//log.Println(f.cellString())
-	//log.Println(showGrid(dist))
-
 	// b から a への経路を復元
 	path = append(path, b)
 	for path[len(path)-1] != a {
@@ -498,8 +495,8 @@ func (f Field) canBuileRail(path []Pos, typ []int16) bool {
 // 駅a, bが繋がることができるか、できないときnil,できるとき距離を返すpath
 // すでにある線路も活用できるようにする
 // 繋がらなかった時はnilを返す
-// 繋がっているはずにnilになる場合はバグなので、呼び出し元でチェックする
-func (f Field) canConnect(a, b Pos) []Pos {
+func (f Field) canConnect(a, b Pos) ([]Pos, error) {
+	// distの更新
 	var dist [2500]int16
 	for i := 0; i < 2500; i++ {
 		dist[i] = 10000
@@ -559,22 +556,19 @@ func (f Field) canConnect(a, b Pos) []Pos {
 			}
 		}
 	}
-	//log.Println(gridToString(dist))
-	//log.Println("dist", dist[int(b.Y)*50+int(b.X)])
+	// 繋がっていない
 	if dist[int(b.Y)*50+int(b.X)] == 10000 {
-		log.Println("can't reach", a, b)
-		return nil
+		return nil, fmt.Errorf("can't reach")
 	}
-	//log.Println(f.cellString())
-	//log.Println(gridToString(dist))
-	//log.Println(dist[int(b.Y)*50+int(b.X)], dist[int(a.Y)*50+int(a.X)])
-	//log.Println(b, a)
 	// b から a への経路を復元
 	path := []Pos{b}
 MAKEPATH:
 	for {
 		p := path[len(path)-1]
-		for d := 0; d < 4; d++ {
+		direction := [4]int{0, 1, 2, 3}
+		// このシャッフルで多様性を持たせる
+		rand.Shuffle(4, func(i, j int) { direction[i], direction[j] = direction[j], direction[i] })
+		for _, d := range direction {
 			y, x := p.Y+dy[d], p.X+dx[d]
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				// 場外
@@ -593,7 +587,7 @@ MAKEPATH:
 			}
 		}
 	}
-	return path
+	return path, nil
 }
 
 var ErrNotEnoughMoney = fmt.Errorf("not enough money")
@@ -797,9 +791,9 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			edges = append(edges, Edge{From: i, To: j, Cost: dist})
 		}
 	}
-	// ここまで前処理
 	//////////////////////////
 	// MSTを求める
+	// コストが小さい順にソート
 	sort.Slice(edges, func(i, j int) bool {
 		return edges[i].Cost < edges[j].Cost
 	})
@@ -814,8 +808,8 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			continue
 		}
 		// 連結可能か確認
-		path := field.canConnect(stations[edge.From], stations[edge.To])
-		// ここではフィールドを使っているので、path=nilの可能性もある
+		path, _ := field.canConnect(stations[edge.From], stations[edge.To])
+		// ここではフィールドを使っているので、path=nil,でも素通り
 		if path != nil {
 			types := field.selectRails(path)
 			if !field.canBuileRail(path, types) {
@@ -839,38 +833,9 @@ func constructRailway(in Input, stations []Pos) []Edge {
 		}
 	}
 	log.Println(field.cellString())
-	//log.Println("Num of Stations", numStations)
-	//log.Println("Num of Edges", len(mstEdges))
-	//log.Println(field.cellString())
-	// これをもとに、純粋なエッジ、駅、を分解する
-	// エッジに駅が含まれている時は再度typesを求めて含まれていないようにする
-	// 次に、src,dstを繋ぐエッジを探す
-	//　このときマンハッタン距離と、上の結果上を使うエッジのさが大きい時は、新しいエッジを作る
-	// 線路->駅は建築可能
-	//var grid [2500]int16
-	//for i := 0; i < 50; i++ {
-	//for j := 0; j < 50; j++ {
-	//grid[i*50+j] = field.cell[i][j]
-	//}
-	//}
-	//for i := 0; i < 50; i++ {
-	//fmt.Println(grid[i*50 : i*50+50])
-	//}
 
-	//for i := 0; i < in.M; i++ {
-	//src, dst := in.src[i], in.dst[i]
-	//dist0 := distance(src, dst)
-	//dest1 := shortestPathLimited(grid, src, dst, EMPTY)
-	//dist1 := shortestPathLimited(grid, src, dst, EMPTY)
-	//log.Println(src, "->", dst, dist0, len(dest1), len(dist1))
-	//}
-	//log.Println(len(mstEdges))
-	//for _, edge := range mstEdges {
-	//log.Println(edge.From, edge.To, edge.Cost, len(edge.Path), len(edge.Rail))
-	//}
 	///////////////////////////////////
 	// 全てに駅間を繋ぐエッジを作る
-	// TODO:線路の種類がMSTと違うルートがあるので要修正
 	// 使わない場所はOTHERにして、線路と駅をコピーする
 	field2 := NewField(in.N) // mstEdgesで使われている場所だけを使う
 	for i := 0; i < 50; i++ {
@@ -889,10 +854,10 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	pathpath := make([][]Pos, 0, numStations)
 	for i := 0; i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
-			path := field2.canConnect(stations[i], stations[j])
+			path, err := field2.canConnect(stations[i], stations[j])
 			// すべての駅は繋がっているはずなので、nilはありえない
-			if path == nil {
-				log.Fatal("can't connect", i, stations[i], j, stations[j])
+			if err != nil {
+				panic(err)
 			}
 			pathpath = append(pathpath, path)
 		}
@@ -929,9 +894,9 @@ func constructRailway(in Input, stations []Pos) []Edge {
 					continue
 				}
 				unique[uniquePair(s0, s1)] = true
-				path := field2.canConnect(s0, s1)
-				if len(path) == 0 {
-					log.Fatal("can't connect", s0, s1)
+				path, err := field2.canConnect(s0, s1)
+				if err != nil {
+					panic(err)
 				}
 				types := field2.selectRails(path)
 				edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types}
@@ -1403,7 +1368,8 @@ func main() {
 		log.Println("on AtCoder")
 		log.SetOutput(io.Discard)
 	}
-
+	//rand.Seed(1)
+	//log.Println("rand test:", rand.Int())
 	startTime = time.Now()
 	log.SetFlags(log.Lshortfile)
 	reader := bufio.NewReader(os.Stdin)

@@ -48,7 +48,7 @@ func TestShortestPaht(t *testing.T) {
 
 func TestConstructRailway(t *testing.T) {
 	// go test -timeout 30s -run ^TestConstructRailway$ ahc043 -v
-	in, err := readInputFile("tools/in/0000.txt")
+	in, err := readInputFile("tools/in/0201.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
@@ -65,7 +65,16 @@ func TestConstructRailway(t *testing.T) {
 		for j := 0; j < len(edges[i].Rail); j++ {
 			str += fmt.Sprintf(" %s", railMap[edges[i].Rail[j]])
 		}
-		//t.Log(str)
+	}
+	uf := NewUnionFind()
+	for _, e := range edges {
+		uf.unite(int16(e.From), int16(e.To))
+	}
+	root := uf.root(0)
+	for i := 1; i < len(stationPos); i++ {
+		if uf.root(int16(i)) != root {
+			t.Error("not connected")
+		}
 	}
 }
 
@@ -318,4 +327,39 @@ var reverseRailMap = map[string]int16{
 	"└": RAIL_RIGHT_UP,
 	"┌": RAIL_RIGHT_DOWN,
 	"#": OTHER,
+}
+
+// CanReach は、グラフ内でノード a からノード b に到達可能かどうかを判断します。
+func CanReach(a, b int, g []Edge) bool {
+	visited := make(map[int]bool)
+	queue := []int{a}
+
+	visited[a] = true
+
+	for len(queue) > 0 {
+		currentNode := queue[0]
+		queue = queue[1:]
+
+		if currentNode == b {
+			return true
+		}
+
+		for _, edge := range g {
+			if edge.From == currentNode {
+				neighbor := edge.To
+				if !visited[neighbor] {
+					visited[neighbor] = true
+					queue = append(queue, neighbor)
+				}
+			} else if edge.To == currentNode {
+				neighbor := edge.From
+				if !visited[neighbor] {
+					visited[neighbor] = true
+					queue = append(queue, neighbor)
+				}
+			}
+		}
+	}
+
+	return false
 }
