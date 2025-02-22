@@ -1193,7 +1193,7 @@ func beamSearch(in Input) {
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
 	log.Println(bestState.state.field.cellString())
 
-	return
+	//return
 	for _, act := range bestState.state.actions {
 		fmt.Print(act.String())
 	}
