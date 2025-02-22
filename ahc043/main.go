@@ -885,7 +885,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			}
 		}
 	}
-	log.Println(field2.cellString())
+	//log.Println(field2.cellString())
 	pathpath := make([][]Pos, 0, numStations)
 	for i := 0; i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
@@ -1027,6 +1027,7 @@ type bsAction struct {
 func beamSearch(in Input) {
 	// 駅の位置を選ぶ
 	stations := choseStationPosition(in)
+	log.Printf("stations=%v\n", len(stations))
 	// 駅を繋ぐエッジを求める
 	edges := constructRailway(in, stations)
 
@@ -1196,11 +1197,11 @@ func beamSearch(in Input) {
 				break
 			}
 		}
-		if timeout {
-			log.Printf("TO=1\n")
-		} else {
-			log.Printf("TO=0\n")
-		}
+	}
+	if timeout {
+		log.Printf("TO=1\n")
+	} else {
+		log.Printf("TO=0\n")
 	}
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
 	log.Println(bestState.state.field.cellString())
