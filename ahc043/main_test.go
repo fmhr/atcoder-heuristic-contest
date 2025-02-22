@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -52,7 +53,7 @@ func TestConstructRailway(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := choseStationPosition(*in)
+	stationPos := chooseStationPositions(*in)
 	t.Log("number of station:", len(stationPos))
 	edges := constructRailway(*in, stationPos)
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
@@ -114,18 +115,34 @@ func TestBeamSearch(t *testing.T) {
 	beamSearch(*in)
 }
 
+// go test -bench=BenchmarkBeamSearch -benchtime=10s -cpuprofile cpu.prof -memprofile mem.prof -v .
+func BenchmarkBeamSearch(b *testing.B) {
+	ATCODER = true
+	log.SetOutput(io.Discard)
+	in, err := readInputFile("tools/in/0013.txt")
+	if err != nil {
+		b.Fatalf("failed to read input: %v", err)
+	}
+	for i := 0; i < b.N; i++ {
+		beamSearch(*in)
+	}
+}
+
 func TestChoseStationPosition(t *testing.T) {
-	in, err := readInputFile("tools/in/0001.txt")
+	in, err := readInputFile("tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := choseStationPosition(*in)
-	//t.Log(stationPos)
-	//var grid [2500]int16
-	//for _, p := range stationPos {
-	//grid[p.Y*50+p.X] = 1
-	//}
-	//t.Log("Grid result:" + gridToString(grid))
+	stationPos := chooseStationPositions(*in)
+	t.Log("number of station:", len(stationPos))
+}
+
+func TestChoseStationPosition2(t *testing.T) {
+	in, err := readInputFile("tools/in/0013.txt")
+	if err != nil {
+		t.Fatalf("failed to read input: %v", err)
+	}
+	stationPos := chooseStationPositions(*in)
 	t.Log("number of station:", len(stationPos))
 }
 
@@ -149,7 +166,7 @@ func TestGridCalculation(t *testing.T) {
 			grid[next.Y*50+next.X] = i
 		}
 	}
-	//t.Log("Grid result:" + gridToString(grid))
+	t.Log("Grid result:" + gridToString(grid))
 }
 
 func TestIsRailConnected(t *testing.T) {

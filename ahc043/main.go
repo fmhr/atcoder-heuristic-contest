@@ -12,6 +12,35 @@ import (
 	"time"
 )
 
+var ATCODER bool     // AtCoder環境かどうか
+var frand *rand.Rand // シード固定乱数生成器 rand.Seed()は無効 go1.24~
+
+func init() {
+	log.SetFlags(log.Lshortfile)
+	frand = rand.New(rand.NewSource(1))
+}
+
+var startTime time.Time
+
+func main() {
+	if os.Getenv("ATCODER") == "1" {
+		ATCODER = true
+		log.Println("on AtCoder")
+		log.SetOutput(io.Discard)
+	}
+	startTime = time.Now()
+	log.SetFlags(log.Lshortfile)
+	reader := bufio.NewReader(os.Stdin)
+	writer := bufio.NewWriter(os.Stdout)
+	defer writer.Flush()
+	in := readInput(reader)
+	_ = in
+	ans := beamSearch(*in)
+	_, _ = fmt.Fprintln(writer, ans)
+	//log.Printf("in=%+v\n", in)
+	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
+}
+
 const (
 	N = 50
 )
@@ -139,7 +168,7 @@ func (a Action) String() (str string) {
 }
 
 type Field struct {
-	cell     [50][50]int16
+	cell     [N][N]int16
 	stations []Pos
 	coverd   BitSet //駅によってカバーされた位置
 }
@@ -156,7 +185,7 @@ func NewField(n int) *Field {
 			f.cell[i][j] = EMPTY
 		}
 	}
-	f.stations = make([]Pos, 0, 50)
+	f.stations = make([]Pos, 0)
 	return f
 }
 
@@ -165,12 +194,12 @@ func (f *Field) Clone() *Field {
 		return nil
 	}
 	newField := &Field{
-		cell:     [50][50]int16{},
+		cell:     [N][N]int16{},
 		stations: make([]Pos, len(f.stations)),
 	}
 	copy(newField.stations, f.stations)
-	for i := 0; i < 50; i++ {
-		for j := 0; j < 50; j++ {
+	for i := 0; i < N; i++ {
+		for j := 0; j < N; j++ {
 			newField.cell[i][j] = f.cell[i][j]
 		}
 	}
@@ -179,15 +208,15 @@ func (f *Field) Clone() *Field {
 }
 
 // typeToString は、posのセルの種類を返す 表示用のレールの記号
-func (f Field) typeToString(pos Pos) string {
-	return railMap[f.cell[pos.Y][pos.X]]
-}
+//func (f Field) typeToString(pos Pos) string {
+//return railMap[f.cell[pos.Y][pos.X]]
+//}
 
 func (f Field) cellString() string {
 	str := "view cellString()\n"
-	for i := 0; i < 50; i++ {
+	for i := 0; i < N; i++ {
 		str += fmt.Sprintf("%2d ", i)
-		for j := 0; j < 50; j++ {
+		for j := 0; j < N; j++ {
 			str += railMap[f.cell[i][j]]
 		}
 		str += "\n"
@@ -230,8 +259,8 @@ func (f *Field) build(act Action) error {
 		f.stations = append(f.stations, Pos{Y: act.Y, X: act.X})
 		for d := 0; d < 13; d++ {
 			y, x := act.Y+ddy[d], act.X+ddx[d]
-			if y >= 0 && y < 50 && x >= 0 && x < 50 {
-				f.coverd.Set(int(y*50 + x))
+			if y >= 0 && y < N && x >= 0 && x < N {
+				f.coverd.Set(int(y*N + x))
 			}
 		}
 	}
@@ -241,20 +270,10 @@ func (f *Field) build(act Action) error {
 	return nil
 }
 
-// collectStationsは、posから距離２以内の駅の位置を返す
-func (f Field) collectStations(pos Pos) (stations []Pos) {
-	for _, s := range f.stations {
-		if distance(s, pos) <= 2 {
-			stations = append(stations, s)
-		}
-	}
-	return
-}
-
 // checkConnect 駅,路線をつかって、a,bがつながっているかを返す
 // a, b　はHOME, WORKSPACE
 func (f Field) checkConnect(a, b Pos) bool {
-	return f.coverd.Get(int(a.Y*50+a.X)) && f.coverd.Get(int(b.Y*50+b.X))
+	return f.coverd.Get(int(a.Y*N+a.X)) && f.coverd.Get(int(b.Y*N+b.X))
 }
 
 // 2点間の最短経路を返す (a から b へ)
@@ -262,8 +281,8 @@ func (f Field) checkConnect(a, b Pos) bool {
 func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 	// a から b への最短経路を返す
 	// field=EMPTY なら移動可能 それ以外は移動不可
-	var dist [2500]int16
-	for i := 0; i < 2500; i++ {
+	var dist [N * N]int16
+	for i := 0; i < N*N; i++ {
 		dist[i] = 10000
 	}
 	dist[int(a.Y)*50+int(a.X)] = 0
@@ -350,36 +369,6 @@ func (f *Field) selectRails(path []Pos) (types []int16) {
 		}
 	}
 	return
-}
-
-// countSrcDst は、posから距離２以内のsrc,dstの数を返す ただしすでに駅がある場合はカウントしない
-// 駅を想定
-func (f Field) countSrcDst(pos Pos, in Input) (srcNum, dstNum int) {
-	for dy := -2; dy <= 2; dy++ {
-		for dx := -2; dx <= 2; dx++ {
-			if absInt(dy)+absInt(dx) > 2 {
-				continue
-			}
-			y, x := pos.Y+int16(dy), pos.X+int16(dx)
-			if y >= 0 && y < 50 && x >= 0 && x < 50 {
-			NEXT:
-				for i := 0; i < in.M; i++ {
-					for _, s := range f.stations {
-						if distance(s, Pos{Y: y, X: x}) <= 2 {
-							break NEXT
-						}
-					}
-					if in.src[i].Y == y && in.src[i].X == x {
-						srcNum++
-					}
-					if in.dst[i].Y == y && in.dst[i].X == x {
-						dstNum++
-					}
-				}
-			}
-		}
-	}
-	return srcNum, dstNum
 }
 
 // railが繋がる向きを返す,dy,dxに対応
@@ -546,7 +535,7 @@ MAKEPATH:
 		p := path[len(path)-1]
 		direction := [4]int{0, 1, 2, 3}
 		// このシャッフルで多様性を持たせる
-		rand.Shuffle(4, func(i, j int) { direction[i], direction[j] = direction[j], direction[i] })
+		randShuffle(4, func(i, j int) { direction[i], direction[j] = direction[j], direction[i] })
 		for _, d := range direction {
 			y, x := p.Y+dy[d], p.X+dx[d]
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
@@ -670,66 +659,6 @@ func uniquePair(p1, p2 Pos) Pair {
 // stationの周辺
 var ddy = [13]int16{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
 var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
-
-// shortestPathLimited gridのaからbまでで、movenableの範囲で最短経路を返す
-func shortestPathLimited(grid [2500]int16, a, b Pos, movenable int16) []Pos {
-	//log.Println(a, b, movenable)
-	var dist [2500]int16
-	for i := 0; i < 2500; i++ {
-		dist[i] = 1000
-	}
-	dist[a.Y*50+a.X] = 0
-	que := make([]Pos, 0, 2500)
-	que = append(que, a)
-	for len(que) > 0 {
-		p := que[0]
-		que = que[1:]
-		if p == b {
-			break
-		}
-		for i := 0; i < 4; i++ {
-			y, x := p.Y+dy[i], p.X+dx[i]
-			if y < 0 || y >= 50 || x < 0 || x >= 50 {
-				continue
-			}
-			if grid[y*50+x] == movenable || y == b.Y && x == b.X {
-				if dist[y*50+x] > dist[p.Y*50+p.X]+1 {
-					dist[y*50+x] = dist[p.Y*50+p.X] + 1
-					que = append(que, Pos{Y: y, X: x})
-				}
-			}
-		}
-	}
-	if dist[b.Y*50+b.X] == 1000 {
-		return nil
-	}
-	//log.Println(dist[a.Y*50+a.X], dist[b.Y*50+b.X])
-	// b から a への経路を復元
-	path := []Pos{b}
-	for path[len(path)-1] != a {
-		p := path[len(path)-1]
-		for i := 0; i < 4; i++ {
-			y, x := p.Y+dy[i], p.X+dx[i]
-			if y < 0 || y >= 50 || x < 0 || x >= 50 {
-				continue
-			}
-			if y == a.Y && x == a.X {
-				path = append(path, Pos{Y: y, X: x})
-				break
-			}
-			if (grid[y*50+x] == movenable || grid[y*50+x] == STATION) && dist[y*50+x] == dist[p.Y*50+p.X]-1 {
-				if dist[y*50+x] < dist[p.Y*50+p.X] {
-					path = append(path, Pos{Y: y, X: x})
-					break
-				}
-			}
-		}
-	}
-	for i := 0; i < len(path)/2; i++ {
-		path[i], path[len(path)-1-i] = path[len(path)-1-i], path[i]
-	}
-	return path
-}
 
 // すべての駅を繋ぐ鉄道を敷設する
 // クラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
@@ -888,9 +817,9 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	return mstEdges
 }
 
-// choseStationPosition は,駅の場所をあらかじめ決める
+// chooseStationPositions は,駅の場所をあらかじめ決める
 // Inputからすべての家と職場の位置を所得して、その全てが駅から距離２以下になるように駅を配置する
-func choseStationPosition(in Input) (poss []Pos) {
+func chooseStationPositions(in Input) (poss []Pos) {
 	uncoverd := make([]Pos, 0, in.M*2)
 	for i := 0; i < in.M; i++ {
 		uncoverd = append(uncoverd, in.src[i])
@@ -929,6 +858,57 @@ func choseStationPosition(in Input) (poss []Pos) {
 	return poss
 }
 
+func choseStationPositionFast(in Input) (poss []Pos) {
+	sumPoints := in.M * 2
+	var grid [2500]int
+	for i := 0; i < in.M; i++ {
+		grid[in.src[i].Y*50+in.src[i].X]++
+		grid[in.dst[i].Y*50+in.dst[i].X]++
+	}
+	var coverd [2500]bool
+	coverdPoints := 0
+
+	for coverdPoints < sumPoints {
+		bestPos := Pos{Y: 0, X: 0}
+		bestHit := 0
+		for i := 0; i < 50; i++ {
+			for j := 0; j < 50; j++ {
+				hit := 0
+				if coverd[i*50+j] {
+					continue
+				}
+				for k := 0; k < 13; k++ {
+					y, x := int16(i)+ddy[k], int16(j)+ddx[k]
+					if y < 0 || y >= 50 || x < 0 || x >= 50 {
+						continue
+					}
+					if coverd[y*50+x] {
+						continue
+					}
+					hit += grid[y*50+x]
+				}
+				if hit > bestHit {
+					bestHit = hit
+					bestPos = Pos{Y: int16(i), X: int16(j)}
+				}
+			}
+		}
+		if bestHit == 0 {
+			panic("no station position")
+		}
+		poss = append(poss, bestPos)
+		coverdPoints += bestHit
+		for k := 0; k < 13; k++ {
+			y, x := bestPos.Y+ddy[k], bestPos.X+ddx[k]
+			if y < 0 || y >= 50 || x < 0 || x >= 50 {
+				continue
+			}
+			coverd[y*50+x] = true
+		}
+	}
+	return poss
+}
+
 type bsState struct {
 	state       State
 	restActions []uint
@@ -959,10 +939,14 @@ type bsAction struct {
 	typ  []int16
 }
 
+const (
+	BEAM_WIDHT = 5
+)
+
 // すべての駅の場所と、それらをつなぐエッジを行動にする
-func beamSearch(in Input) {
+func beamSearch(in Input) string {
 	// 駅の位置を選ぶ
-	stations := choseStationPosition(in)
+	stations := choseStationPositionFast(in)
 	log.Printf("stations=%v\n", len(stations))
 	// 駅を繋ぐエッジを求める
 	edges := constructRailway(in, stations)
@@ -977,7 +961,7 @@ func beamSearch(in Input) {
 	}
 	log.Println("actionNum", len(allAction))
 	initialState := newBsState(&in, len(allAction))
-	beamWidth := 5
+	beamWidth := BEAM_WIDHT
 	beamStates := make([]bsState, 0, beamWidth)
 	beamStates = append(beamStates, *initialState)
 	nextStates := make([]bsState, 0, beamWidth)
@@ -1125,7 +1109,7 @@ func beamSearch(in Input) {
 		}
 		nextStates = make([]bsState, 0, beamWidth)
 		loop++
-		if (loop+1)%10 == 0 {
+		if ATCODER && (loop+1)%10 == 0 {
 			elpstime := time.Since(startTime)
 			if elpstime > time.Millisecond*2800 {
 				timeout = true
@@ -1142,163 +1126,14 @@ func beamSearch(in Input) {
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
 	log.Println(bestState.state.field.cellString())
 
-	return
+	sb := strings.Builder{}
 	for _, act := range bestState.state.actions {
-		fmt.Print(act.String())
+		sb.WriteString(act.String())
 	}
 	for i := len(bestState.state.actions); i < in.T; i++ {
-		fmt.Println(DO_NOTHING)
-	}
-}
-
-func greedy(in Input) {
-	state := NewState(&in)
-	bestPos := Pos{Y: 0, X: 0}
-	bestCover := 0
-	for i := 0; i < in.N; i++ {
-		for j := 0; j < in.N; j++ {
-			a, b := state.field.countSrcDst(Pos{Y: int16(i), X: int16(j)}, in)
-			if a+b > bestCover {
-				bestCover = a + b
-				bestPos = Pos{Y: int16(i), X: int16(j)}
-			}
-		}
-	}
-	//log.Println(bestCover, bestPos)
-	state.do(Action{Kind: STATION, Y: bestPos.Y, X: bestPos.X}, in, false)
-	//log.Printf("\n%s", state.field.cellString())
-	// 現在あるstationでカバーされている片方だけがカバーされていないケースを探す
-	uncoverd_home_workplace := make([]Pos, 0)
-	for i := 0; i < in.M; i++ {
-		var a_coverd, b_coverd bool
-		if state.field.checkConnect(in.src[i], in.dst[i]) {
-			continue
-		}
-		for _, s := range state.field.stations {
-			if !a_coverd {
-				a := distance(s, in.src[i])
-				if a <= 2 {
-					a_coverd = true
-				}
-			}
-			if !b_coverd {
-				b := distance(s, in.dst[i])
-				if b <= 2 {
-					b_coverd = true
-				}
-			}
-		}
-		if a_coverd && !b_coverd {
-			uncoverd_home_workplace = append(uncoverd_home_workplace, in.dst[i])
-		}
-		if !a_coverd && b_coverd {
-			uncoverd_home_workplace = append(uncoverd_home_workplace, in.src[i])
-		}
-	}
-	log.Println(len(uncoverd_home_workplace), "uncoverd_home_workplace=", uncoverd_home_workplace)
-	if len(uncoverd_home_workplace) == 0 {
-		panic("no uncoverd_home_workplace")
-	}
-	// 近い順に処理する
-	sort.Slice(uncoverd_home_workplace, func(i, j int) bool {
-		return distance(bestPos, uncoverd_home_workplace[i]) < distance(bestPos, uncoverd_home_workplace[j])
-	})
-
-	// uncoverd_home_workplace [0]を次にstationを置く場所とする
-	for i := 0; i < len(uncoverd_home_workplace); i++ {
-		nextPos := uncoverd_home_workplace[0]
-		uncoverd_home_workplace = uncoverd_home_workplace[1:]
-		ss := state.field.collectStations(nextPos)
-		if len(ss) > 0 {
-			continue
-		}
-		// 一番近いstationに繋げる (すべての駅は繋がっていると仮定)
-		for _, st := range state.field.stations {
-			if distance(st, nextPos) < distance(bestPos, nextPos) {
-				bestPos = st
-			}
-		}
-		path := state.field.findShortestPath(bestPos, nextPos)
-		if len(path) > in.T-state.turn {
-			// 建設するためのターンが足りない
-			break
-		}
-		if path == nil {
-			// 到達不可能
-			continue
-		}
-		types := state.field.selectRails(path)
-		cost := calBuildCost((types[1:]))
-		needMoney := cost - state.money
-		doNotthingTurn := 0
-		if needMoney > 0 {
-			if state.income == 0 {
-				// 収入がないので待っても無駄
-				continue
-			}
-			// 建設途中にDoNothingが入るターン数 簡易計算
-			doNotthingTurn = needMoney / state.income
-			if state.turn+doNotthingTurn+len(path) > in.T {
-				// 完成するまでに残りターンが足りない
-				continue
-			}
-		}
-		// 建設にかかターン数
-		needTurn := len(path) + doNotthingTurn
-		// 建築完成のターン
-		endTurn := state.turn + needTurn
-		// 建築完了後の持ち金
-		money := state.money + state.income*(endTurn) - cost
-		// 建築完了後の収入
-		newIncome := state.income + len(path)
-		// t==in.Tでの資金
-		lastMoney := money + newIncome*(in.T-endTurn)
-		log.Println("lastMoney=", lastMoney, "money=", money, "income=", newIncome)
-		if lastMoney < state.money {
-			// 最終的な資金が減っている
-			continue
-		}
-
-		// ここから建築orWait
-		log.Println("cost=", cost, "path:", bestPos, "->", nextPos)
-		// 最初の一箇所だけ建設済み
-		for j := 1; j < len(path); {
-			act := Action{Kind: types[j], Y: path[j].Y, X: path[j].X}
-			err := state.do(act, in, false)
-			if err == ErrNotEnoughMoney {
-				// お金が足りない場合は何もしない
-				state.do(Action{Kind: DO_NOTHING}, in, false)
-			} else {
-				j++
-			}
-		}
-		if state.turn > 500 {
-			break
-		}
-		if state.turn >= in.T {
-			break
-		}
-	}
-	log.Println(state.field.cellString())
-	var sb strings.Builder
-	sb.Grow(4000)
-	var t int
-	for i, a := range state.actions {
-		//fmt.Print(a)
-		sb.WriteString(a.String())
-		t++
-		if i == in.T-1 {
-			break
-		}
-	}
-	log.Printf("turn=%d\n", t)
-	for t < 800 {
-		//fmt.Println(DO_NOTHING)
 		sb.WriteString("-1\n")
-		t++
 	}
-	log.Printf("stations=%d\n", len(state.field.stations))
-	fmt.Print(sb.String())
+	return sb.String()
 }
 
 type Input struct {
@@ -1326,34 +1161,6 @@ func readInput(re *bufio.Reader) *Input {
 	in.dst = dst
 	in.income = income
 	return &in
-}
-
-var startTime time.Time
-var ATCODER bool
-
-func init() {
-	log.SetFlags(log.Lshortfile)
-}
-
-func main() {
-	if os.Getenv("ATCODER") == "1" {
-		ATCODER = true
-		log.Println("on AtCoder")
-		log.SetOutput(io.Discard)
-	}
-	//rand.Seed(1)
-	//log.Println("rand test:", rand.Int())
-	startTime = time.Now()
-	log.SetFlags(log.Lshortfile)
-	reader := bufio.NewReader(os.Stdin)
-	writer := bufio.NewWriter(os.Stdout)
-	defer writer.Flush()
-	in := readInput(reader)
-	_ = in
-	//greedy(*in)
-	beamSearch(*in)
-	//log.Printf("in=%+v\n", in)
-	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
 
 func absInt16(x int16) int16 {
@@ -1472,9 +1279,9 @@ func minInt(a, b int) int {
 	return b
 }
 
-func absInt(x int) int {
-	if x < 0 {
-		return -x
+func randShuffle(n int, swap func(i int, j int)) {
+	for i := 0; i < n; i++ {
+		j := frand.Intn(n)
+		swap(i, j)
 	}
-	return x
 }
