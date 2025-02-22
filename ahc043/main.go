@@ -71,7 +71,7 @@ const (
 	RAIL_LEFT_UP    int16 = 4
 	RAIL_RIGHT_UP   int16 = 5
 	RAIL_RIGHT_DOWN int16 = 6
-	OTHER           int16 = 7 // テストの障害物として使う
+	WALL            int16 = 7 // テストの障害物として使う
 )
 
 // int16ToString は、レールタイプのint16の種類を文字列に変換する
@@ -94,7 +94,7 @@ func int16ToString(a int16) string {
 		return "RAIL_RIGHT_UP"
 	case RAIL_RIGHT_DOWN:
 		return "RAIL_RIGHT_DOWN"
-	case OTHER:
+	case WALL:
 		return "OTHER"
 	}
 	return "UNKNOWN"
@@ -123,7 +123,7 @@ var railMap = map[int16]string{
 	RAIL_LEFT_UP:    "┘",
 	RAIL_RIGHT_UP:   "└",
 	RAIL_RIGHT_DOWN: "┌",
-	OTHER:           "#",
+	WALL:            "#",
 }
 
 var buildCost = map[int16]int{
@@ -135,7 +135,7 @@ var buildCost = map[int16]int{
 	RAIL_LEFT_UP:    COST_RAIL,
 	RAIL_RIGHT_UP:   COST_RAIL,
 	RAIL_RIGHT_DOWN: COST_RAIL,
-	OTHER:           0, // other
+	WALL:            0, // other
 }
 
 // calBuildCost は、[]actの建設コストを計算する
@@ -435,7 +435,7 @@ func (f Field) canMove(a, b Pos) bool {
 		log.Println("distance", a, b, distance(a, b))
 		return false
 	}
-	if f.cell[b.Y][b.X] == OTHER {
+	if f.cell[b.Y][b.X] == WALL {
 		return false
 	}
 	// directionはaからbに移動する向き
@@ -481,9 +481,8 @@ func (f Field) canBuileRail(path []Pos, typ []int16) bool {
 	return true
 }
 
-// 駅a, bが繋がることができるか、できないときnil,できるとき距離を返すpath
-// すでにある線路も活用できるようにする
-// 繋がらなかった時はnilを返す
+// 駅a, bが繋がることができるか、できないときnil,できるときはすべてのpath
+// すでに建築済みの路線もpathに含まれる
 func (f Field) canConnect(a, b Pos) ([]Pos, error) {
 	// distの更新
 	var dist [2500]int16
@@ -661,27 +660,17 @@ var ddy = [13]int16{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
 var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 
 // すべての駅を繋ぐ鉄道を敷設する
-// クラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
-// .............◎.............
-// ......................┌◎..........│....◎─┐│.└───◎◎
-// ........◎─┐.....┌◎───◎┘└─◎........│......││.......
-// ........│.◎──◎─┐│........│.◎┐..┌◎─◎─◎────◎◎──┐....
-// ........│......◎┘.....┌──◎─┘└─◎┘│...│........◎─┐..
-// ↓
-// .............◎.............
-// .............│........┌◎..........│....◎─┐│.└───◎◎
-// ........◎─┐..│..┌◎───◎┘└─◎........│......││.......
-// ........│.◎──◎─┐│........│.◎┐..┌◎─◎─◎────◎◎──┐....
-// ........│.└──┘.
+// MSTクラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
+// ここのエッジは短いが、まれに駅を挟む
 func constructRailway(in Input, stations []Pos) []Edge {
-	numStations := len(stations)
-	stationIndexMap := make(map[Pos]int)
+	numStations := int16(len(stations))
+	stationIndexMap := make(map[Pos]int16)
 	for i, s := range stations {
-		stationIndexMap[s] = i
+		stationIndexMap[s] = int16(i)
 	}
 	// 決めておいた駅を建設する
 	field := NewField(in.N)
-	for i := 0; i < numStations; i++ {
+	for i := int16(0); i < numStations; i++ {
 		err := field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
 		if err != nil {
 			log.Println("fatal build station:", stations[i])
@@ -689,13 +678,12 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			panic(err)
 		}
 	}
-	log.Println(field.cellString())
 
 	// マンハッタン距離を使って,全駅間の暫定距離を求める
 	edges := []Edge{}
-	for i := 0; i < numStations; i++ {
+	for i := int16(0); i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
-			dist := int(distance(stations[i], stations[j]))
+			dist := distance(stations[i], stations[j])
 			edges = append(edges, Edge{From: i, To: j, Cost: dist})
 		}
 	}
@@ -726,7 +714,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			// すでに建築済みまたは駅がある場合はスキップ
 			for i := 1; i < len(path)-1; i++ {
 				if field.cell[path[i].Y][path[i].X] == STATION || field.cell[path[i].Y][path[i].X] == types[i] {
-					// すでに駅があり線路が必要ない時 または、すでに線路がある時
+					// すでに駅があり線路が必要ない時 または、すでに建築予定の線路がある時
 					continue
 				}
 				err := field.build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
@@ -748,7 +736,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	field2 := NewField(in.N) // mstEdgesで使われている場所だけを使う
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
-			field2.cell[i][j] = OTHER
+			field2.cell[i][j] = WALL
 		}
 	}
 	for _, edge := range mstEdges {
@@ -758,9 +746,10 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			}
 		}
 	}
-	//log.Println(field2.cellString())
+	log.Println(field2.cellString())
+	//return mstEdges
 	pathpath := make([][]Pos, 0, numStations)
-	for i := 0; i < numStations; i++ {
+	for i := int16(0); i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
 			path, err := field2.canConnect(stations[i], stations[j])
 			// すべての駅は繋がっているはずなので、nilはありえない
@@ -1191,8 +1180,8 @@ func gridToString(grid [2500]int16) (str string) {
 
 // MST用
 type Edge struct {
-	From, To int
-	Cost     int
+	From, To int16
+	Cost     int16
 	Path     []Pos
 	Rail     []int16
 }

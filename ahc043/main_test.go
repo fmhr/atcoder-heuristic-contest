@@ -18,7 +18,7 @@ func TestShortestPaht(t *testing.T) {
 		for j := 0; j < 50; j++ {
 			f.cell[i][j] = EMPTY
 			if rand.Intn(100) < 5 {
-				f.cell[i][j] = OTHER
+				f.cell[i][j] = WALL
 			}
 		}
 	}
@@ -48,12 +48,11 @@ func TestShortestPaht(t *testing.T) {
 
 func TestConstructRailway(t *testing.T) {
 	// go test -timeout 30s -run ^TestConstructRailway$ ahc043 -v
-	in, err := readInputFile("tools/in/0201.txt")
+	in, err := readInputFile("tools/in/0000.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
 	stationPos := chooseStationPositionFast(*in)
-	t.Log("number of station:", len(stationPos))
 	edges := constructRailway(*in, stationPos)
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
 	for i := 0; i < len(edges); i++ {
@@ -344,13 +343,13 @@ var reverseRailMap = map[string]int16{
 	"┘": RAIL_LEFT_UP,
 	"└": RAIL_RIGHT_UP,
 	"┌": RAIL_RIGHT_DOWN,
-	"#": OTHER,
+	"#": WALL,
 }
 
 // CanReach は、グラフ内でノード a からノード b に到達可能かどうかを判断します。
-func CanReach(a, b int, g []Edge) bool {
-	visited := make(map[int]bool)
-	queue := []int{a}
+func CanReach(a, b int16, g []Edge) bool {
+	visited := make(map[int16]bool)
+	queue := []int16{a}
 
 	visited[a] = true
 
