@@ -208,9 +208,9 @@ func (f *Field) Clone() *Field {
 }
 
 // typeToString は、posのセルの種類を返す 表示用のレールの記号
-func (f Field) typeToString(pos Pos) string {
-	return railMap[f.cell[pos.Y][pos.X]]
-}
+//func (f Field) typeToString(pos Pos) string {
+//return railMap[f.cell[pos.Y][pos.X]]
+//}
 
 func (f Field) cellString() string {
 	str := "view cellString()\n"
@@ -659,66 +659,6 @@ func uniquePair(p1, p2 Pos) Pair {
 // stationの周辺
 var ddy = [13]int16{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
 var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
-
-// shortestPathLimited gridのaからbまでで、movenableの範囲で最短経路を返す
-func shortestPathLimited(grid [2500]int16, a, b Pos, movenable int16) []Pos {
-	//log.Println(a, b, movenable)
-	var dist [2500]int16
-	for i := 0; i < 2500; i++ {
-		dist[i] = 1000
-	}
-	dist[a.Y*50+a.X] = 0
-	que := make([]Pos, 0, 2500)
-	que = append(que, a)
-	for len(que) > 0 {
-		p := que[0]
-		que = que[1:]
-		if p == b {
-			break
-		}
-		for i := 0; i < 4; i++ {
-			y, x := p.Y+dy[i], p.X+dx[i]
-			if y < 0 || y >= 50 || x < 0 || x >= 50 {
-				continue
-			}
-			if grid[y*50+x] == movenable || y == b.Y && x == b.X {
-				if dist[y*50+x] > dist[p.Y*50+p.X]+1 {
-					dist[y*50+x] = dist[p.Y*50+p.X] + 1
-					que = append(que, Pos{Y: y, X: x})
-				}
-			}
-		}
-	}
-	if dist[b.Y*50+b.X] == 1000 {
-		return nil
-	}
-	//log.Println(dist[a.Y*50+a.X], dist[b.Y*50+b.X])
-	// b から a への経路を復元
-	path := []Pos{b}
-	for path[len(path)-1] != a {
-		p := path[len(path)-1]
-		for i := 0; i < 4; i++ {
-			y, x := p.Y+dy[i], p.X+dx[i]
-			if y < 0 || y >= 50 || x < 0 || x >= 50 {
-				continue
-			}
-			if y == a.Y && x == a.X {
-				path = append(path, Pos{Y: y, X: x})
-				break
-			}
-			if (grid[y*50+x] == movenable || grid[y*50+x] == STATION) && dist[y*50+x] == dist[p.Y*50+p.X]-1 {
-				if dist[y*50+x] < dist[p.Y*50+p.X] {
-					path = append(path, Pos{Y: y, X: x})
-					break
-				}
-			}
-		}
-	}
-	for i := 0; i < len(path)/2; i++ {
-		path[i], path[len(path)-1-i] = path[len(path)-1-i], path[i]
-	}
-	return path
-}
 
 // すべての駅を繋ぐ鉄道を敷設する
 // クラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
