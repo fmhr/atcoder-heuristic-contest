@@ -527,31 +527,10 @@ func (f Field) canConnect(a, b Pos) ([]Pos, error) {
 					q = append(q, Pos{Y: y, X: x})
 				}
 			}
-			if isRail(f.cell[y][x]) {
-				connect := false
-				switch d {
-				case UP:
-					if f.cell[y][x] == RAIL_VERTICAL || f.cell[y][x] == RAIL_LEFT_DOWN || f.cell[y][x] == RAIL_RIGHT_DOWN {
-						connect = true
-					}
-				case RIGHT:
-					if f.cell[y][x] == RAIL_HORIZONTAL || f.cell[y][x] == RAIL_LEFT_DOWN || f.cell[y][x] == RAIL_LEFT_UP {
-						connect = true
-					}
-				case DOWN:
-					if f.cell[y][x] == RAIL_VERTICAL || f.cell[y][x] == RAIL_LEFT_UP || f.cell[y][x] == RAIL_RIGHT_UP {
-						connect = true
-					}
-				case LEFT:
-					if f.cell[y][x] == RAIL_HORIZONTAL || f.cell[y][x] == RAIL_RIGHT_DOWN || f.cell[y][x] == RAIL_RIGHT_UP {
-						connect = true
-					}
-				}
-				if connect {
-					if dist[int(y)*50+int(x)] > dist[int(p.Y)*50+int(p.X)]+1 {
-						dist[int(y)*50+int(x)] = dist[int(p.Y)*50+int(p.X)] + 1
-						q = append(q, Pos{Y: y, X: x})
-					}
+			if isRail(f.cell[y][x]) && checkConnec(f.cell[y][x], int(d), false) {
+				if dist[int(y)*50+int(x)] > dist[int(p.Y)*50+int(p.X)]+1 {
+					dist[int(y)*50+int(x)] = dist[int(p.Y)*50+int(p.X)] + 1
+					q = append(q, Pos{Y: y, X: x})
 				}
 			}
 		}
@@ -1390,13 +1369,6 @@ func absInt16(x int16) int16 {
 	return x
 }
 
-func absInt(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
 type UnionFind struct {
 	par [2500]int16
 }
@@ -1506,5 +1478,9 @@ func minInt(a, b int) int {
 	return b
 }
 
-// デバッグ用 別に debug.goが必要
-func debugLog(format string, v ...interface{}) {}
+func absInt(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
