@@ -53,7 +53,7 @@ func TestConstructRailway(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := choseStationPosition(*in)
+	stationPos := chooseStationPositions(*in)
 	t.Log("number of station:", len(stationPos))
 	edges := constructRailway(*in, stationPos)
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
@@ -133,7 +133,7 @@ func TestChoseStationPosition(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := choseStationPosition(*in)
+	stationPos := chooseStationPositions(*in)
 	t.Log("number of station:", len(stationPos))
 }
 
@@ -142,7 +142,7 @@ func TestChoseStationPosition2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := choseStationPosition(*in)
+	stationPos := chooseStationPositions(*in)
 	t.Log("number of station:", len(stationPos))
 }
 
@@ -166,7 +166,7 @@ func TestGridCalculation(t *testing.T) {
 			grid[next.Y*50+next.X] = i
 		}
 	}
-	//t.Log("Grid result:" + gridToString(grid))
+	t.Log("Grid result:" + gridToString(grid))
 }
 
 func TestIsRailConnected(t *testing.T) {

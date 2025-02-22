@@ -877,9 +877,9 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	return mstEdges
 }
 
-// choseStationPosition は,駅の場所をあらかじめ決める
+// chooseStationPositions は,駅の場所をあらかじめ決める
 // Inputからすべての家と職場の位置を所得して、その全てが駅から距離２以下になるように駅を配置する
-func choseStationPosition(in Input) (poss []Pos) {
+func chooseStationPositions(in Input) (poss []Pos) {
 	uncoverd := make([]Pos, 0, in.M*2)
 	for i := 0; i < in.M; i++ {
 		uncoverd = append(uncoverd, in.src[i])
