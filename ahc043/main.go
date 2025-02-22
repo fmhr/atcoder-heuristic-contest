@@ -168,7 +168,7 @@ func (a Action) String() (str string) {
 }
 
 type Field struct {
-	cell     [50][50]int16
+	cell     [N][N]int16
 	stations []Pos
 	coverd   BitSet //駅によってカバーされた位置
 }
@@ -185,7 +185,7 @@ func NewField(n int) *Field {
 			f.cell[i][j] = EMPTY
 		}
 	}
-	f.stations = make([]Pos, 0, 50)
+	f.stations = make([]Pos, 0)
 	return f
 }
 
@@ -194,12 +194,12 @@ func (f *Field) Clone() *Field {
 		return nil
 	}
 	newField := &Field{
-		cell:     [50][50]int16{},
+		cell:     [N][N]int16{},
 		stations: make([]Pos, len(f.stations)),
 	}
 	copy(newField.stations, f.stations)
-	for i := 0; i < 50; i++ {
-		for j := 0; j < 50; j++ {
+	for i := 0; i < N; i++ {
+		for j := 0; j < N; j++ {
 			newField.cell[i][j] = f.cell[i][j]
 		}
 	}
@@ -214,9 +214,9 @@ func (f Field) typeToString(pos Pos) string {
 
 func (f Field) cellString() string {
 	str := "view cellString()\n"
-	for i := 0; i < 50; i++ {
+	for i := 0; i < N; i++ {
 		str += fmt.Sprintf("%2d ", i)
-		for j := 0; j < 50; j++ {
+		for j := 0; j < N; j++ {
 			str += railMap[f.cell[i][j]]
 		}
 		str += "\n"
@@ -259,8 +259,8 @@ func (f *Field) build(act Action) error {
 		f.stations = append(f.stations, Pos{Y: act.Y, X: act.X})
 		for d := 0; d < 13; d++ {
 			y, x := act.Y+ddy[d], act.X+ddx[d]
-			if y >= 0 && y < 50 && x >= 0 && x < 50 {
-				f.coverd.Set(int(y*50 + x))
+			if y >= 0 && y < N && x >= 0 && x < N {
+				f.coverd.Set(int(y*N + x))
 			}
 		}
 	}
@@ -273,7 +273,7 @@ func (f *Field) build(act Action) error {
 // checkConnect 駅,路線をつかって、a,bがつながっているかを返す
 // a, b　はHOME, WORKSPACE
 func (f Field) checkConnect(a, b Pos) bool {
-	return f.coverd.Get(int(a.Y*50+a.X)) && f.coverd.Get(int(b.Y*50+b.X))
+	return f.coverd.Get(int(a.Y*N+a.X)) && f.coverd.Get(int(b.Y*N+b.X))
 }
 
 // 2点間の最短経路を返す (a から b へ)
@@ -281,8 +281,8 @@ func (f Field) checkConnect(a, b Pos) bool {
 func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 	// a から b への最短経路を返す
 	// field=EMPTY なら移動可能 それ以外は移動不可
-	var dist [2500]int16
-	for i := 0; i < 2500; i++ {
+	var dist [N * N]int16
+	for i := 0; i < N*N; i++ {
 		dist[i] = 10000
 	}
 	dist[int(a.Y)*50+int(a.X)] = 0
@@ -999,6 +999,10 @@ type bsAction struct {
 	typ  []int16
 }
 
+const (
+	BEAM_WIDHT = 5
+)
+
 // すべての駅の場所と、それらをつなぐエッジを行動にする
 func beamSearch(in Input) string {
 	// 駅の位置を選ぶ
@@ -1017,7 +1021,7 @@ func beamSearch(in Input) string {
 	}
 	log.Println("actionNum", len(allAction))
 	initialState := newBsState(&in, len(allAction))
-	beamWidth := 5
+	beamWidth := BEAM_WIDHT
 	beamStates := make([]bsState, 0, beamWidth)
 	beamStates = append(beamStates, *initialState)
 	nextStates := make([]bsState, 0, beamWidth)
