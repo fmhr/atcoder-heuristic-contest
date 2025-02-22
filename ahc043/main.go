@@ -750,7 +750,6 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	///////////////////////////////////
 	// MST木の上で、すべての家と職場を繋ぐ駅のエッジを作る
 	// src,dstの対応する駅を探して、その間を繋ぐエッジを作る
-	count := 0
 	unique := make(map[Pair]bool)
 	for i := 0; i < in.M; i++ {
 		src, dst := in.src[i], in.dst[i]
@@ -781,15 +780,17 @@ func constructRailway(in Input, stations []Pos) []Edge {
 				if err != nil {
 					panic(err)
 				}
+				unique[uniquePair(s0, s1)] = true
+				//if len(path) < MAX_LEN {
 				types := field2.selectRails(path)
 				edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types}
 				mstEdges = append(mstEdges, edge)
-				count++
-				unique[uniquePair(s0, s1)] = true
+				//log.Println("src", s0, "dst", s1, len(path))
+				//}
 			}
 		}
 	}
-	log.Println("count", count, len(unique))
+	log.Println("edgeNum", len(mstEdges), "extraEdgeNum", len(unique))
 	return mstEdges
 }
 
@@ -876,7 +877,7 @@ type bsAction struct {
 }
 
 const (
-	BEAM_WIDHT = 5
+	BEAM_WIDHT = 50
 )
 
 // すべての駅の場所と、それらをつなぐエッジを行動にする
@@ -1028,7 +1029,7 @@ func beamSearch(in Input) string {
 		}
 		log.Println("nextStates", len(nextStates))
 		sort.Slice(nextStates, func(i, j int) bool {
-			if nextStates[i].state.turn == nextStates[j].state.turn {
+			if nextStates[i].state.score == nextStates[j].state.score {
 				return nextStates[i].state.income > nextStates[j].state.income
 			}
 			return nextStates[i].state.score > nextStates[j].state.score
