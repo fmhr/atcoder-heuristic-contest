@@ -65,7 +65,18 @@ func TestConstructRailway(t *testing.T) {
 		for j := 0; j < len(edges[i].Rail); j++ {
 			str += fmt.Sprintf(" %s", railMap[edges[i].Rail[j]])
 		}
-		//t.Log(str)
+	}
+	var errCount int
+	for i := 0; i < len(stationPos); i++ {
+		for j := i + 1; j < len(stationPos); j++ {
+			if !CanReach(i, j, edges) {
+				log.Println("Can't reach", i, j)
+				errCount++
+			}
+		}
+	}
+	if errCount > 0 {
+		t.Error("Can't reach")
 	}
 }
 
@@ -318,4 +329,40 @@ var reverseRailMap = map[string]int16{
 	"└": RAIL_RIGHT_UP,
 	"┌": RAIL_RIGHT_DOWN,
 	"#": OTHER,
+}
+
+// CanReach は、グラフ内でノード a からノード b に到達可能かどうかを判断します。
+func CanReach(a, b int, g []Edge) bool {
+	visited := make(map[int]bool) // 訪問済みのノードを追跡します
+	queue := []int{a}             // 幅優先探索(BFS)で使用するキュー
+
+	visited[a] = true // 開始ノードを訪問済みにします
+
+	for len(queue) > 0 {
+		currentNode := queue[0] // キューから最初のノードを取り出します
+		queue = queue[1:]       // キューの先頭を削除します
+
+		if currentNode == b {
+			return true // 目的ノードに到達しました
+		}
+
+		// 現在のノードから到達可能なすべての隣接ノードを見つけます
+		for _, edge := range g {
+			if edge.From == currentNode {
+				neighbor := edge.To
+				if !visited[neighbor] { // まだ訪問していない隣接ノードの場合
+					visited[neighbor] = true        // 訪問済みにします
+					queue = append(queue, neighbor) // キューに追加します
+				}
+			} else if edge.To == currentNode {
+				neighbor := edge.From
+				if !visited[neighbor] { // まだ訪問していない隣接ノードの場合
+					visited[neighbor] = true        // 訪問済みにします
+					queue = append(queue, neighbor) // キューに追加します
+				}
+			}
+		}
+	}
+
+	return false // 目的ノードに到達できませんでした
 }
