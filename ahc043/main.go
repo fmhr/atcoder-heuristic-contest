@@ -482,6 +482,19 @@ func (f Field) canMove(a, b Pos) bool {
 	return true
 }
 
+// canBuileRail は、pathをたどって、線路を敷くことができるかを返す
+// 線路の上に駅は建てることができる
+// 線路の上に種類の違う線路を建てることはできない
+func (f Field) canBuileRail(path []Pos, typ []int16) bool {
+	for i := 1; i < len(path)-1; i++ {
+		y, x := path[i].Y, path[i].X
+		if isRail(f.cell[y][x]) && f.cell[y][x] != typ[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // 駅a, bが繋がることができるか、できないときnil,できるとき距離を返すpath
 // すでにある線路も活用できるようにする
 // 繋がらなかった時はnilを返す
@@ -805,9 +818,13 @@ func constructRailway(in Input, stations []Pos) []Edge {
 		// ここではフィールドを使っているので、path=nilの可能性もある
 		if path != nil {
 			types := field.selectRails(path)
+			if !field.canBuileRail(path, types) {
+				continue
+			}
 			// すでに建築済みまたは駅がある場合はスキップ
 			for i := 1; i < len(path)-1; i++ {
 				if field.cell[path[i].Y][path[i].X] == STATION || field.cell[path[i].Y][path[i].X] == types[i] {
+					// すでに駅があり線路が必要ない時 または、すでに線路がある時
 					continue
 				}
 				err := field.build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
@@ -868,7 +885,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			}
 		}
 	}
-	log.Println(field2.cellString())
+	//log.Println(field2.cellString())
 	pathpath := make([][]Pos, 0, numStations)
 	for i := 0; i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
@@ -1010,6 +1027,7 @@ type bsAction struct {
 func beamSearch(in Input) {
 	// 駅の位置を選ぶ
 	stations := choseStationPosition(in)
+	log.Printf("stations=%v\n", len(stations))
 	// 駅を繋ぐエッジを求める
 	edges := constructRailway(in, stations)
 
@@ -1179,11 +1197,11 @@ func beamSearch(in Input) {
 				break
 			}
 		}
-		if timeout {
-			log.Printf("TO=1\n")
-		} else {
-			log.Printf("TO=0\n")
-		}
+	}
+	if timeout {
+		log.Printf("TO=1\n")
+	} else {
+		log.Printf("TO=0\n")
 	}
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
 	log.Println(bestState.state.field.cellString())
