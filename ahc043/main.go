@@ -12,18 +12,15 @@ import (
 	"time"
 )
 
-const (
-	N = 50
-)
-
-var startTime time.Time
-var ATCODER bool
-var frand *rand.Rand
+var ATCODER bool     // AtCoder環境かどうか
+var frand *rand.Rand // シード固定乱数生成器 rand.Seed()は無効 go1.24~
 
 func init() {
 	log.SetFlags(log.Lshortfile)
 	frand = rand.New(rand.NewSource(1))
 }
+
+var startTime time.Time
 
 func main() {
 	if os.Getenv("ATCODER") == "1" {
@@ -42,6 +39,10 @@ func main() {
 	//log.Printf("in=%+v\n", in)
 	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
+
+const (
+	N = 50
+)
 
 const (
 	COST_STATION = 5000
