@@ -817,48 +817,8 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	return mstEdges
 }
 
-// chooseStationPositions は,駅の場所をあらかじめ決める
-// Inputからすべての家と職場の位置を所得して、その全てが駅から距離２以下になるように駅を配置する
-func chooseStationPositions(in Input) (poss []Pos) {
-	uncoverd := make([]Pos, 0, in.M*2)
-	for i := 0; i < in.M; i++ {
-		uncoverd = append(uncoverd, in.src[i])
-		uncoverd = append(uncoverd, in.dst[i])
-	}
-	for len(uncoverd) > 0 {
-		bestPos := Pos{Y: 0, X: 0}
-		bestHit := 0
-		for i := 0; i < 50; i++ {
-			for j := 0; j < 50; j++ {
-				count := 0
-				y, x := int16(i), int16(j)
-				for _, u := range uncoverd {
-					if distance(u, Pos{Y: y, X: x}) <= 2 {
-						count++
-					}
-				}
-				if count > bestHit {
-					bestHit = count
-					bestPos = Pos{Y: y, X: x}
-				}
-			}
-		}
-		if bestHit == 0 {
-			panic("no station position")
-		}
-		poss = append(poss, bestPos)
-		newUncoverd := make([]Pos, 0, len(uncoverd))
-		for _, u := range uncoverd {
-			if distance(u, bestPos) > 2 {
-				newUncoverd = append(newUncoverd, u)
-			}
-		}
-		uncoverd = newUncoverd
-	}
-	return poss
-}
-
-func choseStationPositionFast(in Input) (poss []Pos) {
+func chooseStationPositionFast(in Input) (poss []Pos) {
+	poss = make([]Pos, 0, intMax(in.M, 100))
 	sumPoints := in.M * 2
 	var grid [2500]int
 	for i := 0; i < in.M; i++ {
@@ -946,7 +906,7 @@ const (
 // すべての駅の場所と、それらをつなぐエッジを行動にする
 func beamSearch(in Input) string {
 	// 駅の位置を選ぶ
-	stations := choseStationPositionFast(in)
+	stations := chooseStationPositionFast(in)
 	log.Printf("stations=%v\n", len(stations))
 	// 駅を繋ぐエッジを求める
 	edges := constructRailway(in, stations)
@@ -1271,7 +1231,6 @@ func (b *BitSet) Get(index int) bool {
 	return (b.bits[index/64] & (1 << (index % 64))) != 0
 }
 
-// utils
 func minInt(a, b int) int {
 	if a < b {
 		return a
@@ -1284,4 +1243,11 @@ func randShuffle(n int, swap func(i int, j int)) {
 		j := frand.Intn(n)
 		swap(i, j)
 	}
+}
+
+func intMax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

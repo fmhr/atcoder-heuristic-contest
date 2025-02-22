@@ -13,7 +13,6 @@ import (
 )
 
 func TestShortestPaht(t *testing.T) {
-	rand.Seed(0)
 	f := NewField(50)
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
@@ -53,7 +52,7 @@ func TestConstructRailway(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositions(*in)
+	stationPos := chooseStationPositionFast(*in)
 	t.Log("number of station:", len(stationPos))
 	edges := constructRailway(*in, stationPos)
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
@@ -128,22 +127,24 @@ func BenchmarkBeamSearch(b *testing.B) {
 	}
 }
 
+// CoseStationPosition のテスト
 func TestChoseStationPosition(t *testing.T) {
-	in, err := readInputFile("tools/in/0013.txt")
+	in, err := readInputFile("tools/in/0000.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositions(*in)
+	stationPos := chooseStationPositionFast(*in)
 	t.Log("number of station:", len(stationPos))
 }
 
-func TestChoseStationPosition2(t *testing.T) {
-	in, err := readInputFile("tools/in/0013.txt")
+func BenchmarkChoseStationPosition(b *testing.B) {
+	in, err := readInputFile("tools/in/0000.txt")
 	if err != nil {
-		t.Fatalf("failed to read input: %v", err)
+		b.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositions(*in)
-	t.Log("number of station:", len(stationPos))
+	for i := 0; i < b.N; i++ {
+		chooseStationPositionFast(*in)
+	}
 }
 
 func TestReadInput(t *testing.T) {
