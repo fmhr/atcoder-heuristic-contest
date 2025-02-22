@@ -1368,7 +1368,8 @@ func main() {
 		log.Println("on AtCoder")
 		log.SetOutput(io.Discard)
 	}
-
+	//rand.Seed(1)
+	//log.Println("rand test:", rand.Int())
 	startTime = time.Now()
 	log.SetFlags(log.Lshortfile)
 	reader := bufio.NewReader(os.Stdin)

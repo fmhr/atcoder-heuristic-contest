@@ -48,7 +48,7 @@ func TestShortestPaht(t *testing.T) {
 
 func TestConstructRailway(t *testing.T) {
 	// go test -timeout 30s -run ^TestConstructRailway$ ahc043 -v
-	in, err := readInputFile("tools/in/0200.txt")
+	in, err := readInputFile("tools/in/0201.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
@@ -66,27 +66,14 @@ func TestConstructRailway(t *testing.T) {
 			str += fmt.Sprintf(" %s", railMap[edges[i].Rail[j]])
 		}
 	}
-	var errCount int
-	unReachable := map[int]bool{}
-	for i := 0; i < len(stationPos); i++ {
-		for j := i + 1; j < len(stationPos); j++ {
-			if unReachable[i] || unReachable[j] {
-				continue
-			}
-			if !CanReach(i, j, edges) {
-				unReachable[i] = true
-				unReachable[j] = true
-				errCount++
-				break
-			}
-		}
+	uf := NewUnionFind()
+	for _, e := range edges {
+		uf.unite(int16(e.From), int16(e.To))
 	}
-	if errCount > 0 {
-		t.Error("Can't reach")
-		for k, v := range unReachable {
-			if v {
-				t.Log(k)
-			}
+	root := uf.root(0)
+	for i := 1; i < len(stationPos); i++ {
+		if uf.root(int16(i)) != root {
+			t.Error("not connected")
 		}
 	}
 }
