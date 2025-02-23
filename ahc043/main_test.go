@@ -100,7 +100,7 @@ func TestConstructRailway(t *testing.T) {
 }
 
 func TestConstructGredyRailway(t *testing.T) {
-	in, err := readInputFile("tools/in/0007.txt")
+	in, err := readInputFile("tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
