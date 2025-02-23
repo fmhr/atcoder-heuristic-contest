@@ -53,7 +53,7 @@ func TestConstructRailway(t *testing.T) {
 		t.Fatalf("failed to read input: %v", err)
 	}
 	stationPos := chooseStationPositionFast(*in)
-	edges := constructRailway(*in, stationPos)
+	edges := constructMSTRailway(*in, stationPos)
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
 	for i := 0; i < len(edges); i++ {
 		if len(edges[i].Rail) != len(edges[i].Path) {

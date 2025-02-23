@@ -662,7 +662,7 @@ var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 // すべての駅を繋ぐ鉄道を敷設する
 // MSTクラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
 // ここのエッジは短いが、まれに駅を挟む
-func constructRailway(in Input, stations []Pos) []Edge {
+func constructMSTRailway(in Input, stations []Pos) []Edge {
 	numStations := int16(len(stations))
 	stationIndexMap := make(map[Pos]int16)
 	for i, s := range stations {
@@ -887,7 +887,7 @@ func beamSearch(in Input) string {
 	stations := chooseStationPositionFast(in)
 	log.Printf("stations=%v\n", len(stations))
 	// 駅を繋ぐエッジを求める
-	edges := constructRailway(in, stations)
+	edges := constructMSTRailway(in, stations)
 
 	allAction := make([]bsAction, 0, len(stations)+len(edges))
 	for _, s := range stations {
