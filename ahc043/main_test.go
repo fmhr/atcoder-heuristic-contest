@@ -112,7 +112,7 @@ func TestConstructGredyRailway(t *testing.T) {
 
 func TestDebugBeamSearch(t *testing.T) {
 	// 線路上に駅を配置することができるのかを確認する
-	f, err := readGridFileToFild("test/t0002.txt")
+	f, err := readGridFileToFild("test/t0000.txt")
 	if err != nil {
 		t.Fatalf("failed to read grid: %v", err)
 	}

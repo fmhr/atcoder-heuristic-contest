@@ -209,10 +209,14 @@ const (
 	LEFT  = 3
 )
 
+const (
+	// Action
+	DO_NOTHING int = -1
+)
+
 // セルの種類
 const (
 	EMPTY           int = -1
-	DO_NOTHING      int = -1
 	STATION         int = 0
 	RAIL_HORIZONTAL int = 1
 	RAIL_VERTICAL   int = 2
