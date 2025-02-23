@@ -806,158 +806,67 @@ func ConstructGreedyRailway(in Input, stations []Pos) ([]Edge, *Field) {
 		}
 	}
 	log.Println(f.ToString())
+
+	directions := map[string][]int{
+		"LT": {1, 2}, // 右, 下
+		"RT": {2, 3}, // 下, 左
+		"LB": {0, 1}, // 上, 右
+		"RB": {0, 3}, // 上, 左
+	}
+
 	var q []Pos
 NEXTSTATION:
 	for _, s := range stations {
 		q = make([]Pos, 0)
+		var region string
 		if s.Y < N/2 && s.X < N/2 {
-			// 左上から右下に向けてエッジを作る,対象が左上を過ぎたらqueueにはいれない
-			var used [50][50]bool
-			used[s.Y][s.X] = true
-			q = append(q, s)
-			for len(q) > 0 {
-				p := q[0]
-				q = q[1:]
-				for d := 1; d < 3; d++ {
-					next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
-					if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
-						continue
-					}
-					if used[next.Y][next.X] {
-						continue
-					}
-					if f.cell[next.Y][next.X] == EMPTY && next.Y < N/2 && next.X < N/2 {
-						used[next.Y][next.X] = true
-						q = append(q, next)
-					} else if f.cell[next.Y][next.X] == STATION {
-						path, err := f.canConnect(s, next)
-						if err != nil {
-							panic(err)
-						}
-						types := f.selectRails(path)
-						for k := 0; k < len(path); k++ {
-							if isRail(types[k]) {
-								err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
-								if err != nil {
-									panic(err)
-								}
-							}
-						}
-						continue NEXTSTATION
-					}
-				}
-			}
+			region = "LT"
 		} else if s.Y < N/2 && s.X >= N/2 {
-			// 右上
-			var used [50][50]bool
-			used[s.Y][s.X] = true
-			q = append(q, s)
-			for len(q) > 0 {
-				p := q[0]
-				q = q[1:]
-				for d := 2; d < 4; d++ {
-					next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
-					if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
-						continue
-					}
-					if used[next.Y][next.X] {
-						continue
-					}
-					if f.cell[next.Y][next.X] == EMPTY && next.Y < N/2 && next.X >= N/2 {
-						used[next.Y][next.X] = true
-						q = append(q, next)
-					} else if f.cell[next.Y][next.X] == STATION {
-						path, err := f.canConnect(s, next)
-						if err != nil {
-							panic(err)
-						}
-						types := f.selectRails(path)
-						for k := 0; k < len(path); k++ {
-							if isRail(types[k]) {
-								err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
-								if err != nil {
-									panic(err)
-								}
-							}
-						}
-						continue NEXTSTATION
-					}
-				}
-			}
+			region = "RT"
 		} else if s.Y >= N/2 && s.X < N/2 {
-			// 左下
-			var used [50][50]bool
-			used[s.Y][s.X] = true
-			q = append(q, s)
-			for len(q) > 0 {
-				p := q[0]
-				q = q[1:]
-				for d := 0; d < 2; d++ {
-					next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
-					if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
-						continue
-					}
-					if used[next.Y][next.X] {
-						continue
-					}
-					if f.cell[next.Y][next.X] == EMPTY && next.Y >= N/2 && next.X < N/2 {
-						used[next.Y][next.X] = true
-						q = append(q, next)
-					} else if f.cell[next.Y][next.X] == STATION {
-						path, err := f.canConnect(s, next)
-						if err != nil {
-							panic(err)
-						}
-						types := f.selectRails(path)
-						for k := 0; k < len(path); k++ {
-							if isRail(types[k]) {
-								err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
-								if err != nil {
-									panic(err)
-								}
-							}
-						}
-						continue NEXTSTATION
-					}
-				}
-			}
+			region = "LB"
+		} else {
+			region = "RB"
+		}
 
-		} else if s.Y >= N/2 && s.X >= N/2 {
-			// 右下
-			var used [50][50]bool
-			used[s.Y][s.X] = true
-			q = append(q, s)
-			for len(q) > 0 {
-				p := q[0]
-				q = q[1:]
-				dd := [2]int{0, 3}
-				for _, d := range dd {
-					next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
-					if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
-						continue
+		var used [50][50]bool
+		used[s.Y][s.X] = true
+		q = append(q, s)
+
+		for len(q) > 0 {
+			p := q[0]
+			q = q[1:]
+			for _, d := range directions[region] {
+				next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
+				if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
+					continue
+				}
+				if used[next.Y][next.X] {
+					continue
+				}
+				if f.cell[next.Y][next.X] == EMPTY {
+					used[next.Y][next.X] = true
+					q = append(q, next)
+				} else if f.cell[next.Y][next.X] == STATION {
+					path, err := f.canConnect(s, next)
+					if err != nil {
+						panic(err)
 					}
-					if used[next.Y][next.X] {
-						continue
-					}
-					if f.cell[next.Y][next.X] == EMPTY && next.Y >= N/2 && next.X >= N/2 {
-						used[next.Y][next.X] = true
-						q = append(q, next)
-					} else if f.cell[next.Y][next.X] == STATION {
-						path, err := f.canConnect(s, next)
-						if err != nil {
-							panic(err)
+					types := f.selectRails(path)
+					for k := 1; k < len(path)-1; k++ {
+						if f.cell[path[k].Y][path[k].X] == STATION {
+							continue
 						}
-						types := f.selectRails(path)
-						for k := 0; k < len(path); k++ {
-							if isRail(types[k]) {
-								err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
-								if err != nil {
-									panic(err)
-								}
+						if isRail(types[k]) && f.cell[path[k].Y][path[k].X] != types[k] {
+							err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
+							if err != nil {
+								log.Println("k", k)
+								log.Println(types)
+								panic(err)
 							}
 						}
-						continue NEXTSTATION
 					}
+					continue NEXTSTATION
 				}
 			}
 		}

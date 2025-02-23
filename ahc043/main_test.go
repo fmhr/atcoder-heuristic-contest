@@ -100,7 +100,7 @@ func TestConstructRailway(t *testing.T) {
 }
 
 func TestConstructGredyRailway(t *testing.T) {
-	in, err := readInputFile("tools/in/0013.txt")
+	in, err := readInputFile("tools/in/0007.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestConstructGredyRailway(t *testing.T) {
 
 func TestDebugBeamSearch(t *testing.T) {
 	// 線路上に駅を配置することができるのかを確認する
-	f, err := readGridFileToFild("test/t0000.txt")
+	f, err := readGridFileToFild("test/t0007.txt")
 	if err != nil {
 		t.Fatalf("failed to read grid: %v", err)
 	}
