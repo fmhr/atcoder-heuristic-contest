@@ -141,7 +141,16 @@ func BuildGraph(in Input, stations []Pos) {
 	}
 	log.Println("countPath_min_max", len(countPath_min_max))
 	// 使われた回数が多いものからfieldに追加していく
-
+	tmpCoutPath := make([][3]int, 0, len(countPath_min_max))
+	for k, v := range countPath_min_max {
+		tmpCoutPath = append(tmpCoutPath, [3]int{k[0], k[1], v})
+	}
+	sort.Slice(tmpCoutPath, func(i, j int) bool {
+		return tmpCoutPath[i][2] > tmpCoutPath[j][2]
+	})
+	for _, v := range tmpCoutPath {
+		log.Printf("to:%d from:%d count:%d\n", v[0], v[1], v[2])
+	}
 }
 
 const (
