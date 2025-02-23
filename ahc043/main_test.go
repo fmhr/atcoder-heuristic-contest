@@ -91,12 +91,23 @@ func TestConstructRailway(t *testing.T) {
 	for i := 0; i < in.M; i++ {
 		home := in.src[i]
 		work := in.dst[i]
-		ok := f.isNearStation(home, work)
+		ok := f.IsNearStation(home, work)
 		if !ok {
 			t.Error("no path")
 			return
 		}
 	}
+}
+
+func TestConstructGredyRailway(t *testing.T) {
+	in, err := readInputFile("tools/in/0013.txt")
+	if err != nil {
+		t.Fatalf("failed to read input: %v", err)
+	}
+	stationPos := chooseStationPositionFast(*in)
+	edges, f := ConstructGredyRailway(*in, stationPos)
+	_ = edges
+	t.Log(f.ToString())
 }
 
 func TestDebugBeamSearch(t *testing.T) {

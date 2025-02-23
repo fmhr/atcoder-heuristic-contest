@@ -270,9 +270,9 @@ func (f *Field) Build(act Action) error {
 	return nil
 }
 
-// isNearStation 駅,路線をつかって、a,bがつながっているかを返す
+// IsNearStation 駅,路線をつかって、a,bがつながっているかを返す
 // a, b　はHOME, WORKSPACE
-func (f Field) isNearStation(a, b Pos) bool {
+func (f Field) IsNearStation(a, b Pos) bool {
 	return f.coverd.Get(int(a.Y*N+a.X)) && f.coverd.Get(int(b.Y*N+b.X))
 }
 
@@ -608,7 +608,7 @@ func (s *State) do(act Action, in Input, last bool) error {
 		if act.Kind == STATION && last {
 			for i := 0; i < in.M; i++ {
 				if !s.connected[i] {
-					if s.field.isNearStation(in.src[i], in.dst[i]) {
+					if s.field.IsNearStation(in.src[i], in.dst[i]) {
 						s.income += in.income[i]
 						s.connected[i] = true
 					}
@@ -795,6 +795,69 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 	return mstEdges, field
 }
 
+// ConstructGredyRailway は、貪欲法で鉄道を構築する
+// 盤面を４分割にして、左上の駅は右下の駅と繋ぐ,他も同様
+func ConstructGredyRailway(in Input, stations []Pos) ([]Edge, *Field) {
+	f := NewField(in.N)
+	for _, s := range stations {
+		err := f.Build(Action{Kind: STATION, Y: s.Y, X: s.X})
+		if err != nil {
+			panic(err)
+		}
+	}
+	log.Println(f.ToString())
+	q := make([]Pos, 0)
+NEXTSTATION:
+	for _, s := range stations {
+		q = make([]Pos, 0)
+		if s.Y < N/2 && s.X < N/2 {
+			// 左上から右下に向けてエッジを作る,対象が左上を過ぎたらqueueにはいれない
+			var used [50][50]bool
+			used[s.Y][s.X] = true
+			q = append(q, s)
+			for len(q) > 0 {
+				p := q[0]
+				q = q[1:]
+				for d := 1; d < 3; d++ {
+					next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
+					if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
+						continue
+					}
+					if used[next.Y][next.X] {
+						continue
+					}
+					if f.cell[next.Y][next.X] == EMPTY && next.Y < N/2 && next.X < N/2 {
+						used[next.Y][next.X] = true
+						q = append(q, next)
+					} else if f.cell[next.Y][next.X] == STATION {
+						path, err := f.canConnect(s, next)
+						if err != nil {
+							panic(err)
+						}
+						types := f.selectRails(path)
+						for k := 0; k < len(path); k++ {
+							if isRail(types[k]) {
+								err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
+								if err != nil {
+									panic(err)
+								}
+							}
+						}
+						continue NEXTSTATION
+					}
+				}
+			}
+		} else if s.Y < N/2 && s.X >= N/2 {
+			// 右上
+		} else if s.Y >= N/2 && s.X < N/2 {
+			// 左下
+		} else if s.Y >= N/2 && s.X >= N/2 {
+			// 右下
+		}
+	}
+	return nil, f
+}
+
 func chooseStationPositionFast(in Input) (poss []Pos) {
 	poss = make([]Pos, 0, intMax(in.M, 100))
 	sumPoints := in.M * 2
@@ -844,6 +907,12 @@ func chooseStationPositionFast(in Input) (poss []Pos) {
 			coverd[y*50+x] = true
 		}
 	}
+	sort.Slice(poss, func(i, j int) bool {
+		if poss[i].Y == poss[j].Y {
+			return poss[i].X < poss[j].X
+		}
+		return poss[i].Y < poss[j].Y
+	})
 	return poss
 }
 
