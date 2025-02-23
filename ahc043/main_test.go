@@ -52,7 +52,7 @@ func TestConstructMSTRailway(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositionFast(*in)
+	stationPos := ChooseStationPositionFast(*in)
 	edges, _ := constructMSTRailway(*in, stationPos)
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
 	for i := 0; i < len(edges); i++ {
@@ -82,7 +82,7 @@ func TestConstructRailway(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositionFast(*in)
+	stationPos := ChooseStationPositionFast(*in)
 	edges, f := constructMSTRailway(*in, stationPos)
 	_ = edges
 
@@ -104,7 +104,7 @@ func TestConstructGredyRailway(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositionFast(*in)
+	stationPos := ChooseStationPositionFast(*in)
 	edges, f := ConstructGreedyRailway(*in, stationPos)
 	_ = edges
 	t.Log(f.ToString())
@@ -165,7 +165,7 @@ func TestChoseStationPosition(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositionFast(*in)
+	stationPos := ChooseStationPositionFast(*in)
 	t.Log("number of station:", len(stationPos))
 }
 
@@ -175,7 +175,7 @@ func BenchmarkChoseStationPosition(b *testing.B) {
 		b.Fatalf("failed to read input: %v", err)
 	}
 	for i := 0; i < b.N; i++ {
-		chooseStationPositionFast(*in)
+		ChooseStationPositionFast(*in)
 	}
 }
 
@@ -380,7 +380,7 @@ var reverseRailMap = map[string]int{
 }
 
 // CanReach は、グラフ内でノード a からノード b に到達可能かどうかを判断します。
-func CanReach(a, b int, g []Edge) bool {
+func CanReach(a, b int, g []mstEdge) bool {
 	visited := make(map[int]bool)
 	queue := []int{a}
 

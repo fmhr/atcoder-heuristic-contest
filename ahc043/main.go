@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"io"
 	"log"
@@ -35,13 +36,89 @@ func main() {
 	defer writer.Flush()
 	in := readInput(reader)
 	_ = in
-	ans := beamSearch(*in)
+	//ans := beamSearch(*in)
+	ans := ChokudaiSearch(*in)
 	_, _ = fmt.Fprintln(writer, ans)
 	//log.Printf("in=%+v\n", in)
 	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
 
-func chokudaiSearch() {
+func ChokudaiSearch(in Input) string {
+	stations := ChooseStationPositionFast(in)
+	log.Printf("stations=%d", len(stations))
+	BuildGraph(in, stations)
+	//graphe := make([][]Edge, len(stations)) // [駅]
+
+	return ""
+}
+
+// 駅の位置を受け取る
+// 1.各駅ごとに４までの近い駅を探す
+// 2.src->dstで駅間を繋ぐ経路を探す
+// 駅間の経路が使われた回数をカウントする
+// よく使われたものからfieldに追加していく
+// 更新されたfieldでつくられた経路でグラフを作るo
+// src->dstで経路を探す 駅から駅までの経路を１つのActionとする
+func BuildGraph(in Input, stations []Pos) {
+	// 中央の駅から始める
+	sort.Slice(stations, func(i, j int) bool {
+		return distance(Pos{Y: N / 2, X: N / 2}, stations[i]) < distance(Pos{Y: N / 2, X: N / 2}, stations[j])
+	})
+	for i, s := range stations {
+		log.Printf("station[%d]=%+v dist=%d\n", i, s, distance(Pos{Y: N / 2, X: N / 2}, s))
+	}
+	// 1
+	g := make([][]DijEdge, len(stations))
+	for i := 0; i < len(stations); i++ {
+		for j := 0; j < len(stations); j++ {
+			if i == j {
+				continue
+			}
+			dist := distance(stations[i], stations[j])
+			g[i] = append(g[i], DijEdge{To: j, Cost: dist})
+		}
+		sort.Slice(g[i], func(k, j int) bool {
+			return g[i][k].Cost < g[i][j].Cost
+		})
+		g[i] = g[i][:4]
+	}
+	for i, e := range g {
+		log.Println(i, e)
+	}
+	// 2
+	// 前処理で駅間の経路を求める
+	// pathes[i][j] = iからjまでの経路　値は駅のindex
+	// j>i
+	pathes := make([][][]int, len(stations))
+	for i := 0; i < len(stations); i++ {
+		pathes[i] = make([][]int, len(stations))
+		for j := i + 1; j < len(stations); j++ {
+			//log.Printf("%d->%d L1=%d\n", i, j, distance(stations[i], stations[j]))
+			path, dist := dijkstra(g, i, j)
+			//log.Printf("dist=%d path=%+v\n", dist, path)
+			pathes[i][j] = path
+			if dist > distance(stations[i], stations[j]) {
+				log.Printf("L1:%d dist:%d\n", distance(stations[i], stations[j]), dist)
+			}
+		}
+	}
+	// src->dstの最も近い駅を探す
+	// 各セルに対して、最も近い駅を探す
+	// 重複は上書きしてしまう
+	var stationGrid [2500]int // 駅のindex
+	for i := 0; i < 2500; i++ {
+		stationGrid[i] = -1
+	}
+	for i, s := range stations {
+		stationGrid[s.Y*50+s.X] = i
+		for d := 0; d < 13; d++ {
+			y, x := s.Y+ddy[d], s.X+ddx[d]
+			if y >= 0 && y < N && x >= 0 && x < N {
+				stationGrid[y*50+x] = i
+			}
+		}
+	}
+	log.Println(gridToString(stationGrid))
 
 }
 
@@ -664,7 +741,7 @@ var ddx = [13]int{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 // すべての駅を繋ぐ鉄道を敷設する
 // MSTクラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
 // ここのエッジは短いが、まれに駅を挟む
-func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
+func constructMSTRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 	numStations := int(len(stations))
 	stationIndexMap := make(map[Pos]int)
 	for i, s := range stations {
@@ -682,11 +759,11 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 	}
 
 	// マンハッタン距離を使って,全駅間の暫定距離を求める
-	edges := []Edge{}
+	edges := []mstEdge{}
 	for i := int(0); i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
 			dist := distance(stations[i], stations[j])
-			edges = append(edges, Edge{From: i, To: j, L1: dist})
+			edges = append(edges, mstEdge{From: i, To: j, L1: dist})
 		}
 	}
 	//////////////////////////
@@ -699,7 +776,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 	// UnionFindで連結成分を管理
 	uf := NewUnionFind()
 	// Kruskal法で最小全域木を求める
-	mstEdges := []Edge{}
+	mstEdges := []mstEdge{}
 	for _, edge := range edges {
 		// すでに連結されている場合はスキップ
 		if uf.same(int(edge.From), int(edge.To)) {
@@ -788,7 +865,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 				//if len(path) < MAX_LEN {
 				types := field2.selectRails(path)
 				dist := distance(s0, s1)
-				edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types, L1: dist}
+				edge := mstEdge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types, L1: dist}
 				mstEdges = append(mstEdges, edge)
 				//log.Println("src", s0, "dst", s1, len(path))
 				//}
@@ -801,7 +878,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 
 // ConstructGreedyRailway は、貪欲法で鉄道を構築する
 // 盤面を４分割にして、左上の駅は右下の駅と繋ぐ,他も同様
-func ConstructGreedyRailway(in Input, stations []Pos) ([]Edge, *Field) {
+func ConstructGreedyRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 	f := NewField(in.N)
 	for _, s := range stations {
 		err := f.Build(Action{Kind: STATION, Y: int(s.Y), X: int(s.X)})
@@ -878,7 +955,7 @@ NEXTSTATION:
 	return nil, f
 }
 
-func chooseStationPositionFast(in Input) (poss []Pos) {
+func ChooseStationPositionFast(in Input) (poss []Pos) {
 	poss = make([]Pos, 0, intMax(in.M, 100))
 	sumPoints := in.M * 2
 	var grid [2500]int
@@ -974,7 +1051,7 @@ const (
 func beamSearch(in Input) string {
 	var cnt int // 探索空間のカウント
 	// 駅の位置を選ぶ
-	stations := chooseStationPositionFast(in)
+	stations := ChooseStationPositionFast(in)
 	log.Printf("stations=%v\n", len(stations))
 	// 駅を繋ぐエッジを求める
 	edges, _ := constructMSTRailway(in, stations)
@@ -1263,7 +1340,7 @@ func gridToString(grid [2500]int) (str string) {
 }
 
 // MST用
-type Edge struct {
+type mstEdge struct {
 	From, To int
 	L1       int // マンハッタン距離
 	Path     []Pos
@@ -1272,7 +1349,7 @@ type Edge struct {
 
 type Graph struct {
 	NumNodes int
-	Edges    []Edge
+	Edges    []mstEdge
 }
 
 // BitSet は 2500個の bool を uint64 で管理する構造体
@@ -1323,4 +1400,84 @@ func intMax(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// //////////////////////////////////
+// Dijkstra library
+type DijEdge struct {
+	To, Cost int
+}
+
+type Item struct {
+	cost, nodeCount, node int
+}
+
+type PriorityQueue []Item
+
+func (pq PriorityQueue) Len() int { return len(pq) }
+func (pq PriorityQueue) Less(i, j int) bool {
+	if pq[i].cost == pq[j].cost {
+		return pq[i].nodeCount > pq[j].nodeCount
+	}
+	return pq[i].cost < pq[j].cost
+}
+func (pq PriorityQueue) Swap(i, j int) { pq[i], pq[j] = pq[j], pq[i] }
+func (pq *PriorityQueue) Push(x interface{}) {
+	item := x.(Item)
+	*pq = append(*pq, item)
+}
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	*pq = old[0 : n-1]
+	return item
+}
+
+// return path, cost
+func dijkstra(graph [][]DijEdge, start, goal int) ([]int, int) {
+	n := len(graph)
+	dist := make([]int, n)
+	nodeCount := make([]int, n)
+	prev := make([]int, n)
+	for i := range dist {
+		dist[i] = 10000
+		nodeCount[i] = 0
+		prev[i] = -1
+	}
+	dist[start] = 0
+	nodeCount[start] = 1
+	pq := &PriorityQueue{}
+	heap.Init(pq)
+	heap.Push(pq, Item{cost: 0, nodeCount: 1, node: start})
+	for pq.Len() > 0 {
+		current := heap.Pop(pq).(Item)
+		cost, count, node := current.cost, current.nodeCount, current.node
+		//if node == goal {
+		//break
+		//}
+		for _, edge := range graph[node] {
+			nowCost := cost + edge.Cost
+			nowCount := count + 1
+			if nowCost < dist[edge.To] || nowCost == dist[edge.To] && nowCount > nodeCount[edge.To] {
+				dist[edge.To] = nowCost
+				nodeCount[edge.To] = nowCount
+				prev[edge.To] = node
+				heap.Push(pq, Item{cost: nowCost, nodeCount: nowCount, node: edge.To})
+			}
+		}
+	}
+	// 経路復元
+	path := []int{}
+	for node := goal; node != -1; node = prev[node] {
+		path = append(path, node)
+	}
+	for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
+		path[i], path[j] = path[j], path[i]
+	}
+	if len(path) == 0 || path[0] != start {
+		log.Println("cannot reach goal")
+		panic("")
+	}
+	return path, dist[goal]
 }
