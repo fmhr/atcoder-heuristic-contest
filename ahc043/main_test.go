@@ -22,8 +22,8 @@ func TestShortestPaht(t *testing.T) {
 			}
 		}
 	}
-	a := Pos{Y: int16(rand.Intn(50)), X: int16(rand.Intn(50))}
-	b := Pos{Y: int16(rand.Intn(50)), X: int16(rand.Intn(50))}
+	a := Pos{Y: rand.Intn(50), X: int(rand.Intn(50))}
+	b := Pos{Y: int(rand.Intn(50)), X: int(rand.Intn(50))}
 	f.cell[a.Y][a.X] = STATION
 	f.cell[b.Y][b.X] = STATION
 	//t.Log(f.cellString())
@@ -67,11 +67,11 @@ func TestConstructMSTRailway(t *testing.T) {
 	}
 	uf := NewUnionFind()
 	for _, e := range edges {
-		uf.unite(int16(e.From), int16(e.To))
+		uf.unite(int(e.From), int(e.To))
 	}
 	root := uf.root(0)
 	for i := 1; i < len(stationPos); i++ {
-		if uf.root(int16(i)) != root {
+		if uf.root(int(i)) != root {
 			t.Error("not connected")
 		}
 	}
@@ -123,7 +123,7 @@ func TestDebugBeamSearch(t *testing.T) {
 		for j := 0; j < 50; j++ {
 			if isRail(f.cell[i][j]) {
 				if rand.Intn(10) < 5 {
-					err := f.Build(Action{Kind: STATION, X: int16(j), Y: int16(i)})
+					err := f.Build(Action{Kind: STATION, X: int(j), Y: int(i)})
 					if err != nil {
 						t.Fatalf("failed to build: %v", err)
 					}
@@ -190,8 +190,8 @@ func TestReadInput(t *testing.T) {
 
 func TestGridCalculation(t *testing.T) {
 	p := Pos{X: 10, Y: 10}
-	var grid [2500]int16
-	for i := int16(0); i < int16(len(ddy)); i++ {
+	var grid [2500]int
+	for i := int(0); i < int(len(ddy)); i++ {
 		next := p.add(Pos{Y: ddy[i], X: ddx[i]})
 		if next.Y < 0 || next.Y >= 50 || next.X < 0 || next.X >= 50 {
 			t.Log("out of range", next)
@@ -204,7 +204,7 @@ func TestGridCalculation(t *testing.T) {
 
 func TestIsRailConnected(t *testing.T) {
 	tests := []struct {
-		railType  int16
+		railType  int
 		direction int
 		isStart   bool
 		expected  bool
@@ -297,8 +297,8 @@ func readInputFile(filename string) (*Input, error) {
 		dstY, _ := strconv.Atoi(fields[2])
 		dstX, _ := strconv.Atoi(fields[3])
 
-		in.src[i] = Pos{X: int16(srcX), Y: int16(srcY)}
-		in.dst[i] = Pos{X: int16(dstX), Y: int16(dstY)}
+		in.src[i] = Pos{X: int(srcX), Y: int(srcY)}
+		in.dst[i] = Pos{X: int(dstX), Y: int(dstY)}
 		in.income[i] = int(distance(in.src[i], in.dst[i])) // 収入は距離
 	}
 	//log.Printf("readInput: N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
@@ -313,7 +313,7 @@ func TestReadGridFile(t *testing.T) {
 	f := NewField(50)
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
-			a := Action{Kind: grid[i][j], X: int16(j), Y: int16(i)}
+			a := Action{Kind: grid[i][j], X: int(j), Y: int(i)}
 			err := f.Build(a)
 			if err != nil {
 				t.Fatalf("failed to build: %v", err)
@@ -330,7 +330,7 @@ func readGridFileToFild(filename string) (*Field, error) {
 	f := NewField(50)
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
-			a := Action{Kind: grid[i][j], X: int16(j), Y: int16(i)}
+			a := Action{Kind: grid[i][j], X: int(j), Y: int(i)}
 			err := f.Build(a)
 			if err != nil {
 				return nil, fmt.Errorf("failed to build: %v", err)
@@ -340,20 +340,20 @@ func readGridFileToFild(filename string) (*Field, error) {
 	return f, nil
 }
 
-func readGridFile(filename string) ([][]int16, error) {
+func readGridFile(filename string) ([][]int, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %v", err)
 	}
 	defer file.Close()
 
-	grid := make([][]int16, 50)
+	grid := make([][]int, 50)
 	scanner := bufio.NewScanner(file)
 	for i := 0; i < 50; i++ {
 		scanner.Scan()
 		line := scanner.Text()
 		runes := []rune(line)
-		grid[i] = make([]int16, 50)
+		grid[i] = make([]int, 50)
 		for j := 0; j < 50; j++ {
 			v, exit := reverseRailMap[string(runes[j])]
 			if !exit {
@@ -367,7 +367,7 @@ func readGridFile(filename string) ([][]int16, error) {
 }
 
 // reverseRailMap は、railMapの逆引き
-var reverseRailMap = map[string]int16{
+var reverseRailMap = map[string]int{
 	".": EMPTY,
 	"◎": STATION,
 	"─": RAIL_HORIZONTAL,
@@ -380,9 +380,9 @@ var reverseRailMap = map[string]int16{
 }
 
 // CanReach は、グラフ内でノード a からノード b に到達可能かどうかを判断します。
-func CanReach(a, b int16, g []Edge) bool {
-	visited := make(map[int16]bool)
-	queue := []int16{a}
+func CanReach(a, b int, g []Edge) bool {
+	visited := make(map[int]bool)
+	queue := []int{a}
 
 	visited[a] = true
 

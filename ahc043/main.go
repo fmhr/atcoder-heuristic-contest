@@ -41,6 +41,10 @@ func main() {
 	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
 
+func chokudaiSearch() {
+
+}
+
 const (
 	N = 50
 )
@@ -58,25 +62,25 @@ const (
 )
 
 // UP, RIGHT, DOWN, LEFT
-var dy = []int16{-1, 0, 1, 0}
-var dx = []int16{0, 1, 0, -1}
+var dy = []int{-1, 0, 1, 0}
+var dx = []int{0, 1, 0, -1}
 
 const (
-	EMPTY           int16 = -1
-	DO_NOTHING      int16 = -1
-	STATION         int16 = 0
-	RAIL_HORIZONTAL int16 = 1
-	RAIL_VERTICAL   int16 = 2
-	RAIL_LEFT_DOWN  int16 = 3
-	RAIL_LEFT_UP    int16 = 4
-	RAIL_RIGHT_UP   int16 = 5
-	RAIL_RIGHT_DOWN int16 = 6
-	WALL            int16 = 7 // テストの障害物として使う
+	EMPTY           int = -1
+	DO_NOTHING      int = -1
+	STATION         int = 0
+	RAIL_HORIZONTAL int = 1
+	RAIL_VERTICAL   int = 2
+	RAIL_LEFT_DOWN  int = 3
+	RAIL_LEFT_UP    int = 4
+	RAIL_RIGHT_UP   int = 5
+	RAIL_RIGHT_DOWN int = 6
+	WALL            int = 7 // テストの障害物として使う
 )
 
-// int16ToString は、レールタイプのint16の種類を文字列に変換する
+// int16ToString は、レールタイプのintの種類を文字列に変換する
 // EMPTY = DO_NOTHING = -1 に注意
-func int16ToString(a int16) string {
+func int16ToString(a int) string {
 	switch a {
 	case EMPTY:
 		return "EMPTY"
@@ -100,12 +104,12 @@ func int16ToString(a int16) string {
 	return "UNKNOWN"
 }
 
-func isRail(kind int16) bool {
+func isRail(kind int) bool {
 	return kind >= RAIL_HORIZONTAL && kind <= RAIL_RIGHT_DOWN
 }
 
-// railToString は、[]int16のレールの種類を文字列に変換する
-func railToString(rails []int16) string {
+// railToString は、[]intのレールの種類を文字列に変換する
+func railToString(rails []int) string {
 	var sb strings.Builder
 	for _, rail := range rails {
 		sb.WriteString(" ")
@@ -114,7 +118,7 @@ func railToString(rails []int16) string {
 	return sb.String()
 }
 
-var railMap = map[int16]string{
+var railMap = map[int]string{
 	EMPTY:           ".",
 	STATION:         "◎",
 	RAIL_HORIZONTAL: "─",
@@ -126,7 +130,7 @@ var railMap = map[int16]string{
 	WALL:            "#",
 }
 
-var buildCost = map[int16]int{
+var buildCost = map[int]int{
 	EMPTY:           0,            // EMPTY
 	STATION:         COST_STATION, // STATION
 	RAIL_HORIZONTAL: COST_RAIL,
@@ -139,7 +143,7 @@ var buildCost = map[int16]int{
 }
 
 // calBuildCost は、[]actの建設コストを計算する
-func calBuildCost(act []int16) (cost int) {
+func calBuildCost(act []int) (cost int) {
 	for _, a := range act {
 		if val, ok := buildCost[a]; ok {
 			cost += val
@@ -152,8 +156,8 @@ func calBuildCost(act []int16) (cost int) {
 }
 
 type Action struct {
-	Kind    int16
-	Y, X    int16
+	Kind    int
+	Y, X    int
 	comment string
 }
 
@@ -168,7 +172,7 @@ func (a Action) String() (str string) {
 }
 
 type Field struct {
-	cell     [N][N]int16
+	cell     [N][N]int
 	stations []Pos
 	coverd   BitSet //駅によってカバーされた位置
 }
@@ -194,7 +198,7 @@ func (f *Field) Clone() *Field {
 		return nil
 	}
 	newField := &Field{
-		cell:     [N][N]int16{},
+		cell:     [N][N]int{},
 		stations: make([]Pos, len(f.stations)),
 	}
 	copy(newField.stations, f.stations)
@@ -256,7 +260,7 @@ func (f *Field) Build(act Action) error {
 
 	// 駅のチェック
 	if act.Kind == STATION {
-		f.stations = append(f.stations, Pos{Y: act.Y, X: act.X})
+		f.stations = append(f.stations, Pos{Y: int(act.Y), X: int(act.X)})
 		for d := 0; d < 13; d++ {
 			y, x := act.Y+ddy[d], act.X+ddx[d]
 			if y >= 0 && y < N && x >= 0 && x < N {
@@ -282,7 +286,7 @@ func (f Field) IsNearStation(a, b Pos) bool {
 func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 	// a から b への最短経路を返す
 	// field=EMPTY なら移動可能 それ以外は移動不可
-	var dist [N * N]int16
+	var dist [N * N]int
 	for i := 0; i < N*N; i++ {
 		dist[i] = 10000
 	}
@@ -293,7 +297,7 @@ func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 		p := que[0]
 		que = que[1:]
 		for d := 0; d < 4; d++ {
-			y, x := p.Y+dy[d], p.X+dx[d]
+			y, x := int(p.Y)+int(dy[d]), int(p.X)+int(dx[d])
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				continue
 			}
@@ -342,8 +346,8 @@ func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 
 // 2点間の最短経路を返す (a から b へ)
 // paht[0]とpath[len(path)-1]は駅
-func (f *Field) selectRails(path []Pos) (types []int16) {
-	types = make([]int16, len(path))
+func (f *Field) selectRails(path []Pos) (types []int) {
+	types = make([]int, len(path))
 	types[0] = STATION
 	types[len(path)-1] = STATION
 	for i := 1; i < len(path)-1; i++ {
@@ -371,28 +375,28 @@ func (f *Field) selectRails(path []Pos) (types []int16) {
 
 // railが繋がる向きを返す,dy,dxに対応
 // 0:UP, 1:RIGHT, 2:DOWN, 3:LEFT
-func railDirection(rail int16) []int16 {
+func railDirection(rail int) []int {
 	switch rail {
 	case RAIL_HORIZONTAL:
-		return []int16{1, 3}
+		return []int{1, 3}
 	case RAIL_VERTICAL:
-		return []int16{0, 2}
+		return []int{0, 2}
 	case RAIL_LEFT_DOWN:
-		return []int16{3, 2}
+		return []int{3, 2}
 	case RAIL_LEFT_UP:
-		return []int16{0, 3}
+		return []int{0, 3}
 	case RAIL_RIGHT_UP:
-		return []int16{0, 1}
+		return []int{0, 1}
 	case RAIL_RIGHT_DOWN:
-		return []int16{1, 2}
+		return []int{1, 2}
 	case STATION, EMPTY:
-		return []int16{0, 1, 2, 3}
+		return []int{0, 1, 2, 3}
 	}
 	return nil
 }
 
 // checkConnec はレールの接続ルールを判定する
-func checkConnec(railType int16, direction int, isStart bool) bool {
+func checkConnec(railType int, direction int, isStart bool) bool {
 	if railType == STATION {
 		return true
 	}
@@ -447,7 +451,7 @@ func (f Field) canMove(a, b Pos) bool {
 		direction = DOWN
 	}
 	// aからbに移動する向きが繋がっているか
-	x, y := a.X+dx[direction], a.Y+dy[direction]
+	x, y := int(a.X)+int(dx[direction]), int(a.Y)+int(dy[direction])
 	if !(x == b.X && y == b.Y) {
 		log.Fatal("canMove: invalid direction")
 	}
@@ -469,7 +473,7 @@ func (f Field) canMove(a, b Pos) bool {
 // canBuileRail は、pathをたどって、線路を敷くことができるかを返す
 // 線路の上に駅は建てることができる
 // 線路の上に種類の違う線路を建てることはできない
-func (f Field) canBuileRail(path []Pos, typ []int16) bool {
+func (f Field) canBuileRail(path []Pos, typ []int) bool {
 	for i := 1; i < len(path)-1; i++ {
 		y, x := path[i].Y, path[i].X
 		if isRail(f.cell[y][x]) && f.cell[y][x] != typ[i] {
@@ -483,7 +487,7 @@ func (f Field) canBuileRail(path []Pos, typ []int16) bool {
 // すでに建築済みの路線もpathに含まれる
 func (f Field) canConnect(a, b Pos) ([]Pos, error) {
 	// distの更新
-	var dist [2500]int16
+	var dist [2500]int
 	for i := 0; i < 2500; i++ {
 		dist[i] = 10000
 	}
@@ -628,7 +632,7 @@ func (s *State) do(act Action, in Input, last bool) error {
 }
 
 type Pos struct {
-	Y, X int16
+	Y, X int
 }
 
 func (p Pos) add(a Pos) Pos {
@@ -639,8 +643,8 @@ func (p Pos) Clone() Pos {
 	return Pos{Y: p.Y, X: p.X}
 }
 
-func distance(a, b Pos) int16 {
-	return absInt16(a.X-b.X) + absInt16(a.Y-b.Y)
+func distance(a, b Pos) int {
+	return absint(int(a.X)-int(b.X)) + absint(int(a.Y)-int(b.Y))
 }
 
 type Pair [2]Pos
@@ -654,22 +658,22 @@ func uniquePair(p1, p2 Pos) Pair {
 }
 
 // stationの周辺
-var ddy = [13]int16{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
-var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
+var ddy = [13]int{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
+var ddx = [13]int{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 
 // すべての駅を繋ぐ鉄道を敷設する
 // MSTクラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
 // ここのエッジは短いが、まれに駅を挟む
 func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
-	numStations := int16(len(stations))
-	stationIndexMap := make(map[Pos]int16)
+	numStations := int(len(stations))
+	stationIndexMap := make(map[Pos]int)
 	for i, s := range stations {
-		stationIndexMap[s] = int16(i)
+		stationIndexMap[s] = int(i)
 	}
 	// 決めておいた駅を建設する
 	field := NewField(in.N)
-	for i := int16(0); i < numStations; i++ {
-		err := field.Build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
+	for i := int(0); i < numStations; i++ {
+		err := field.Build(Action{Kind: STATION, Y: int(stations[i].Y), X: int(stations[i].X)})
 		if err != nil {
 			log.Println("fatal build station:", stations[i])
 			log.Println("station build error", err)
@@ -679,7 +683,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 
 	// マンハッタン距離を使って,全駅間の暫定距離を求める
 	edges := []Edge{}
-	for i := int16(0); i < numStations; i++ {
+	for i := int(0); i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
 			dist := distance(stations[i], stations[j])
 			edges = append(edges, Edge{From: i, To: j, L1: dist})
@@ -698,7 +702,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 	mstEdges := []Edge{}
 	for _, edge := range edges {
 		// すでに連結されている場合はスキップ
-		if uf.same(int16(edge.From), int16(edge.To)) {
+		if uf.same(int(edge.From), int(edge.To)) {
 			continue
 		}
 		// 連結可能か確認
@@ -715,12 +719,12 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 					// すでに駅があり線路が必要ない時 または、すでに建築予定の線路がある時
 					continue
 				}
-				err := field.Build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
+				err := field.Build(Action{Kind: types[i], Y: int(path[i].Y), X: int(path[i].X)})
 				if err != nil {
 					panic(err)
 				}
 			}
-			uf.unite(int16(edge.From), int16(edge.To))
+			uf.unite(int(edge.From), int(edge.To))
 			edge.Path = path
 			edge.Rail = types
 			mstEdges = append(mstEdges, edge)
@@ -741,7 +745,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 		for _, p := range edge.Path {
 			if isRail(field.cell[p.Y][p.X]) || field.cell[p.Y][p.X] == STATION {
 				field2.cell[p.Y][p.X] = EMPTY // WALLの強制解除
-				_ = field2.Build(Action{Kind: field.cell[p.Y][p.X], Y: p.Y, X: p.X})
+				_ = field2.Build(Action{Kind: field.cell[p.Y][p.X], Y: int(p.Y), X: int(p.X)})
 				// 駅->線路の順番で建築するときエラーを吐くが無視できる
 			}
 		}
@@ -800,7 +804,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 func ConstructGreedyRailway(in Input, stations []Pos) ([]Edge, *Field) {
 	f := NewField(in.N)
 	for _, s := range stations {
-		err := f.Build(Action{Kind: STATION, Y: s.Y, X: s.X})
+		err := f.Build(Action{Kind: STATION, Y: int(s.Y), X: int(s.X)})
 		if err != nil {
 			panic(err)
 		}
@@ -837,7 +841,7 @@ NEXTSTATION:
 			p := q[0]
 			q = q[1:]
 			for _, d := range directions[region] {
-				next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
+				next := Pos{Y: int(p.Y) + int(dy[d]), X: int(p.X) + int(dx[d])}
 				if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
 					continue
 				}
@@ -858,7 +862,7 @@ NEXTSTATION:
 							continue
 						}
 						if isRail(types[k]) && f.cell[path[k].Y][path[k].X] != types[k] {
-							err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
+							err := f.Build(Action{Kind: types[k], Y: int(path[k].Y), X: int(path[k].X)})
 							if err != nil {
 								log.Println("k", k)
 								log.Println(types)
@@ -895,7 +899,7 @@ func chooseStationPositionFast(in Input) (poss []Pos) {
 					continue
 				}
 				for k := 0; k < 13; k++ {
-					y, x := int16(i)+ddy[k], int16(j)+ddx[k]
+					y, x := int(i)+ddy[k], int(j)+ddx[k]
 					if y < 0 || y >= 50 || x < 0 || x >= 50 {
 						continue
 					}
@@ -906,7 +910,7 @@ func chooseStationPositionFast(in Input) (poss []Pos) {
 				}
 				if hit > bestHit {
 					bestHit = hit
-					bestPos = Pos{Y: int16(i), X: int16(j)}
+					bestPos = Pos{Y: i, X: j}
 				}
 			}
 		}
@@ -916,7 +920,7 @@ func chooseStationPositionFast(in Input) (poss []Pos) {
 		poss = append(poss, bestPos)
 		coverdPoints += bestHit
 		for k := 0; k < 13; k++ {
-			y, x := bestPos.Y+ddy[k], bestPos.X+ddx[k]
+			y, x := int(bestPos.Y)+int(ddy[k]), int(bestPos.X)+int(ddx[k])
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				continue
 			}
@@ -959,7 +963,7 @@ func (s *bsState) Clone() *bsState {
 
 type bsAction struct {
 	path []Pos
-	typ  []int16
+	typ  []int
 }
 
 const (
@@ -977,7 +981,7 @@ func beamSearch(in Input) string {
 
 	allAction := make([]bsAction, 0, len(stations)+len(edges))
 	for _, s := range stations {
-		allAction = append(allAction, bsAction{path: []Pos{s}, typ: []int16{STATION}})
+		allAction = append(allAction, bsAction{path: []Pos{s}, typ: []int{STATION}})
 	}
 	for _, e := range edges {
 		allAction = append(allAction, bsAction{path: e.Path, typ: e.Rail})
@@ -1019,7 +1023,7 @@ func beamSearch(in Input) string {
 				}
 				// 不要なactionをのぞいたp,tを作る
 				p := make([]Pos, 0, len(acts.path))
-				t := make([]int16, 0, len(acts.typ))
+				t := make([]int, 0, len(acts.typ))
 				tmp := beamStates[i].state.field // これはcloneしていないので使わない
 				for k := 0; k < len(acts.path); k++ {
 					if acts.typ[k] == tmp.cell[acts.path[k].Y][acts.path[k].X] {
@@ -1043,7 +1047,7 @@ func beamSearch(in Input) string {
 				if len(beamStates[i].state.field.stations) > 0 {
 					for l := 0; l < len(p) && isolated; l++ {
 						for d := 0; d < 4; d++ {
-							y, x := p[l].Y+dy[d], p[l].X+dx[d]
+							y, x := int(p[l].Y)+int(dy[d]), int(p[l].X)+int(dx[d])
 							if y < 0 || y >= 50 || x < 0 || x >= 50 {
 								continue
 							}
@@ -1099,7 +1103,7 @@ func beamSearch(in Input) string {
 					if j == len(p)-1 {
 						last = true
 					}
-					err := newState.state.do(Action{Kind: t[j], Y: p[j].Y, X: p[j].X}, in, last)
+					err := newState.state.do(Action{Kind: t[j], Y: int(p[j].Y), X: int(p[j].X)}, in, last)
 					if err != nil {
 						log.Println("j", j)
 						log.Println("actions", railToString(t))
@@ -1192,7 +1196,7 @@ func readInput(re *bufio.Reader) *Input {
 	return &in
 }
 
-func absInt16(x int16) int16 {
+func absint(x int) int {
 	if x < 0 {
 		return -x
 	}
@@ -1200,7 +1204,7 @@ func absInt16(x int16) int16 {
 }
 
 type UnionFind struct {
-	par [2500]int16
+	par [2500]int
 }
 
 func (uf *UnionFind) Clone() *UnionFind {
@@ -1216,13 +1220,13 @@ func (uf *UnionFind) Clone() *UnionFind {
 // 2500固定
 func NewUnionFind() *UnionFind {
 	uf := new(UnionFind)
-	for i := int16(0); i < 2500; i++ {
+	for i := int(0); i < 2500; i++ {
 		uf.par[i] = i
 	}
 	return uf
 }
 
-func (uf *UnionFind) root(a int16) int16 {
+func (uf *UnionFind) root(a int) int {
 	if uf.par[a] == a {
 		return a
 	}
@@ -1230,11 +1234,11 @@ func (uf *UnionFind) root(a int16) int16 {
 	return uf.par[a]
 }
 
-func (uf *UnionFind) same(a, b int16) bool {
-	return uf.root(int16(a)) == uf.root(int16(b))
+func (uf *UnionFind) same(a, b int) bool {
+	return uf.root(int(a)) == uf.root(int(b))
 }
 
-func (uf *UnionFind) unite(a, b int16) {
+func (uf *UnionFind) unite(a, b int) {
 	a = uf.root(a)
 	b = uf.root(b)
 	if a == b {
@@ -1243,7 +1247,7 @@ func (uf *UnionFind) unite(a, b int16) {
 	uf.par[a] = b
 }
 
-func gridToString(grid [2500]int16) (str string) {
+func gridToString(grid [2500]int) (str string) {
 	str = "showGrid()\n"
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
@@ -1260,10 +1264,10 @@ func gridToString(grid [2500]int16) (str string) {
 
 // MST用
 type Edge struct {
-	From, To int16
-	L1       int16 // マンハッタン距離
+	From, To int
+	L1       int // マンハッタン距離
 	Path     []Pos
-	Rail     []int16
+	Rail     []int
 }
 
 type Graph struct {
