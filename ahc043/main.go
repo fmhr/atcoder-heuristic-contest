@@ -71,7 +71,7 @@ const (
 	RAIL_LEFT_UP    int16 = 4
 	RAIL_RIGHT_UP   int16 = 5
 	RAIL_RIGHT_DOWN int16 = 6
-	OTHER           int16 = 7 // テストの障害物として使う
+	WALL            int16 = 7 // テストの障害物として使う
 )
 
 // int16ToString は、レールタイプのint16の種類を文字列に変換する
@@ -94,7 +94,7 @@ func int16ToString(a int16) string {
 		return "RAIL_RIGHT_UP"
 	case RAIL_RIGHT_DOWN:
 		return "RAIL_RIGHT_DOWN"
-	case OTHER:
+	case WALL:
 		return "OTHER"
 	}
 	return "UNKNOWN"
@@ -123,7 +123,7 @@ var railMap = map[int16]string{
 	RAIL_LEFT_UP:    "┘",
 	RAIL_RIGHT_UP:   "└",
 	RAIL_RIGHT_DOWN: "┌",
-	OTHER:           "#",
+	WALL:            "#",
 }
 
 var buildCost = map[int16]int{
@@ -135,7 +135,7 @@ var buildCost = map[int16]int{
 	RAIL_LEFT_UP:    COST_RAIL,
 	RAIL_RIGHT_UP:   COST_RAIL,
 	RAIL_RIGHT_DOWN: COST_RAIL,
-	OTHER:           0, // other
+	WALL:            0, // other
 }
 
 // calBuildCost は、[]actの建設コストを計算する
@@ -435,7 +435,7 @@ func (f Field) canMove(a, b Pos) bool {
 		log.Println("distance", a, b, distance(a, b))
 		return false
 	}
-	if f.cell[b.Y][b.X] == OTHER {
+	if f.cell[b.Y][b.X] == WALL {
 		return false
 	}
 	// directionはaからbに移動する向き
@@ -481,9 +481,8 @@ func (f Field) canBuileRail(path []Pos, typ []int16) bool {
 	return true
 }
 
-// 駅a, bが繋がることができるか、できないときnil,できるとき距離を返すpath
-// すでにある線路も活用できるようにする
-// 繋がらなかった時はnilを返す
+// 駅a, bが繋がることができるか、できないときnil,できるときはすべてのpath
+// すでに建築済みの路線もpathに含まれる
 func (f Field) canConnect(a, b Pos) ([]Pos, error) {
 	// distの更新
 	var dist [2500]int16
@@ -661,27 +660,17 @@ var ddy = [13]int16{0, -1, 0, 1, 0, -1, 1, 1, -1, -2, 0, 2, 0}
 var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 
 // すべての駅を繋ぐ鉄道を敷設する
-// クラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
-// .............◎.............
-// ......................┌◎..........│....◎─┐│.└───◎◎
-// ........◎─┐.....┌◎───◎┘└─◎........│......││.......
-// ........│.◎──◎─┐│........│.◎┐..┌◎─◎─◎────◎◎──┐....
-// ........│......◎┘.....┌──◎─┘└─◎┘│...│........◎─┐..
-// ↓
-// .............◎.............
-// .............│........┌◎..........│....◎─┐│.└───◎◎
-// ........◎─┐..│..┌◎───◎┘└─◎........│......││.......
-// ........│.◎──◎─┐│........│.◎┐..┌◎─◎─◎────◎◎──┐....
-// ........│.└──┘.
-func constructRailway(in Input, stations []Pos) []Edge {
-	numStations := len(stations)
-	stationIndexMap := make(map[Pos]int)
+// MSTクラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
+// ここのエッジは短いが、まれに駅を挟む
+func constructMSTRailway(in Input, stations []Pos) []Edge {
+	numStations := int16(len(stations))
+	stationIndexMap := make(map[Pos]int16)
 	for i, s := range stations {
-		stationIndexMap[s] = i
+		stationIndexMap[s] = int16(i)
 	}
 	// 決めておいた駅を建設する
 	field := NewField(in.N)
-	for i := 0; i < numStations; i++ {
+	for i := int16(0); i < numStations; i++ {
 		err := field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
 		if err != nil {
 			log.Println("fatal build station:", stations[i])
@@ -689,13 +678,12 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			panic(err)
 		}
 	}
-	log.Println(field.cellString())
 
 	// マンハッタン距離を使って,全駅間の暫定距離を求める
 	edges := []Edge{}
-	for i := 0; i < numStations; i++ {
+	for i := int16(0); i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
-			dist := int(distance(stations[i], stations[j]))
+			dist := distance(stations[i], stations[j])
 			edges = append(edges, Edge{From: i, To: j, Cost: dist})
 		}
 	}
@@ -726,7 +714,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			// すでに建築済みまたは駅がある場合はスキップ
 			for i := 1; i < len(path)-1; i++ {
 				if field.cell[path[i].Y][path[i].X] == STATION || field.cell[path[i].Y][path[i].X] == types[i] {
-					// すでに駅があり線路が必要ない時 または、すでに線路がある時
+					// すでに駅があり線路が必要ない時 または、すでに建築予定の線路がある時
 					continue
 				}
 				err := field.build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
@@ -748,7 +736,7 @@ func constructRailway(in Input, stations []Pos) []Edge {
 	field2 := NewField(in.N) // mstEdgesで使われている場所だけを使う
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
-			field2.cell[i][j] = OTHER
+			field2.cell[i][j] = WALL
 		}
 	}
 	for _, edge := range mstEdges {
@@ -758,23 +746,10 @@ func constructRailway(in Input, stations []Pos) []Edge {
 			}
 		}
 	}
-	//log.Println(field2.cellString())
-	pathpath := make([][]Pos, 0, numStations)
-	for i := 0; i < numStations; i++ {
-		for j := i + 1; j < numStations; j++ {
-			path, err := field2.canConnect(stations[i], stations[j])
-			// すべての駅は繋がっているはずなので、nilはありえない
-			if err != nil {
-				panic(err)
-			}
-			pathpath = append(pathpath, path)
-		}
-	}
-	log.Println("stations", len(stations))
-	log.Println("pathpath", len(pathpath))
+	log.Println(field2.cellString())
 	///////////////////////////////////
+	// MST木の上で、すべての家と職場を繋ぐ駅のエッジを作る
 	// src,dstの対応する駅を探して、その間を繋ぐエッジを作る
-	count := 0
 	unique := make(map[Pair]bool)
 	for i := 0; i < in.M; i++ {
 		src, dst := in.src[i], in.dst[i]
@@ -801,64 +776,26 @@ func constructRailway(in Input, stations []Pos) []Edge {
 				if s0 == s1 {
 					continue
 				}
-				unique[uniquePair(s0, s1)] = true
 				path, err := field2.canConnect(s0, s1)
 				if err != nil {
 					panic(err)
 				}
+				unique[uniquePair(s0, s1)] = true
+				//if len(path) < MAX_LEN {
 				types := field2.selectRails(path)
 				edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types}
 				mstEdges = append(mstEdges, edge)
-				count++
+				//log.Println("src", s0, "dst", s1, len(path))
+				//}
 			}
 		}
 	}
-	log.Println("count", count, len(unique))
+	log.Println("edgeNum", len(mstEdges), "extraEdgeNum", len(unique))
 	return mstEdges
 }
 
-// chooseStationPositions は,駅の場所をあらかじめ決める
-// Inputからすべての家と職場の位置を所得して、その全てが駅から距離２以下になるように駅を配置する
-func chooseStationPositions(in Input) (poss []Pos) {
-	uncoverd := make([]Pos, 0, in.M*2)
-	for i := 0; i < in.M; i++ {
-		uncoverd = append(uncoverd, in.src[i])
-		uncoverd = append(uncoverd, in.dst[i])
-	}
-	for len(uncoverd) > 0 {
-		bestPos := Pos{Y: 0, X: 0}
-		bestHit := 0
-		for i := 0; i < 50; i++ {
-			for j := 0; j < 50; j++ {
-				count := 0
-				y, x := int16(i), int16(j)
-				for _, u := range uncoverd {
-					if distance(u, Pos{Y: y, X: x}) <= 2 {
-						count++
-					}
-				}
-				if count > bestHit {
-					bestHit = count
-					bestPos = Pos{Y: y, X: x}
-				}
-			}
-		}
-		if bestHit == 0 {
-			panic("no station position")
-		}
-		poss = append(poss, bestPos)
-		newUncoverd := make([]Pos, 0, len(uncoverd))
-		for _, u := range uncoverd {
-			if distance(u, bestPos) > 2 {
-				newUncoverd = append(newUncoverd, u)
-			}
-		}
-		uncoverd = newUncoverd
-	}
-	return poss
-}
-
-func choseStationPositionFast(in Input) (poss []Pos) {
+func chooseStationPositionFast(in Input) (poss []Pos) {
+	poss = make([]Pos, 0, intMax(in.M, 100))
 	sumPoints := in.M * 2
 	var grid [2500]int
 	for i := 0; i < in.M; i++ {
@@ -940,16 +877,17 @@ type bsAction struct {
 }
 
 const (
-	BEAM_WIDHT = 5
+	BEAM_WIDHT_X_ACTIONS = 20000
 )
 
 // すべての駅の場所と、それらをつなぐエッジを行動にする
 func beamSearch(in Input) string {
+	var cnt int // 探索空間のカウント
 	// 駅の位置を選ぶ
-	stations := choseStationPositionFast(in)
+	stations := chooseStationPositionFast(in)
 	log.Printf("stations=%v\n", len(stations))
 	// 駅を繋ぐエッジを求める
-	edges := constructRailway(in, stations)
+	edges := constructMSTRailway(in, stations)
 
 	allAction := make([]bsAction, 0, len(stations)+len(edges))
 	for _, s := range stations {
@@ -961,7 +899,9 @@ func beamSearch(in Input) string {
 	}
 	log.Println("actionNum", len(allAction))
 	initialState := newBsState(&in, len(allAction))
-	beamWidth := BEAM_WIDHT
+	beamWidth := BEAM_WIDHT_X_ACTIONS / len(allAction)
+	log.Printf("Width=%d\n", beamWidth)
+	beamWidth = intMax(beamWidth, 5)
 	beamStates := make([]bsState, 0, beamWidth)
 	beamStates = append(beamStates, *initialState)
 	nextStates := make([]bsState, 0, beamWidth)
@@ -1048,6 +988,7 @@ func beamSearch(in Input) string {
 				}
 
 				newState := beamStates[i].Clone()
+				cnt++
 				for costMoney > newState.state.money {
 					// 必要なお金が貯まるまで待つ
 					err := newState.state.do(Action{Kind: DO_NOTHING}, in, false)
@@ -1090,18 +1031,18 @@ func beamSearch(in Input) string {
 			}
 
 		}
-		log.Println("nextStates", len(nextStates))
+		//log.Println("nextStates", len(nextStates))
 		sort.Slice(nextStates, func(i, j int) bool {
-			if nextStates[i].state.turn == nextStates[j].state.turn {
+			if nextStates[i].state.score == nextStates[j].state.score {
 				return nextStates[i].state.income > nextStates[j].state.income
 			}
 			return nextStates[i].state.score > nextStates[j].state.score
 		})
-		if len(nextStates) > 0 {
-			log.Println("score:", nextStates[0].state.score, nextStates[len(nextStates)-1].state.score)
-			log.Println("income:", nextStates[0].state.income, nextStates[len(nextStates)-1].state.income)
-		}
-		log.Println("loop", loop, "beamStates", len(beamStates))
+		//if len(nextStates) > 0 {
+		//log.Println("score:", nextStates[0].state.score, nextStates[len(nextStates)-1].state.score)
+		//log.Println("income:", nextStates[0].state.income, nextStates[len(nextStates)-1].state.income)
+		//}
+		//log.Println("loop", loop, "beamStates", len(beamStates))
 		if len(nextStates) > beamWidth {
 			beamStates = nextStates[:beamWidth]
 		} else {
@@ -1109,7 +1050,8 @@ func beamSearch(in Input) string {
 		}
 		nextStates = make([]bsState, 0, beamWidth)
 		loop++
-		if ATCODER && (loop+1)%10 == 0 {
+		ATCODER = true
+		if ATCODER {
 			elpstime := time.Since(startTime)
 			if elpstime > time.Millisecond*2800 {
 				timeout = true
@@ -1118,6 +1060,7 @@ func beamSearch(in Input) string {
 			}
 		}
 	}
+	log.Printf("Cnt=%v\n", cnt)
 	if timeout {
 		log.Printf("TO=1\n")
 	} else {
@@ -1231,8 +1174,8 @@ func gridToString(grid [2500]int16) (str string) {
 
 // MST用
 type Edge struct {
-	From, To int
-	Cost     int
+	From, To int16
+	Cost     int16
 	Path     []Pos
 	Rail     []int16
 }
@@ -1271,7 +1214,6 @@ func (b *BitSet) Get(index int) bool {
 	return (b.bits[index/64] & (1 << (index % 64))) != 0
 }
 
-// utils
 func minInt(a, b int) int {
 	if a < b {
 		return a
@@ -1284,4 +1226,11 @@ func randShuffle(n int, swap func(i int, j int)) {
 		j := frand.Intn(n)
 		swap(i, j)
 	}
+}
+
+func intMax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

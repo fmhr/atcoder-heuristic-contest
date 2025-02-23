@@ -13,13 +13,12 @@ import (
 )
 
 func TestShortestPaht(t *testing.T) {
-	rand.Seed(0)
 	f := NewField(50)
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
 			f.cell[i][j] = EMPTY
 			if rand.Intn(100) < 5 {
-				f.cell[i][j] = OTHER
+				f.cell[i][j] = WALL
 			}
 		}
 	}
@@ -49,13 +48,12 @@ func TestShortestPaht(t *testing.T) {
 
 func TestConstructRailway(t *testing.T) {
 	// go test -timeout 30s -run ^TestConstructRailway$ ahc043 -v
-	in, err := readInputFile("tools/in/0201.txt")
+	in, err := readInputFile("tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositions(*in)
-	t.Log("number of station:", len(stationPos))
-	edges := constructRailway(*in, stationPos)
+	stationPos := chooseStationPositionFast(*in)
+	edges := constructMSTRailway(*in, stationPos)
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
 	for i := 0; i < len(edges); i++ {
 		if len(edges[i].Rail) != len(edges[i].Path) {
@@ -128,22 +126,24 @@ func BenchmarkBeamSearch(b *testing.B) {
 	}
 }
 
+// CoseStationPosition のテスト
 func TestChoseStationPosition(t *testing.T) {
-	in, err := readInputFile("tools/in/0013.txt")
+	in, err := readInputFile("tools/in/0000.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositions(*in)
+	stationPos := chooseStationPositionFast(*in)
 	t.Log("number of station:", len(stationPos))
 }
 
-func TestChoseStationPosition2(t *testing.T) {
-	in, err := readInputFile("tools/in/0013.txt")
+func BenchmarkChoseStationPosition(b *testing.B) {
+	in, err := readInputFile("tools/in/0000.txt")
 	if err != nil {
-		t.Fatalf("failed to read input: %v", err)
+		b.Fatalf("failed to read input: %v", err)
 	}
-	stationPos := chooseStationPositions(*in)
-	t.Log("number of station:", len(stationPos))
+	for i := 0; i < b.N; i++ {
+		chooseStationPositionFast(*in)
+	}
 }
 
 func TestReadInput(t *testing.T) {
@@ -343,13 +343,13 @@ var reverseRailMap = map[string]int16{
 	"┘": RAIL_LEFT_UP,
 	"└": RAIL_RIGHT_UP,
 	"┌": RAIL_RIGHT_DOWN,
-	"#": OTHER,
+	"#": WALL,
 }
 
 // CanReach は、グラフ内でノード a からノード b に到達可能かどうかを判断します。
-func CanReach(a, b int, g []Edge) bool {
-	visited := make(map[int]bool)
-	queue := []int{a}
+func CanReach(a, b int16, g []Edge) bool {
+	visited := make(map[int16]bool)
+	queue := []int16{a}
 
 	visited[a] = true
 
