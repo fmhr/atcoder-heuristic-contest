@@ -795,9 +795,9 @@ func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 	return mstEdges, field
 }
 
-// ConstructGredyRailway は、貪欲法で鉄道を構築する
+// ConstructGreedyRailway は、貪欲法で鉄道を構築する
 // 盤面を４分割にして、左上の駅は右下の駅と繋ぐ,他も同様
-func ConstructGredyRailway(in Input, stations []Pos) ([]Edge, *Field) {
+func ConstructGreedyRailway(in Input, stations []Pos) ([]Edge, *Field) {
 	f := NewField(in.N)
 	for _, s := range stations {
 		err := f.Build(Action{Kind: STATION, Y: s.Y, X: s.X})
@@ -806,7 +806,7 @@ func ConstructGredyRailway(in Input, stations []Pos) ([]Edge, *Field) {
 		}
 	}
 	log.Println(f.ToString())
-	q := make([]Pos, 0)
+	var q []Pos
 NEXTSTATION:
 	for _, s := range stations {
 		q = make([]Pos, 0)
@@ -849,10 +849,117 @@ NEXTSTATION:
 			}
 		} else if s.Y < N/2 && s.X >= N/2 {
 			// 右上
+			var used [50][50]bool
+			used[s.Y][s.X] = true
+			q = append(q, s)
+			for len(q) > 0 {
+				p := q[0]
+				q = q[1:]
+				for d := 2; d < 4; d++ {
+					next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
+					if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
+						continue
+					}
+					if used[next.Y][next.X] {
+						continue
+					}
+					if f.cell[next.Y][next.X] == EMPTY && next.Y < N/2 && next.X >= N/2 {
+						used[next.Y][next.X] = true
+						q = append(q, next)
+					} else if f.cell[next.Y][next.X] == STATION {
+						path, err := f.canConnect(s, next)
+						if err != nil {
+							panic(err)
+						}
+						types := f.selectRails(path)
+						for k := 0; k < len(path); k++ {
+							if isRail(types[k]) {
+								err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
+								if err != nil {
+									panic(err)
+								}
+							}
+						}
+						continue NEXTSTATION
+					}
+				}
+			}
 		} else if s.Y >= N/2 && s.X < N/2 {
 			// 左下
+			var used [50][50]bool
+			used[s.Y][s.X] = true
+			q = append(q, s)
+			for len(q) > 0 {
+				p := q[0]
+				q = q[1:]
+				for d := 0; d < 2; d++ {
+					next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
+					if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
+						continue
+					}
+					if used[next.Y][next.X] {
+						continue
+					}
+					if f.cell[next.Y][next.X] == EMPTY && next.Y >= N/2 && next.X < N/2 {
+						used[next.Y][next.X] = true
+						q = append(q, next)
+					} else if f.cell[next.Y][next.X] == STATION {
+						path, err := f.canConnect(s, next)
+						if err != nil {
+							panic(err)
+						}
+						types := f.selectRails(path)
+						for k := 0; k < len(path); k++ {
+							if isRail(types[k]) {
+								err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
+								if err != nil {
+									panic(err)
+								}
+							}
+						}
+						continue NEXTSTATION
+					}
+				}
+			}
+
 		} else if s.Y >= N/2 && s.X >= N/2 {
 			// 右下
+			var used [50][50]bool
+			used[s.Y][s.X] = true
+			q = append(q, s)
+			for len(q) > 0 {
+				p := q[0]
+				q = q[1:]
+				dd := [2]int{0, 3}
+				for _, d := range dd {
+					next := Pos{Y: p.Y + dy[d], X: p.X + dx[d]}
+					if next.Y < 0 || next.Y >= N || next.X < 0 || next.X >= N {
+						continue
+					}
+					if used[next.Y][next.X] {
+						continue
+					}
+					if f.cell[next.Y][next.X] == EMPTY && next.Y >= N/2 && next.X >= N/2 {
+						used[next.Y][next.X] = true
+						q = append(q, next)
+					} else if f.cell[next.Y][next.X] == STATION {
+						path, err := f.canConnect(s, next)
+						if err != nil {
+							panic(err)
+						}
+						types := f.selectRails(path)
+						for k := 0; k < len(path); k++ {
+							if isRail(types[k]) {
+								err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
+								if err != nil {
+									panic(err)
+								}
+							}
+						}
+						continue NEXTSTATION
+					}
+				}
+			}
 		}
 	}
 	return nil, f

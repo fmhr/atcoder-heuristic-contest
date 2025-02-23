@@ -105,7 +105,7 @@ func TestConstructGredyRailway(t *testing.T) {
 		t.Fatalf("failed to read input: %v", err)
 	}
 	stationPos := chooseStationPositionFast(*in)
-	edges, f := ConstructGredyRailway(*in, stationPos)
+	edges, f := ConstructGreedyRailway(*in, stationPos)
 	_ = edges
 	t.Log(f.ToString())
 }
