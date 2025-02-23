@@ -62,7 +62,7 @@ func ChokudaiSearch(in Input) string {
 func BuildGraph(in Input, stations []Pos) {
 	// 中央の駅から始める
 	sort.Slice(stations, func(i, j int) bool {
-		return distance(Pos{Y: N / 2, X: N / 2}, stations[i]) > distance(Pos{Y: N / 2, X: N / 2}, stations[j])
+		return distance(Pos{Y: N / 2, X: N / 2}, stations[i]) < distance(Pos{Y: N / 2, X: N / 2}, stations[j])
 	})
 	for i, s := range stations {
 		log.Printf("station[%d]=%+v dist=%d\n", i, s, distance(Pos{Y: N / 2, X: N / 2}, s))
@@ -80,7 +80,7 @@ func BuildGraph(in Input, stations []Pos) {
 		sort.Slice(g[i], func(k, j int) bool {
 			return g[i][k].Cost < g[i][j].Cost
 		})
-		g[i] = g[i][:4] // 4までに限定すると総距離は当然伸びる
+		//g[i] = g[i][:4] // 4までに限定すると総距離は当然伸びる
 		//if len(g[i]) > 10 {
 		//g[i] = g[i][:10]
 		//}
