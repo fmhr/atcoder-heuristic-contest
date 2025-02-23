@@ -80,10 +80,7 @@ func BuildGraph(in Input, stations []Pos) {
 		sort.Slice(g[i], func(k, j int) bool {
 			return g[i][k].Cost < g[i][j].Cost
 		})
-		g[i] = g[i][:4]
-	}
-	for i, e := range g {
-		log.Println(i, e)
+		// g[i] = g[i][:4] // 4までに限定すると総距離は当然伸びる
 	}
 	// 2
 	// 前処理で駅間の経路を求める
@@ -119,7 +116,26 @@ func BuildGraph(in Input, stations []Pos) {
 		}
 	}
 	log.Println(gridToString(stationGrid))
-
+	// すべてのsrc->dstをまわす
+	var sumDist int
+	for i := 0; i < in.M; i++ {
+		start := stationGrid[in.src[i].Y*50+in.src[i].X]
+		end := stationGrid[in.dst[i].Y*50+in.dst[i].X]
+		if start > end {
+			start, end = end, start
+		}
+		path := pathes[start][end]
+		dist := 0
+		// pathは駅を辿っている
+		// pathの中の駅間はL1距離なので,distance()をつかって距離を計算する
+		// len(path)は駅の数
+		for j := 1; j < len(path); j++ {
+			dist += distance(stations[path[j-1]], stations[path[j]])
+		}
+		log.Printf("%d L1:%d 駅間L1:%d dist:%d\n", i, distance(in.src[i], in.dst[i]), distance(stations[start], stations[end]), dist)
+		sumDist += dist
+	}
+	log.Println("総距離", sumDist)
 }
 
 const (
