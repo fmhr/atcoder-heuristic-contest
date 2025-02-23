@@ -80,22 +80,22 @@ func BuildGraph(in Input, stations []Pos) {
 		sort.Slice(g[i], func(k, j int) bool {
 			return g[i][k].Cost < g[i][j].Cost
 		})
-		// g[i] = g[i][:4] // 4までに限定すると総距離は当然伸びる
+		g[i] = g[i][:4] // 4までに限定すると総距離は当然伸びる
 	}
 	// 2
 	// 前処理で駅間の経路を求める
-	// pathes[i][j] = iからjまでの経路　値は駅のindex
+	// pathes_min_max[i][j] = iからjまでの経路　値は駅のindex
 	// j>i
-	pathes := make([][][]int, len(stations))
+	pathes_min_max := make([][][]int, len(stations))
 	for i := 0; i < len(stations); i++ {
-		pathes[i] = make([][]int, len(stations))
+		pathes_min_max[i] = make([][]int, len(stations))
 		for j := i + 1; j < len(stations); j++ {
 			//log.Printf("%d->%d L1=%d\n", i, j, distance(stations[i], stations[j]))
 			path, dist := dijkstra(g, i, j)
 			//log.Printf("dist=%d path=%+v\n", dist, path)
-			pathes[i][j] = path
+			pathes_min_max[i][j] = path
 			if dist > distance(stations[i], stations[j]) {
-				log.Printf("L1:%d dist:%d\n", distance(stations[i], stations[j]), dist)
+				//log.Printf("L1:%d dist:%d\n", distance(stations[i], stations[j]), dist)
 			}
 		}
 	}
@@ -115,27 +115,33 @@ func BuildGraph(in Input, stations []Pos) {
 			}
 		}
 	}
-	log.Println(gridToString(stationGrid))
-	// すべてのsrc->dstをまわす
+	//log.Println(gridToString(stationGrid))
+	// すべてのsrc->dstを回して、経路が何回使われたかをカウントする
+	countPath_min_max := map[[2]int]int{} // 駅間のカウント
 	var sumDist int
 	for i := 0; i < in.M; i++ {
 		start := stationGrid[in.src[i].Y*50+in.src[i].X]
 		end := stationGrid[in.dst[i].Y*50+in.dst[i].X]
-		if start > end {
-			start, end = end, start
-		}
-		path := pathes[start][end]
+		path := pathes_min_max[min(start, end)][max(start, end)]
 		dist := 0
 		// pathは駅を辿っている
 		// pathの中の駅間はL1距離なので,distance()をつかって距離を計算する
 		// len(path)は駅の数
 		for j := 1; j < len(path); j++ {
 			dist += distance(stations[path[j-1]], stations[path[j]])
+			a, b := min(path[j-1], path[j]), max(path[j-1], path[j])
+			countPath_min_max[[2]int{a, b}]++
 		}
 		log.Printf("%d L1:%d 駅間L1:%d dist:%d\n", i, distance(in.src[i], in.dst[i]), distance(stations[start], stations[end]), dist)
 		sumDist += dist
 	}
 	log.Println("総距離", sumDist)
+	for k, v := range countPath_min_max {
+		log.Printf("%+v %d\n", k, v)
+	}
+	log.Println("countPath_min_max", len(countPath_min_max))
+	// 使われた回数が多いものからfieldに追加していく
+
 }
 
 const (
@@ -1496,4 +1502,18 @@ func dijkstra(graph [][]DijEdge, start, goal int) ([]int, int) {
 		panic("")
 	}
 	return path, dist[goal]
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
