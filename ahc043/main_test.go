@@ -27,7 +27,7 @@ func TestShortestPaht(t *testing.T) {
 	f.cell[a.Y][a.X] = STATION
 	f.cell[b.Y][b.X] = STATION
 	//t.Log(f.cellString())
-	path := f.findShortestPath(a, b)
+	path := f.FindNewPath(a, b)
 	t.Log(path)
 	if path == nil {
 		t.Error("no path")
@@ -39,7 +39,7 @@ func TestShortestPaht(t *testing.T) {
 			str += railMap[f.cell[i][j]] + " "
 		}
 	}
-	rtn := f.selectRails(path)
+	rtn := f.SelectRails(path)
 	for i := 0; i < len(rtn); i++ {
 		f.cell[path[i].Y][path[i].X] = rtn[i]
 	}

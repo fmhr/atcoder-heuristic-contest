@@ -62,7 +62,7 @@ func ChokudaiSearch(in Input) string {
 func BuildGraph(in Input, stations []Pos) {
 	// 中央の駅から始める
 	sort.Slice(stations, func(i, j int) bool {
-		return distance(Pos{Y: N / 2, X: N / 2}, stations[i]) < distance(Pos{Y: N / 2, X: N / 2}, stations[j])
+		return distance(Pos{Y: N / 2, X: N / 2}, stations[i]) > distance(Pos{Y: N / 2, X: N / 2}, stations[j])
 	})
 	for i, s := range stations {
 		log.Printf("station[%d]=%+v dist=%d\n", i, s, distance(Pos{Y: N / 2, X: N / 2}, s))
@@ -81,19 +81,24 @@ func BuildGraph(in Input, stations []Pos) {
 			return g[i][k].Cost < g[i][j].Cost
 		})
 		g[i] = g[i][:4] // 4までに限定すると総距離は当然伸びる
+		//if len(g[i]) > 10 {
+		//g[i] = g[i][:10]
+		//}
 	}
 	// 2
 	// 前処理で駅間の経路を求める
-	// pathes_min_max[i][j] = iからjまでの経路　値は駅のindex
+	// station_path_min_max[i][j] = iからjまでの経路　値は駅のindex
 	// j>i
-	pathes_min_max := make([][][]int, len(stations))
+	station_path_min_max := make([][][]int, len(stations))
 	for i := 0; i < len(stations); i++ {
-		pathes_min_max[i] = make([][]int, len(stations))
+		station_path_min_max[i] = make([][]int, len(stations))
 		for j := i + 1; j < len(stations); j++ {
 			//log.Printf("%d->%d L1=%d\n", i, j, distance(stations[i], stations[j]))
 			path, dist := dijkstra(g, i, j)
 			//log.Printf("dist=%d path=%+v\n", dist, path)
-			pathes_min_max[i][j] = path
+			if len(path) != 0 {
+				station_path_min_max[i][j] = path
+			}
 			if dist > distance(stations[i], stations[j]) {
 				//log.Printf("L1:%d dist:%d\n", distance(stations[i], stations[j]), dist)
 			}
@@ -122,7 +127,7 @@ func BuildGraph(in Input, stations []Pos) {
 	for i := 0; i < in.M; i++ {
 		start := stationGrid[in.src[i].Y*50+in.src[i].X]
 		end := stationGrid[in.dst[i].Y*50+in.dst[i].X]
-		path := pathes_min_max[min(start, end)][max(start, end)]
+		path := station_path_min_max[min(start, end)][max(start, end)]
 		dist := 0
 		// pathは駅を辿っている
 		// pathの中の駅間はL1距離なので,distance()をつかって距離を計算する
@@ -136,11 +141,9 @@ func BuildGraph(in Input, stations []Pos) {
 		sumDist += dist
 	}
 	log.Println("総距離", sumDist)
-	for k, v := range countPath_min_max {
-		log.Printf("%+v %d\n", k, v)
-	}
 	log.Println("countPath_min_max", len(countPath_min_max))
 	// 使われた回数が多いものからfieldに追加していく
+	// tmpCoutPathをつかって、sortする
 	tmpCoutPath := make([][3]int, 0, len(countPath_min_max))
 	for k, v := range countPath_min_max {
 		tmpCoutPath = append(tmpCoutPath, [3]int{k[0], k[1], v})
@@ -151,6 +154,43 @@ func BuildGraph(in Input, stations []Pos) {
 	for _, v := range tmpCoutPath {
 		log.Printf("to:%d from:%d count:%d\n", v[0], v[1], v[2])
 	}
+	// 使われた回数が多いものからfieldに追加していく
+	f := NewField(50)
+	for s := range stations {
+		err := f.Build(Action{Kind: STATION, Y: stations[s].Y, X: stations[s].X})
+		if err != nil {
+			panic("invalid station")
+		}
+	}
+	for _, v := range tmpCoutPath {
+		stationIndexs := station_path_min_max[v[0]][v[1]]
+		if len(stationIndexs) == 0 {
+			continue
+		}
+		to := stations[stationIndexs[0]]
+		from := stations[stationIndexs[1]]
+		path := f.FindNewPath(from, to)
+		typ := f.SelectRails(path)
+		if len(path) == 0 {
+			continue
+		}
+		//log.Println(from, to, len(path), distance(from, to))
+		//log.Println(float64(len(path)) / float64(distance(from, to)) * 100)
+		ok := f.CanBuildRail(path, typ)
+		if !ok {
+			log.Println("can't build rail")
+			continue
+		}
+		for i := 0; i < len(path); i++ {
+			if typ[i] == STATION || f.cell[path[i].Y][path[i].X] == STATION {
+				continue
+			}
+			if err := f.Build(Action{Kind: typ[i], Y: path[i].Y, X: path[i].X}); err != nil {
+				log.Println("can't build rail")
+			}
+		}
+	}
+	log.Println(f.ToString())
 }
 
 const (
@@ -324,6 +364,7 @@ func (f *Field) Clone() *Field {
 //return railMap[f.cell[pos.Y][pos.X]]
 //}
 
+// ToString は、Fieldを文字列に変換する
 func (f Field) ToString() string {
 	str := "view cellString()\n"
 	for i := 0; i < N; i++ {
@@ -376,9 +417,6 @@ func (f *Field) Build(act Action) error {
 			}
 		}
 	}
-	// 連結成分をつなげる
-	// 上下左右を確認して、線路が繋がっている場合は連結成分をつなげる
-	// 上
 	return nil
 }
 
@@ -391,7 +429,7 @@ func (f Field) IsNearStation(a, b Pos) bool {
 // 2点間の最短経路を返す (a から b へ)
 // bはEMPTYまたはSTATION
 // fieldの線路または駅を通って移動するための関数
-func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
+func (f *Field) FindNewPath(a, b Pos) (path []Pos) {
 	// a から b への最短経路を返す
 	// field=EMPTY なら移動可能 それ以外は移動不可
 	var dist [N * N]int
@@ -419,9 +457,6 @@ func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 		}
 	}
 	if dist[int(b.Y)*50+int(b.X)] == 10000 {
-		//log.Println(gridToString(dist))
-		log.Println("can't reach", a, b)
-		//log.Println(f.cellString())
 		return nil
 	}
 	// b から a への経路を復元
@@ -454,7 +489,11 @@ func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 
 // 2点間の最短経路を返す (a から b へ)
 // paht[0]とpath[len(path)-1]は駅
-func (f *Field) selectRails(path []Pos) (types []int) {
+// 駅間の路線の線路の種類を返す
+func (f *Field) SelectRails(path []Pos) (types []int) {
+	if len(path) == 0 {
+		return nil
+	}
 	types = make([]int, len(path))
 	types[0] = STATION
 	types[len(path)-1] = STATION
@@ -578,12 +617,14 @@ func (f Field) canMove(a, b Pos) bool {
 	return true
 }
 
-// canBuileRail は、pathをたどって、線路を敷くことができるかを返す
+// CanBuildRail は、pathをたどって、線路を敷くことができるかを返す
 // 線路の上に駅は建てることができる
 // 線路の上に種類の違う線路を建てることはできない
-func (f Field) canBuileRail(path []Pos, typ []int) bool {
+// 最初と最後に駅があるPathを受け取る
+func (f Field) CanBuildRail(path []Pos, typ []int) bool {
 	for i := 1; i < len(path)-1; i++ {
 		y, x := path[i].Y, path[i].X
+		// 完成系が線路のとき、通れるのは同じ種類の線路のみ
 		if isRail(f.cell[y][x]) && f.cell[y][x] != typ[i] {
 			return false
 		}
@@ -817,8 +858,8 @@ func constructMSTRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 		path, _ := field.canConnect(stations[edge.From], stations[edge.To])
 		// ここではフィールドを使っているので、path=nil,でも素通り
 		if path != nil {
-			types := field.selectRails(path)
-			if !field.canBuileRail(path, types) {
+			types := field.SelectRails(path)
+			if !field.CanBuildRail(path, types) {
 				continue
 			}
 			// すでに建築済みまたは駅がある場合はスキップ
@@ -894,7 +935,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 				}
 				unique[uniquePair(s0, s1)] = true
 				//if len(path) < MAX_LEN {
-				types := field2.selectRails(path)
+				types := field2.SelectRails(path)
 				dist := distance(s0, s1)
 				edge := mstEdge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types, L1: dist}
 				mstEdges = append(mstEdges, edge)
@@ -964,7 +1005,7 @@ NEXTSTATION:
 					if err != nil {
 						panic(err)
 					}
-					types := f.selectRails(path)
+					types := f.SelectRails(path)
 					for k := 1; k < len(path)-1; k++ {
 						if f.cell[path[k].Y][path[k].X] == STATION {
 							continue
@@ -1484,9 +1525,9 @@ func dijkstra(graph [][]DijEdge, start, goal int) ([]int, int) {
 	for pq.Len() > 0 {
 		current := heap.Pop(pq).(Item)
 		cost, count, node := current.cost, current.nodeCount, current.node
-		//if node == goal {
-		//break
-		//}
+		if node == goal {
+			break
+		}
 		for _, edge := range graph[node] {
 			nowCost := cost + edge.Cost
 			nowCount := count + 1
@@ -1507,8 +1548,8 @@ func dijkstra(graph [][]DijEdge, start, goal int) ([]int, int) {
 		path[i], path[j] = path[j], path[i]
 	}
 	if len(path) == 0 || path[0] != start {
-		log.Println("cannot reach goal")
-		panic("")
+		log.Println("cannot reach goal", start, "to", goal)
+		return nil, 10000000
 	}
 	return path, dist[goal]
 }
