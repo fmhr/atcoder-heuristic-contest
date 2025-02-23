@@ -193,14 +193,14 @@ func BuildGraph(in Input, stations []Pos) {
 	log.Println(f.ToString())
 }
 
+// 問題固有の固定値
 const (
-	N = 50
-)
-
-const (
+	N            = 50
 	COST_STATION = 5000
 	COST_RAIL    = 100
 )
+
+// ４方向
 const (
 	// 0:UP, 1:RIGHT, 2:DOWN, 3:LEFT
 	UP    = 0
@@ -209,10 +209,7 @@ const (
 	LEFT  = 3
 )
 
-// UP, RIGHT, DOWN, LEFT
-var dy = []int{-1, 0, 1, 0}
-var dx = []int{0, 1, 0, -1}
-
+// セルの種類
 const (
 	EMPTY           int = -1
 	DO_NOTHING      int = -1
@@ -225,6 +222,10 @@ const (
 	RAIL_RIGHT_DOWN int = 6
 	WALL            int = 7 // テストの障害物として使う
 )
+
+// UP, RIGHT, DOWN, LEFT
+var dy = []int{-1, 0, 1, 0}
+var dx = []int{0, 1, 0, -1}
 
 // int16ToString は、レールタイプのintの種類を文字列に変換する
 // EMPTY = DO_NOTHING = -1 に注意
@@ -899,7 +900,6 @@ func constructMSTRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 			}
 		}
 	}
-	//log.Println(field2.ToString())
 	///////////////////////////////////
 	// MST木の上で、すべての家と職場を繋ぐ駅のエッジを作る
 	// src,dstの対応する駅を探して、その間を繋ぐエッジを作る
