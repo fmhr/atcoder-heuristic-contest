@@ -877,11 +877,12 @@ type bsAction struct {
 }
 
 const (
-	BEAM_WIDHT = 50
+	BEAM_WIDHT_X_ACTIONS = 20000
 )
 
 // すべての駅の場所と、それらをつなぐエッジを行動にする
 func beamSearch(in Input) string {
+	var cnt int // 探索空間のカウント
 	// 駅の位置を選ぶ
 	stations := chooseStationPositionFast(in)
 	log.Printf("stations=%v\n", len(stations))
@@ -898,7 +899,9 @@ func beamSearch(in Input) string {
 	}
 	log.Println("actionNum", len(allAction))
 	initialState := newBsState(&in, len(allAction))
-	beamWidth := BEAM_WIDHT
+	beamWidth := BEAM_WIDHT_X_ACTIONS / len(allAction)
+	log.Printf("Width=%d\n", beamWidth)
+	beamWidth = intMax(beamWidth, 5)
 	beamStates := make([]bsState, 0, beamWidth)
 	beamStates = append(beamStates, *initialState)
 	nextStates := make([]bsState, 0, beamWidth)
@@ -985,6 +988,7 @@ func beamSearch(in Input) string {
 				}
 
 				newState := beamStates[i].Clone()
+				cnt++
 				for costMoney > newState.state.money {
 					// 必要なお金が貯まるまで待つ
 					err := newState.state.do(Action{Kind: DO_NOTHING}, in, false)
@@ -1027,18 +1031,18 @@ func beamSearch(in Input) string {
 			}
 
 		}
-		log.Println("nextStates", len(nextStates))
+		//log.Println("nextStates", len(nextStates))
 		sort.Slice(nextStates, func(i, j int) bool {
 			if nextStates[i].state.score == nextStates[j].state.score {
 				return nextStates[i].state.income > nextStates[j].state.income
 			}
 			return nextStates[i].state.score > nextStates[j].state.score
 		})
-		if len(nextStates) > 0 {
-			log.Println("score:", nextStates[0].state.score, nextStates[len(nextStates)-1].state.score)
-			log.Println("income:", nextStates[0].state.income, nextStates[len(nextStates)-1].state.income)
-		}
-		log.Println("loop", loop, "beamStates", len(beamStates))
+		//if len(nextStates) > 0 {
+		//log.Println("score:", nextStates[0].state.score, nextStates[len(nextStates)-1].state.score)
+		//log.Println("income:", nextStates[0].state.income, nextStates[len(nextStates)-1].state.income)
+		//}
+		//log.Println("loop", loop, "beamStates", len(beamStates))
 		if len(nextStates) > beamWidth {
 			beamStates = nextStates[:beamWidth]
 		} else {
@@ -1046,7 +1050,8 @@ func beamSearch(in Input) string {
 		}
 		nextStates = make([]bsState, 0, beamWidth)
 		loop++
-		if ATCODER && (loop+1)%10 == 0 {
+		ATCODER = true
+		if ATCODER {
 			elpstime := time.Since(startTime)
 			if elpstime > time.Millisecond*2800 {
 				timeout = true
@@ -1055,6 +1060,7 @@ func beamSearch(in Input) string {
 			}
 		}
 	}
+	log.Printf("Cnt=%v\n", cnt)
 	if timeout {
 		log.Printf("TO=1\n")
 	} else {
