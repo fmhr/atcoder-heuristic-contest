@@ -43,17 +43,17 @@ func TestShortestPaht(t *testing.T) {
 	for i := 0; i < len(rtn); i++ {
 		f.cell[path[i].Y][path[i].X] = rtn[i]
 	}
-	t.Log(f.cellString())
+	t.Log(f.ToString())
 }
 
-func TestConstructRailway(t *testing.T) {
+func TestConstructMSTRailway(t *testing.T) {
 	// go test -timeout 30s -run ^TestConstructRailway$ ahc043 -v
 	in, err := readInputFile("tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
 	stationPos := chooseStationPositionFast(*in)
-	edges := constructMSTRailway(*in, stationPos)
+	edges, _ := constructMSTRailway(*in, stationPos)
 	t.Log("stations=", len(stationPos), "edges=", len(edges))
 	for i := 0; i < len(edges); i++ {
 		if len(edges[i].Rail) != len(edges[i].Path) {
@@ -77,6 +77,28 @@ func TestConstructRailway(t *testing.T) {
 	}
 }
 
+func TestConstructRailway(t *testing.T) {
+	in, err := readInputFile("tools/in/0013.txt")
+	if err != nil {
+		t.Fatalf("failed to read input: %v", err)
+	}
+	stationPos := chooseStationPositionFast(*in)
+	edges, f := constructMSTRailway(*in, stationPos)
+	_ = edges
+
+	t.Log(f.ToString())
+
+	for i := 0; i < in.M; i++ {
+		home := in.src[i]
+		work := in.dst[i]
+		ok := f.isNearStation(home, work)
+		if !ok {
+			t.Error("no path")
+			return
+		}
+	}
+}
+
 func TestDebugBeamSearch(t *testing.T) {
 	// 線路上に駅を配置することができるのかを確認する
 	f, err := readGridFileToFild("test/t0000.txt")
@@ -90,7 +112,7 @@ func TestDebugBeamSearch(t *testing.T) {
 		for j := 0; j < 50; j++ {
 			if isRail(f.cell[i][j]) {
 				if rand.Intn(10) < 5 {
-					err := f.build(Action{Kind: STATION, X: int16(j), Y: int16(i)})
+					err := f.Build(Action{Kind: STATION, X: int16(j), Y: int16(i)})
 					if err != nil {
 						t.Fatalf("failed to build: %v", err)
 					}
@@ -98,7 +120,7 @@ func TestDebugBeamSearch(t *testing.T) {
 			}
 		}
 	}
-	t.Log(f.cellString())
+	t.Log(f.ToString())
 }
 
 // ベンチマークの使い方
@@ -281,7 +303,7 @@ func TestReadGridFile(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
 			a := Action{Kind: grid[i][j], X: int16(j), Y: int16(i)}
-			err := f.build(a)
+			err := f.Build(a)
 			if err != nil {
 				t.Fatalf("failed to build: %v", err)
 			}
@@ -298,7 +320,7 @@ func readGridFileToFild(filename string) (*Field, error) {
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
 			a := Action{Kind: grid[i][j], X: int16(j), Y: int16(i)}
-			err := f.build(a)
+			err := f.Build(a)
 			if err != nil {
 				return nil, fmt.Errorf("failed to build: %v", err)
 			}

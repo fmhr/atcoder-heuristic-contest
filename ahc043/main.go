@@ -212,7 +212,7 @@ func (f *Field) Clone() *Field {
 //return railMap[f.cell[pos.Y][pos.X]]
 //}
 
-func (f Field) cellString() string {
+func (f Field) ToString() string {
 	str := "view cellString()\n"
 	for i := 0; i < N; i++ {
 		str += fmt.Sprintf("%2d ", i)
@@ -224,7 +224,7 @@ func (f Field) cellString() string {
 	return str
 }
 
-func (f *Field) build(act Action) error {
+func (f *Field) Build(act Action) error {
 	if act.Kind == DO_NOTHING {
 		return nil
 	}
@@ -270,14 +270,15 @@ func (f *Field) build(act Action) error {
 	return nil
 }
 
-// checkConnect 駅,路線をつかって、a,bがつながっているかを返す
+// isNearStation 駅,路線をつかって、a,bがつながっているかを返す
 // a, b　はHOME, WORKSPACE
-func (f Field) checkConnect(a, b Pos) bool {
+func (f Field) isNearStation(a, b Pos) bool {
 	return f.coverd.Get(int(a.Y*N+a.X)) && f.coverd.Get(int(b.Y*N+b.X))
 }
 
 // 2点間の最短経路を返す (a から b へ)
 // bはEMPTYまたはSTATION
+// fieldの線路または駅を通って移動するための関数
 func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 	// a から b への最短経路を返す
 	// field=EMPTY なら移動可能 それ以外は移動不可
@@ -291,9 +292,6 @@ func (f *Field) findShortestPath(a, b Pos) (path []Pos) {
 	for len(que) > 0 {
 		p := que[0]
 		que = que[1:]
-		//if p == b {
-		//break
-		//}
 		for d := 0; d < 4; d++ {
 			y, x := p.Y+dy[d], p.X+dx[d]
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
@@ -599,7 +597,7 @@ func (s *State) do(act Action, in Input, last bool) error {
 		return ErrNotEnoughMoney
 	}
 	if act.Kind != DO_NOTHING {
-		err := s.field.build(act)
+		err := s.field.Build(act)
 		if err != nil {
 			log.Println("acttype:", act.Kind, "pos:", act.Y, act.X)
 			log.Println("build error", err)
@@ -610,7 +608,7 @@ func (s *State) do(act Action, in Input, last bool) error {
 		if act.Kind == STATION && last {
 			for i := 0; i < in.M; i++ {
 				if !s.connected[i] {
-					if s.field.checkConnect(in.src[i], in.dst[i]) {
+					if s.field.isNearStation(in.src[i], in.dst[i]) {
 						s.income += in.income[i]
 						s.connected[i] = true
 					}
@@ -662,7 +660,7 @@ var ddx = [13]int16{0, 0, 1, 0, -1, 1, 1, -1, -1, 0, 2, 0, -2}
 // すべての駅を繋ぐ鉄道を敷設する
 // MSTクラスカル法を使っているが、簡易距離と制約によって、無駄なエッジが作られることがある
 // ここのエッジは短いが、まれに駅を挟む
-func constructMSTRailway(in Input, stations []Pos) []Edge {
+func constructMSTRailway(in Input, stations []Pos) ([]Edge, *Field) {
 	numStations := int16(len(stations))
 	stationIndexMap := make(map[Pos]int16)
 	for i, s := range stations {
@@ -671,7 +669,7 @@ func constructMSTRailway(in Input, stations []Pos) []Edge {
 	// 決めておいた駅を建設する
 	field := NewField(in.N)
 	for i := int16(0); i < numStations; i++ {
-		err := field.build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
+		err := field.Build(Action{Kind: STATION, Y: stations[i].Y, X: stations[i].X})
 		if err != nil {
 			log.Println("fatal build station:", stations[i])
 			log.Println("station build error", err)
@@ -684,14 +682,14 @@ func constructMSTRailway(in Input, stations []Pos) []Edge {
 	for i := int16(0); i < numStations; i++ {
 		for j := i + 1; j < numStations; j++ {
 			dist := distance(stations[i], stations[j])
-			edges = append(edges, Edge{From: i, To: j, Cost: dist})
+			edges = append(edges, Edge{From: i, To: j, L1: dist})
 		}
 	}
 	//////////////////////////
 	// MSTを求める
 	// コストが小さい順にソート
 	sort.Slice(edges, func(i, j int) bool {
-		return edges[i].Cost < edges[j].Cost
+		return edges[i].L1 < edges[j].L1
 	})
 
 	// UnionFindで連結成分を管理
@@ -717,7 +715,7 @@ func constructMSTRailway(in Input, stations []Pos) []Edge {
 					// すでに駅があり線路が必要ない時 または、すでに建築予定の線路がある時
 					continue
 				}
-				err := field.build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
+				err := field.Build(Action{Kind: types[i], Y: path[i].Y, X: path[i].X})
 				if err != nil {
 					panic(err)
 				}
@@ -728,7 +726,7 @@ func constructMSTRailway(in Input, stations []Pos) []Edge {
 			mstEdges = append(mstEdges, edge)
 		}
 	}
-	log.Println(field.cellString())
+	log.Println(field.ToString())
 
 	///////////////////////////////////
 	// 全てに駅間を繋ぐエッジを作る
@@ -742,11 +740,13 @@ func constructMSTRailway(in Input, stations []Pos) []Edge {
 	for _, edge := range mstEdges {
 		for _, p := range edge.Path {
 			if isRail(field.cell[p.Y][p.X]) || field.cell[p.Y][p.X] == STATION {
-				field2.cell[p.Y][p.X] = field.cell[p.Y][p.X]
+				field2.cell[p.Y][p.X] = EMPTY // WALLの強制解除
+				_ = field2.Build(Action{Kind: field.cell[p.Y][p.X], Y: p.Y, X: p.X})
+				// 駅->線路の順番で建築するときエラーを吐くが無視できる
 			}
 		}
 	}
-	log.Println(field2.cellString())
+	//log.Println(field2.ToString())
 	///////////////////////////////////
 	// MST木の上で、すべての家と職場を繋ぐ駅のエッジを作る
 	// src,dstの対応する駅を探して、その間を繋ぐエッジを作る
@@ -783,7 +783,8 @@ func constructMSTRailway(in Input, stations []Pos) []Edge {
 				unique[uniquePair(s0, s1)] = true
 				//if len(path) < MAX_LEN {
 				types := field2.selectRails(path)
-				edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types}
+				dist := distance(s0, s1)
+				edge := Edge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types, L1: dist}
 				mstEdges = append(mstEdges, edge)
 				//log.Println("src", s0, "dst", s1, len(path))
 				//}
@@ -791,7 +792,7 @@ func constructMSTRailway(in Input, stations []Pos) []Edge {
 		}
 	}
 	log.Println("edgeNum", len(mstEdges), "extraEdgeNum", len(unique))
-	return mstEdges
+	return mstEdges, field
 }
 
 func chooseStationPositionFast(in Input) (poss []Pos) {
@@ -887,7 +888,7 @@ func beamSearch(in Input) string {
 	stations := chooseStationPositionFast(in)
 	log.Printf("stations=%v\n", len(stations))
 	// 駅を繋ぐエッジを求める
-	edges := constructMSTRailway(in, stations)
+	edges, _ := constructMSTRailway(in, stations)
 
 	allAction := make([]bsAction, 0, len(stations)+len(edges))
 	for _, s := range stations {
@@ -1067,7 +1068,7 @@ func beamSearch(in Input) string {
 		log.Printf("TO=0\n")
 	}
 	log.Println("bestScore", bestState.state.score, "income:", bestState.state.income, "turn:", bestState.state.turn)
-	log.Println(bestState.state.field.cellString())
+	log.Println(bestState.state.field.ToString())
 
 	sb := strings.Builder{}
 	for _, act := range bestState.state.actions {
@@ -1175,7 +1176,7 @@ func gridToString(grid [2500]int16) (str string) {
 // MST用
 type Edge struct {
 	From, To int16
-	Cost     int16
+	L1       int16 // マンハッタン距離
 	Path     []Pos
 	Rail     []int16
 }
