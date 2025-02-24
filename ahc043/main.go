@@ -429,7 +429,7 @@ func calBuildCost(act []int8) (cost int) {
 type Action struct {
 	Kind    int8
 	Y, X    int8
-	comment string
+	comment *string
 }
 
 func (a Action) String() (str string) {
@@ -438,7 +438,7 @@ func (a Action) String() (str string) {
 	} else {
 		str = fmt.Sprintf("%d %d %d", a.Kind, a.Y, a.X)
 	}
-	str = a.comment + str + "\n"
+	str = *a.comment + str + "\n"
 	return
 }
 
@@ -919,8 +919,12 @@ func (s *State) do(act Action, in Input, last bool) error {
 	s.turn++
 	s.money += s.income
 	s.score = s.money + s.income*(in.T-s.turn)
+	ATCODER = true
 	if !ATCODER {
-		act.comment = fmt.Sprintf("#turn=%d, \n#money=%d, \n#income=%d\n #Score=%d\n",
+		if act.comment == nil {
+			act.comment = new(string)
+		}
+		*act.comment = fmt.Sprintf("#turn=%d, \n#money=%d, \n#income=%d\n #Score=%d\n",
 			s.turn, s.money, s.income, s.score)
 	}
 	s.actions = append(s.actions, act)
