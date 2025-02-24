@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -29,6 +30,10 @@ func main() {
 		log.Println("on AtCoder")
 		log.SetOutput(io.Discard)
 	}
+	var memStats runtime.MemStats
+
+	defer runtime.ReadMemStats(&memStats)
+	defer log.Printf("HeapAlloc: %d bytes\n", memStats.HeapAlloc)
 	startTime = time.Now()
 	log.SetFlags(log.Lshortfile)
 	reader := bufio.NewReader(os.Stdin)
@@ -73,74 +78,81 @@ func ChokudaiSearch(in Input) string {
 
 	bestState := initialState.Clone()
 	bestScore := initialState.state.score
+	loopCnt := 0
 	for {
 		newCnt := 0
 		for i := 0; i < len(allAction); i++ {
 			if pq[i].Len() == 0 {
 				continue
 			}
-			cur := heap.Pop(pq[i]).(*bsState)
-			// 残っているアクションを実行する
-			for j := 0; j < len(cur.restActions); j++ {
-				act := allAction[cur.restActions[j]]
-				ok, connect := cur.state.field.CanBuildRail(act.path, act.typ)
-				if (ok && connect) || (ok && i == 0) {
-					p := make([]Pos, 0, len(act.path))
-					t := make([]int, 0, len(act.typ))
-					for k := 0; k < len(act.path); k++ {
-						typ := act.typ[k]
-						now := cur.state.field.cell[act.path[k].Y][act.path[k].X]
-						if typ == now || now == STATION {
+			if i < 3 && pq[i].Len() > 0 {
+				cur := heap.Pop(pq[i]).(*bsState)
+				// 残っているアクションを実行する
+				for j := 0; j < len(cur.restActions); j++ {
+					act := allAction[cur.restActions[j]]
+					ok, connect := cur.state.field.CanBuildRail(act.path, act.typ)
+					if (ok && connect) || (ok && i == 0) {
+						p := make([]Pos, 0, len(act.path))
+						t := make([]int, 0, len(act.typ))
+						for k := 0; k < len(act.path); k++ {
+							typ := act.typ[k]
+							now := cur.state.field.cell[act.path[k].Y][act.path[k].X]
+							if typ == now || now == STATION {
+								continue
+							}
+							p = append(p, act.path[k])
+							t = append(t, typ)
+						}
+						if len(p) == 0 {
+							log.Println("no action")
+							break
+						}
+						cost := calBuildCost(t)
+						if cost > cur.state.money+cur.state.income*(in.T-cur.state.turn) {
 							continue
 						}
-						p = append(p, act.path[k])
-						t = append(t, typ)
-					}
-					if len(p) == 0 {
-						break
-					}
-					cost := calBuildCost(t)
-					if cost > cur.state.money+cur.state.income*(in.T-cur.state.turn) {
-						continue
-					}
-					// 駅は最後に建てる
-					if t[0] == STATION && len(t) > 1 {
-						if t[len(t)-1] == STATION && len(t) > 2 {
-							t[0], t[len(t)-2] = t[len(t)-2], t[0]
-							p[0], p[len(p)-2] = p[len(p)-2], p[0]
-						} else {
-							t[0], t[len(t)-1] = t[len(t)-1], t[0]
-							p[0], p[len(p)-1] = p[len(p)-1], p[0]
+						// 駅は最後に建てる
+						if t[0] == STATION && len(t) > 1 {
+							if t[len(t)-1] == STATION && len(t) > 2 {
+								t[0], t[len(t)-2] = t[len(t)-2], t[0]
+								p[0], p[len(p)-2] = p[len(p)-2], p[0]
+							} else {
+								t[0], t[len(t)-1] = t[len(t)-1], t[0]
+								p[0], p[len(p)-1] = p[len(p)-1], p[0]
+							}
 						}
-					}
-					newState := cur.Clone()
-					for k := 0; k < len(p); k++ {
-						for buildCost[t[k]] > newState.state.money {
-							// 建築費用までお金を貯める
-							newState.state.do(Action{Kind: DO_NOTHING}, in, k == len(p)-1)
+						newState := cur.Clone()
+						for k := 0; k < len(p); k++ {
+							for buildCost[t[k]] > newState.state.money {
+								// 建築費用までお金を貯める
+								newState.state.do(Action{Kind: DO_NOTHING}, in, k == len(p)-1)
+							}
+							err := newState.state.do(Action{Kind: t[k], Y: p[k].Y, X: p[k].X}, in, k == len(p)-1)
+							if err != nil {
+								panic(err)
+							}
 						}
-						err := newState.state.do(Action{Kind: t[k], Y: p[k].Y, X: p[k].X}, in, k == len(p)-1)
-						if err != nil {
-							panic(err)
+						// delete restActions
+						newState.restActions = append(newState.restActions[:j], newState.restActions[j+1:]...)
+						heap.Push(pq[i+1], newState)
+						newCnt++
+						if newState.state.score > bestScore {
+							bestState = newState.Clone()
+							bestScore = newState.state.score
+							log.Println("bestScore", bestScore)
 						}
-					}
-					// delete restActions
-					newState.restActions = append(newState.restActions[:j], newState.restActions[j+1:]...)
-					heap.Push(pq[i+1], newState)
-					newCnt++
-					if newState.state.score > bestScore {
-						bestState = newState.Clone()
-						bestScore = newState.state.score
-						log.Println("bestScore", bestScore)
 					}
 				}
 			}
+			//log.Println(i, pq[i].Len())
 		}
 		elapsedTime := time.Since(startTime)
 		if elapsedTime > 2900*time.Millisecond {
 			break
 		}
+		loopCnt++
 	}
+	log.Printf("loop=%d\n", loopCnt)
 	log.Println("bestScore", bestScore)
 	log.Println(bestState.state.field.ToString())
 
@@ -151,7 +163,6 @@ func ChokudaiSearch(in Input) string {
 	for i := 0; i < in.T-bestState.state.turn; i++ {
 		sb.WriteString("-1\n")
 	}
-
 	return sb.String()
 }
 
@@ -1056,12 +1067,11 @@ func constructMSTRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 					panic(err)
 				}
 				unique[uniquePair(s0, s1)] = true
-				//if len(path) < MAX_LEN {
 				types := field2.SelectRails(path)
 				dist := distance(s0, s1)
 				edge := mstEdge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types, L1: dist}
 				mstEdges = append(mstEdges, edge)
-				log.Println("append", s0, s1, dist)
+				//log.Println("append", s0, s1, dist)
 			}
 		}
 	}

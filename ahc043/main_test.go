@@ -110,6 +110,15 @@ func TestConstructGredyRailway(t *testing.T) {
 	t.Log(f.ToString())
 }
 
+func TestChokudaiSearch(t *testing.T) {
+	in, err := readInputFile("tools/in/0013.txt")
+	if err != nil {
+		t.Fatalf("failed to read input: %v", err)
+	}
+	ans := beamSearch(*in)
+	t.Log(ans)
+}
+
 func TestDebugBeamSearch(t *testing.T) {
 	// 線路上に駅を配置することができるのかを確認する
 	f, err := readGridFileToFild("test/t0000.txt")
@@ -137,7 +146,6 @@ func TestDebugBeamSearch(t *testing.T) {
 // ベンチマークの使い方
 // go test . -bench . -run ^TestBeamSearch$ -v -cpuprofile cpu.prof
 // go tool pprof -http=:8080 cpu.prof
-
 func TestBeamSearch(t *testing.T) {
 	in, err := readInputFile("tools/in/0013.txt")
 	if err != nil {
