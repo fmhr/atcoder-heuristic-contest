@@ -138,9 +138,6 @@ func TestDebugBeamSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read grid: %v", err)
 	}
-	for _, s := range f.stations {
-		t.Log(s)
-	}
 	for i := int8(0); i < 50; i++ {
 		for j := int8(0); j < 50; j++ {
 			if isRail(f.cell[i][j]) {

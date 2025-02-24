@@ -443,9 +443,9 @@ func (a Action) String() (str string) {
 }
 
 type Field struct {
-	cell     [N][N]int8
-	stations []Pos
-	coverd   BitSet //駅によってカバーされた位置
+	cell [N][N]int8
+	//stations []Pos
+	coverd BitSet //駅によってカバーされた位置
 }
 
 // n == 50
@@ -460,7 +460,7 @@ func NewField(n int) *Field {
 			f.cell[i][j] = EMPTY
 		}
 	}
-	f.stations = make([]Pos, 0)
+	//f.stations = make([]Pos, 0)
 	return f
 }
 
@@ -469,10 +469,10 @@ func (f *Field) Clone() *Field {
 		return nil
 	}
 	newField := &Field{
-		cell:     [N][N]int8{},
-		stations: make([]Pos, len(f.stations)),
+		cell: [N][N]int8{},
+		//stations: make([]Pos, len(f.stations)),
 	}
-	copy(newField.stations, f.stations)
+	//copy(newField.stations, f.stations)
 	for i := 0; i < N; i++ {
 		for j := 0; j < N; j++ {
 			newField.cell[i][j] = f.cell[i][j]
@@ -532,7 +532,7 @@ func (f *Field) Build(act Action) error {
 
 	// 駅がカバーしている範囲を更新
 	if act.Kind == STATION {
-		f.stations = append(f.stations, Pos{Y: act.Y, X: act.X})
+		//f.stations = append(f.stations, Pos{Y: act.Y, X: act.X})
 		for d := 0; d < 13; d++ {
 			y, x := act.Y+ddy[d], act.X+ddx[d]
 			if y >= 0 && y < N && x >= 0 && x < N {
