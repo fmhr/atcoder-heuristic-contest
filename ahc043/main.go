@@ -79,6 +79,7 @@ func ChokudaiSearch(in Input) string {
 	bestState := initialState.Clone()
 	bestScore := initialState.state.score
 	loopCnt := 0
+	var elapsedTime time.Duration
 	for {
 		newCnt := 0
 		for i := 0; i < len(allAction); i++ {
@@ -143,15 +144,13 @@ func ChokudaiSearch(in Input) string {
 						bestScore = newState.state.score
 						log.Println(i, j, "bestScore", bestScore)
 					}
-					log.Println(i, j)
 				}
+				elapsedTime = time.Since(startTime)
 			}
-			elapsedTime := time.Since(startTime)
 			if elapsedTime > 2900*time.Millisecond {
 				break
 			}
 		}
-		elapsedTime := time.Since(startTime)
 		if elapsedTime > 2900*time.Millisecond {
 			break
 		}
