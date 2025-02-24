@@ -107,8 +107,8 @@ func ChokudaiSearch(in Input) string {
 					}
 					if len(p) == 0 {
 						cur.restActions = append(cur.restActions[:j], cur.restActions[j+1:]...)
-						continue //時間無制限になる
-						//break
+						//continue //時間無制限になる
+						break
 					}
 					cost := calBuildCost(t)
 					if cost > cur.state.money+cur.state.income*(in.T-cur.state.turn) {
@@ -528,7 +528,7 @@ func (f *Field) Build(act Action) error {
 	// 建設
 	f.cell[act.Y][act.X] = act.Kind
 
-	// 駅のチェック
+	// 駅がカバーしている範囲を更新
 	if act.Kind == STATION {
 		f.stations = append(f.stations, Pos{Y: act.Y, X: act.X})
 		for d := 0; d < 13; d++ {
@@ -543,8 +543,13 @@ func (f *Field) Build(act Action) error {
 
 // IsNearStation 駅,路線をつかって、a,bがつながっているかを返す
 // a, b　はHOME, WORKSPACE
-func (f Field) IsNearStation(a, b Pos) bool {
-	return f.coverd.Get(index(a.Y, a.X)) && f.coverd.Get(index(b.Y, b.X))
+func (f Field) IsNearStation(a, b Pos) int {
+	if f.coverd.Get(index(a.Y, a.X)) && f.coverd.Get(index(b.Y, b.X)) {
+		return 2
+	} else if f.coverd.Get(index(a.Y, a.X)) || f.coverd.Get(index(b.Y, b.X)) {
+		return 1
+	}
+	return 0
 }
 
 // 2点間の最短経路を返す (a から b へ)
@@ -846,13 +851,14 @@ MAKEPATH:
 var ErrNotEnoughMoney = fmt.Errorf("not enough money")
 
 type State struct {
-	field     *Field
-	money     int
-	turn      int
-	income    int
-	score     int // 最終ターンでの予想スコア
-	actions   []Action
-	connected []bool // in.Mが接続済みかどうか
+	field           *Field
+	money           int
+	turn            int
+	income          int
+	score           int // 最終ターンでの予想スコア
+	potentialIncome int
+	actions         []Action
+	connected       []bool // in.Mが接続済みかどうか
 }
 
 func (s *State) Clone() *State {
@@ -861,13 +867,14 @@ func (s *State) Clone() *State {
 	newConnected := make([]bool, len(s.connected))
 	copy(newConnected, s.connected)
 	newState := &State{
-		field:     s.field.Clone(),
-		money:     s.money,
-		turn:      s.turn,
-		income:    s.income,
-		score:     s.score,
-		actions:   newActions,
-		connected: newConnected,
+		field:           s.field.Clone(),
+		money:           s.money,
+		turn:            s.turn,
+		income:          s.income,
+		score:           s.score,
+		potentialIncome: s.potentialIncome,
+		actions:         newActions,
+		connected:       newConnected,
 	}
 	return newState
 }
@@ -896,9 +903,12 @@ func (s *State) do(act Action, in Input, last bool) error {
 		if act.Kind == STATION && last {
 			for i := 0; i < in.M; i++ {
 				if !s.connected[i] {
-					if s.field.IsNearStation(in.src[i], in.dst[i]) {
+					ab := s.field.IsNearStation(in.src[i], in.dst[i])
+					if ab == 2 {
 						s.income += in.income[i]
 						s.connected[i] = true
+					} else if ab == 1 {
+						s.potentialIncome += in.income[i]
 					}
 				}
 			}
@@ -1411,9 +1421,6 @@ type PriorityQueue2 []*bsState
 func (pq PriorityQueue2) Len() int { return len(pq) }
 
 func (pq PriorityQueue2) Less(i, j int) bool {
-	if pq[i].state.score == pq[j].state.score {
-		return pq[i].state.turn < pq[j].state.turn
-	}
 	return pq[i].state.score > pq[j].state.score
 }
 
@@ -1427,6 +1434,7 @@ func (pq *PriorityQueue2) Pop() interface{} {
 	old := *pq
 	n := len(old)
 	item := old[n-1]
+	old[n-1] = nil
 	*pq = old[0 : n-1]
 	return item
 }

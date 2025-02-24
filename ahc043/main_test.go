@@ -92,7 +92,7 @@ func TestConstructRailway(t *testing.T) {
 		home := in.src[i]
 		work := in.dst[i]
 		ok := f.IsNearStation(home, work)
-		if !ok {
+		if ok != 2 {
 			t.Error("no path")
 			return
 		}
