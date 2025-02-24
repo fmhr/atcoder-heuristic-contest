@@ -122,17 +122,16 @@ func ChokudaiSearch(in Input) string {
 						}
 					}
 					// delete restActions
-					cur.restActions = append(cur.restActions[:j], cur.restActions[j+1:]...)
+					newState.restActions = append(newState.restActions[:j], newState.restActions[j+1:]...)
 					heap.Push(pq[i+1], newState)
 					newCnt++
-					if cur.state.score > bestScore {
-						bestState = cur.Clone()
-						bestScore = cur.state.score
+					if newState.state.score > bestScore {
+						bestState = newState.Clone()
+						bestScore = newState.state.score
 						log.Println("bestScore", bestScore)
 					}
 				}
 			}
-			log.Println(i, pq[i].Len())
 		}
 		elapsedTime := time.Since(startTime)
 		if elapsedTime > 1900*time.Millisecond || newCnt == 0 {
@@ -724,17 +723,22 @@ func (f Field) canMove(a, b Pos) bool {
 }
 
 // CanBuildRail は、pathをたどって、線路を敷くことができるかを返す
+// pathは駅から駅までの経路
 // 線路の上に駅は建てることができる
 // 線路の上に種類の違う線路を建てることはできない
 // 最初と最後に駅があるPathを受け取る
 // 既存のなにかと連結するか
 func (f Field) CanBuildRail(path []Pos, typ []int) (bool, bool) {
 	connect := false
-	for i := 1; i < len(path)-1; i++ {
+	for i := 0; i < len(path); i++ {
 		y, x := path[i].Y, path[i].X
-		// 完成系が線路のとき、通れるのは同じ種類の線路のみ
-		if isRail(f.cell[y][x]) && f.cell[y][x] != typ[i] {
+		// 完成系が線路のとき、通れるのは同じ種類の線路または駅
+		if isRail(f.cell[y][x]) && (f.cell[y][x] != typ[i] && typ[i] != STATION) {
 			return false, false
+		}
+		// 駅の時
+		if typ[i] == STATION && (isRail(f.cell[y][x]) || f.cell[y][x] == STATION) {
+			connect = true
 		}
 		if f.cell[y][x] != EMPTY {
 			connect = true
