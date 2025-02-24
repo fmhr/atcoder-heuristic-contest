@@ -43,12 +43,114 @@ func main() {
 	log.Printf("time=%v\n", time.Since(startTime).Milliseconds())
 }
 
+type bsAction struct {
+	path []Pos
+	typ  []int
+}
+
 func ChokudaiSearch(in Input) string {
 	stations := ChooseStationPositionFast(in)
 	log.Printf("stations=%d", len(stations))
-	BuildGraph(in, stations)
+	edges, _ := constructMSTRailway(in, stations)
 
-	return ""
+	// すべての駅の場所と、それらをつなぐエッジを行動にする
+	allAction := make([]bsAction, 0, len(stations)+len(edges))
+	for _, s := range stations {
+		allAction = append(allAction, bsAction{path: []Pos{s}, typ: []int{STATION}})
+	}
+	for _, e := range edges {
+		allAction = append(allAction, bsAction{path: e.Path, typ: e.Rail})
+	}
+
+	initialState := newBsState(&in, len(allAction))
+	// chokudai search
+	pq := make([]*PriorityQueue2, len(allAction)+1)
+	for i := 0; i < len(allAction)+1; i++ {
+		pq[i] = &PriorityQueue2{}
+		heap.Init(pq[i])
+	}
+	heap.Push(pq[0], initialState)
+
+	bestState := initialState.Clone()
+	bestScore := initialState.state.score
+	for {
+		newCnt := 0
+		for i := 0; i < len(allAction); i++ {
+			if pq[i].Len() == 0 {
+				continue
+			}
+			cur := heap.Pop(pq[i]).(*bsState)
+			// 残っているアクションを実行する
+			for j := 0; j < len(cur.restActions); j++ {
+				act := allAction[cur.restActions[j]]
+				ok, connect := cur.state.field.CanBuildRail(act.path, act.typ)
+				if (ok && connect) || (ok && i == 0) {
+					p := make([]Pos, 0, len(act.path))
+					t := make([]int, 0, len(act.typ))
+					for k := 0; k < len(act.path); k++ {
+						typ := act.typ[k]
+						now := cur.state.field.cell[act.path[k].Y][act.path[k].X]
+						if typ == now || now == STATION {
+							continue
+						}
+						p = append(p, act.path[k])
+						t = append(t, typ)
+					}
+					if len(p) == 0 {
+						break
+					}
+					cost := calBuildCost(t)
+					if cost > cur.state.money+cur.state.income*(in.T-cur.state.turn) {
+						continue
+					}
+					// 駅は最後に建てる
+					if t[0] == STATION && len(t) > 1 {
+						if t[len(t)-1] == STATION && len(t) > 2 {
+							t[0], t[len(t)-2] = t[len(t)-2], t[0]
+						} else {
+							t[0], t[len(t)-1] = t[len(t)-1], t[0]
+						}
+					}
+					newState := cur.Clone()
+					for k := 0; k < len(p); k++ {
+						for buildCost[k] > newState.state.money {
+							newState.state.do(Action{Kind: DO_NOTHING}, in, k == len(p)-1)
+						}
+						err := newState.state.do(Action{Kind: t[k], Y: p[k].Y, X: p[k].X}, in, k == len(p)-1)
+						if err != nil {
+							panic(err)
+						}
+					}
+					// delete restActions
+					cur.restActions = append(cur.restActions[:j], cur.restActions[j+1:]...)
+					heap.Push(pq[i+1], newState)
+					newCnt++
+					if cur.state.score > bestScore {
+						bestState = cur.Clone()
+						bestScore = cur.state.score
+						log.Println("bestScore", bestScore)
+					}
+				}
+			}
+			log.Println(i, pq[i].Len())
+		}
+		elapsedTime := time.Since(startTime)
+		if elapsedTime > 1900*time.Millisecond || newCnt == 0 {
+			break
+		}
+	}
+	log.Println("bestScore", bestScore)
+	log.Println(bestState.state.field.ToString())
+
+	sb := strings.Builder{}
+	for _, act := range bestState.state.actions {
+		sb.WriteString(act.String())
+	}
+	for i := 0; i < in.T-bestState.state.turn; i++ {
+		sb.WriteString("-1\n")
+	}
+
+	return sb.String()
 }
 
 // 駅の位置を受け取る
@@ -175,7 +277,7 @@ func BuildGraph(in Input, stations []Pos) {
 		}
 		//log.Println(from, to, len(path), distance(from, to))
 		//log.Println(float64(len(path)) / float64(distance(from, to)) * 100)
-		ok := f.CanBuildRail(path, typ)
+		ok, _ := f.CanBuildRail(path, typ)
 		if !ok {
 			log.Println("can't build rail")
 			continue
@@ -625,15 +727,20 @@ func (f Field) canMove(a, b Pos) bool {
 // 線路の上に駅は建てることができる
 // 線路の上に種類の違う線路を建てることはできない
 // 最初と最後に駅があるPathを受け取る
-func (f Field) CanBuildRail(path []Pos, typ []int) bool {
+// 既存のなにかと連結するか
+func (f Field) CanBuildRail(path []Pos, typ []int) (bool, bool) {
+	connect := false
 	for i := 1; i < len(path)-1; i++ {
 		y, x := path[i].Y, path[i].X
 		// 完成系が線路のとき、通れるのは同じ種類の線路のみ
 		if isRail(f.cell[y][x]) && f.cell[y][x] != typ[i] {
-			return false
+			return false, false
+		}
+		if f.cell[y][x] != EMPTY {
+			connect = true
 		}
 	}
-	return true
+	return true, connect
 }
 
 // 駅a, bが繋がることができるか、できないときnil,できるときはすべてのpath
@@ -863,7 +970,8 @@ func constructMSTRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 		// ここではフィールドを使っているので、path=nil,でも素通り
 		if path != nil {
 			types := field.SelectRails(path)
-			if !field.CanBuildRail(path, types) {
+			ok, _ := field.CanBuildRail(path, types)
+			if !ok {
 				continue
 			}
 			// すでに建築済みまたは駅がある場合はスキップ
@@ -1267,6 +1375,31 @@ func intMax(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// chokudai search
+// 状態を表す構造体
+// 優先度付きキューの実装
+type PriorityQueue2 []*bsState
+
+func (pq PriorityQueue2) Len() int { return len(pq) }
+
+func (pq PriorityQueue2) Less(i, j int) bool {
+	return pq[i].state.score > pq[j].state.score
+}
+
+func (pq PriorityQueue2) Swap(i, j int) { pq[i], pq[j] = pq[j], pq[i] }
+
+func (pq *PriorityQueue2) Push(x interface{}) {
+	*pq = append(*pq, x.(*bsState))
+}
+
+func (pq *PriorityQueue2) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	*pq = old[0 : n-1]
+	return item
 }
 
 // //////////////////////////////////

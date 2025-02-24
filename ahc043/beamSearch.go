@@ -7,11 +7,6 @@ import (
 	"time"
 )
 
-type bsAction struct {
-	path []Pos
-	typ  []int
-}
-
 const (
 	BEAM_WIDHT_X_ACTIONS = 20000
 )
