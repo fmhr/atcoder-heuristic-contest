@@ -86,6 +86,9 @@ func ChokudaiSearch(in Input) string {
 				continue
 			}
 			cur := heap.Pop(pq[i]).(*bsState)
+			if i > 1 && cur.state.income == 0 {
+				continue
+			}
 			// 残っているアクションを実行する
 			for j := 0; j < len(cur.restActions); j++ {
 				act := &allAction[cur.restActions[j]]
@@ -103,8 +106,9 @@ func ChokudaiSearch(in Input) string {
 						t = append(t, typ)
 					}
 					if len(p) == 0 {
-						log.Println("no action")
-						break
+						cur.restActions = append(cur.restActions[:j], cur.restActions[j+1:]...)
+						continue //時間無制限になる
+						//break
 					}
 					cost := calBuildCost(t)
 					if cost > cur.state.money+cur.state.income*(in.T-cur.state.turn) {
