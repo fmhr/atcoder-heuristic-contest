@@ -22,8 +22,8 @@ func TestShortestPaht(t *testing.T) {
 			}
 		}
 	}
-	a := Pos{Y: rand.Intn(50), X: int(rand.Intn(50))}
-	b := Pos{Y: int(rand.Intn(50)), X: int(rand.Intn(50))}
+	a := Pos{Y: int8(rand.Intn(50)), X: int8(rand.Intn(50))}
+	b := Pos{Y: int8(rand.Intn(50)), X: int8(rand.Intn(50))}
 	f.cell[a.Y][a.X] = STATION
 	f.cell[b.Y][b.X] = STATION
 	//t.Log(f.cellString())
@@ -128,11 +128,11 @@ func TestDebugBeamSearch(t *testing.T) {
 	for _, s := range f.stations {
 		t.Log(s)
 	}
-	for i := 0; i < 50; i++ {
-		for j := 0; j < 50; j++ {
+	for i := int8(0); i < 50; i++ {
+		for j := int8(0); j < 50; j++ {
 			if isRail(f.cell[i][j]) {
 				if rand.Intn(10) < 5 {
-					err := f.Build(Action{Kind: STATION, X: int(j), Y: int(i)})
+					err := f.Build(Action{Kind: STATION, X: j, Y: i})
 					if err != nil {
 						t.Fatalf("failed to build: %v", err)
 					}
@@ -305,8 +305,8 @@ func readInputFile(filename string) (*Input, error) {
 		dstY, _ := strconv.Atoi(fields[2])
 		dstX, _ := strconv.Atoi(fields[3])
 
-		in.src[i] = Pos{X: int(srcX), Y: int(srcY)}
-		in.dst[i] = Pos{X: int(dstX), Y: int(dstY)}
+		in.src[i] = Pos{X: int8(srcX), Y: int8(srcY)}
+		in.dst[i] = Pos{X: int8(dstX), Y: int8(dstY)}
 		in.income[i] = int(distance(in.src[i], in.dst[i])) // 収入は距離
 	}
 	//log.Printf("readInput: N=%v, M=%v, K=%v, T=%v\n", in.N, in.M, in.K, in.T)
@@ -319,9 +319,9 @@ func TestReadGridFile(t *testing.T) {
 		t.Fatalf("failed to read grid: %v", err)
 	}
 	f := NewField(50)
-	for i := 0; i < 50; i++ {
-		for j := 0; j < 50; j++ {
-			a := Action{Kind: grid[i][j], X: int(j), Y: int(i)}
+	for i := int8(0); i < 50; i++ {
+		for j := int8(0); j < 50; j++ {
+			a := Action{Kind: grid[i][j], Y: i, X: j}
 			err := f.Build(a)
 			if err != nil {
 				t.Fatalf("failed to build: %v", err)
@@ -338,7 +338,7 @@ func readGridFileToFild(filename string) (*Field, error) {
 	f := NewField(50)
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
-			a := Action{Kind: grid[i][j], X: int(j), Y: int(i)}
+			a := Action{Kind: grid[i][j], X: int8(j), Y: int8(i)}
 			err := f.Build(a)
 			if err != nil {
 				return nil, fmt.Errorf("failed to build: %v", err)
