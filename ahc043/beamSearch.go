@@ -22,7 +22,7 @@ func beamSearch(in Input) string {
 
 	allAction := make([]bsAction, 0, len(stations)+len(edges))
 	for _, s := range stations {
-		allAction = append(allAction, bsAction{path: []Pos{s}, typ: []int{STATION}})
+		allAction = append(allAction, bsAction{path: []Pos{s}, typ: []int8{STATION}})
 	}
 	for _, e := range edges {
 		allAction = append(allAction, bsAction{path: e.Path, typ: e.Rail})
@@ -64,7 +64,7 @@ func beamSearch(in Input) string {
 				}
 				// 不要なactionをのぞいたp,tを作る
 				p := make([]Pos, 0, len(acts.path))
-				t := make([]int, 0, len(acts.typ))
+				t := make([]int8, 0, len(acts.typ))
 				tmp := beamStates[i].state.field // これはcloneしていないので使わない
 				for k := 0; k < len(acts.path); k++ {
 					if acts.typ[k] == tmp.cell[acts.path[k].Y][acts.path[k].X] {

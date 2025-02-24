@@ -119,7 +119,7 @@ func TestChokudaiSearch(t *testing.T) {
 	t.Log(ans)
 }
 
-// go test -bench=BenchmarkBeamSearch -benchtime=10s -cpuprofile cpu.prof -memprofile mem.prof -v .
+// go test -benchmem -run=^ -bench ^BenchmarkChokudaiSearch ahc043 -cpuprofile cpu.prof
 func BenchmarkChokudaiSearch(b *testing.B) {
 	ATCODER = true
 	log.SetOutput(io.Discard)
@@ -225,7 +225,7 @@ func TestGridCalculation(t *testing.T) {
 
 func TestIsRailConnected(t *testing.T) {
 	tests := []struct {
-		railType  int
+		railType  int8
 		direction int
 		isStart   bool
 		expected  bool
@@ -361,34 +361,34 @@ func readGridFileToFild(filename string) (*Field, error) {
 	return f, nil
 }
 
-func readGridFile(filename string) ([][]int, error) {
+func readGridFile(filename string) ([][]int8, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %v", err)
 	}
 	defer file.Close()
 
-	grid := make([][]int, 50)
+	grid := make([][]int8, 50)
 	scanner := bufio.NewScanner(file)
 	for i := 0; i < 50; i++ {
 		scanner.Scan()
 		line := scanner.Text()
 		runes := []rune(line)
-		grid[i] = make([]int, 50)
+		grid[i] = make([]int8, 50)
 		for j := 0; j < 50; j++ {
 			v, exit := reverseRailMap[string(runes[j])]
 			if !exit {
 				log.Println("invalid character", runes[j], string(runes[j]))
 				return nil, fmt.Errorf("invalid character")
 			}
-			grid[i][j] = v
+			grid[i][j] = int8(v)
 		}
 	}
 	return grid, nil
 }
 
 // reverseRailMap は、railMapの逆引き
-var reverseRailMap = map[string]int{
+var reverseRailMap = map[string]int8{
 	".": EMPTY,
 	"◎": STATION,
 	"─": RAIL_HORIZONTAL,

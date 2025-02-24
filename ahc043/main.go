@@ -50,7 +50,7 @@ func main() {
 
 type bsAction struct {
 	path []Pos
-	typ  []int
+	typ  []int8
 }
 
 func ChokudaiSearch(in Input) string {
@@ -61,7 +61,7 @@ func ChokudaiSearch(in Input) string {
 	// すべての駅の場所と、それらをつなぐエッジを行動にする
 	allAction := make([]bsAction, 0, len(stations)+len(edges))
 	for _, s := range stations {
-		allAction = append(allAction, bsAction{path: []Pos{s}, typ: []int{STATION}})
+		allAction = append(allAction, bsAction{path: []Pos{s}, typ: []int8{STATION}})
 	}
 	for _, e := range edges {
 		allAction = append(allAction, bsAction{path: e.Path, typ: e.Rail})
@@ -96,7 +96,7 @@ func ChokudaiSearch(in Input) string {
 				ok, connect := cur.state.field.CanBuildRail(act.path, act.typ)
 				if (ok && connect) || (ok && i == 0) {
 					p := make([]Pos, 0, len(act.path))
-					t := make([]int, 0, len(act.typ))
+					t := make([]int8, 0, len(act.typ))
 					for k := 0; k < len(act.path); k++ {
 						typ := act.typ[k]
 						now := cur.state.field.cell[act.path[k].Y][act.path[k].X]
@@ -329,20 +329,20 @@ const (
 
 const (
 	// Action
-	DO_NOTHING int = -1
+	DO_NOTHING int8 = -1
 )
 
 // セルの種類
 const (
-	EMPTY           int = -1
-	STATION         int = 0
-	RAIL_HORIZONTAL int = 1
-	RAIL_VERTICAL   int = 2
-	RAIL_LEFT_DOWN  int = 3
-	RAIL_LEFT_UP    int = 4
-	RAIL_RIGHT_UP   int = 5
-	RAIL_RIGHT_DOWN int = 6
-	WALL            int = 7 // テストの障害物として使う
+	EMPTY           int8 = -1
+	STATION         int8 = 0
+	RAIL_HORIZONTAL int8 = 1
+	RAIL_VERTICAL   int8 = 2
+	RAIL_LEFT_DOWN  int8 = 3
+	RAIL_LEFT_UP    int8 = 4
+	RAIL_RIGHT_UP   int8 = 5
+	RAIL_RIGHT_DOWN int8 = 6
+	WALL            int8 = 7 // テストの障害物として使う
 )
 
 // UP, RIGHT, DOWN, LEFT
@@ -351,7 +351,7 @@ var dx = []int8{0, 1, 0, -1}
 
 // int16ToString は、レールタイプのintの種類を文字列に変換する
 // EMPTY = DO_NOTHING = -1 に注意
-func int16ToString(a int) string {
+func int16ToString(a int8) string {
 	switch a {
 	case EMPTY:
 		return "EMPTY"
@@ -375,12 +375,12 @@ func int16ToString(a int) string {
 	return "UNKNOWN"
 }
 
-func isRail(kind int) bool {
+func isRail(kind int8) bool {
 	return kind >= RAIL_HORIZONTAL && kind <= RAIL_RIGHT_DOWN
 }
 
 // railToString は、[]intのレールの種類を文字列に変換する
-func railToString(rails []int) string {
+func railToString(rails []int8) string {
 	var sb strings.Builder
 	for _, rail := range rails {
 		sb.WriteString(" ")
@@ -389,7 +389,7 @@ func railToString(rails []int) string {
 	return sb.String()
 }
 
-var railMap = map[int]string{
+var railMap = map[int8]string{
 	EMPTY:           ".",
 	STATION:         "◎",
 	RAIL_HORIZONTAL: "─",
@@ -401,7 +401,7 @@ var railMap = map[int]string{
 	WALL:            "#",
 }
 
-var buildCost = map[int]int{
+var buildCost = map[int8]int{
 	EMPTY:           0,            // EMPTY
 	STATION:         COST_STATION, // STATION
 	RAIL_HORIZONTAL: COST_RAIL,
@@ -414,7 +414,7 @@ var buildCost = map[int]int{
 }
 
 // calBuildCost は、[]actの建設コストを計算する
-func calBuildCost(act []int) (cost int) {
+func calBuildCost(act []int8) (cost int) {
 	for _, a := range act {
 		if val, ok := buildCost[a]; ok {
 			cost += val
@@ -427,7 +427,7 @@ func calBuildCost(act []int) (cost int) {
 }
 
 type Action struct {
-	Kind    int
+	Kind    int8
 	Y, X    int8
 	comment string
 }
@@ -443,7 +443,7 @@ func (a Action) String() (str string) {
 }
 
 type Field struct {
-	cell     [N][N]int
+	cell     [N][N]int8
 	stations []Pos
 	coverd   BitSet //駅によってカバーされた位置
 }
@@ -469,7 +469,7 @@ func (f *Field) Clone() *Field {
 		return nil
 	}
 	newField := &Field{
-		cell:     [N][N]int{},
+		cell:     [N][N]int8{},
 		stations: make([]Pos, len(f.stations)),
 	}
 	copy(newField.stations, f.stations)
@@ -618,11 +618,11 @@ func (f *Field) FindNewPath(a, b Pos) (path []Pos) {
 // 2点間の最短経路を返す (a から b へ)
 // paht[0]とpath[len(path)-1]は駅
 // 駅間の路線の線路の種類を返す
-func (f *Field) SelectRails(path []Pos) (types []int) {
+func (f *Field) SelectRails(path []Pos) (types []int8) {
 	if len(path) == 0 {
 		return nil
 	}
-	types = make([]int, len(path))
+	types = make([]int8, len(path))
 	types[0] = STATION
 	types[len(path)-1] = STATION
 	for i := 1; i < len(path)-1; i++ {
@@ -650,7 +650,7 @@ func (f *Field) SelectRails(path []Pos) (types []int) {
 
 // railが繋がる向きを返す,dy,dxに対応
 // 0:UP, 1:RIGHT, 2:DOWN, 3:LEFT
-func railDirection(rail int) []int {
+func railDirection(rail int8) []int {
 	switch rail {
 	case RAIL_HORIZONTAL:
 		return []int{1, 3}
@@ -671,7 +671,7 @@ func railDirection(rail int) []int {
 }
 
 // checkConnec はレールの接続ルールを判定する
-func checkConnec(railType int, direction int, isStart bool) bool {
+func checkConnec(railType int8, direction int, isStart bool) bool {
 	if railType == STATION {
 		return true
 	}
@@ -751,7 +751,7 @@ func (f Field) canMove(a, b Pos) bool {
 // 線路の上に種類の違う線路を建てることはできない
 // 最初と最後に駅があるPathを受け取る
 // 既存のなにかと連結するか
-func (f Field) CanBuildRail(path []Pos, typ []int) (bool, bool) {
+func (f Field) CanBuildRail(path []Pos, typ []int8) (bool, bool) {
 	connect := false
 	for i := 0; i < len(path); i++ {
 		y, x := path[i].Y, path[i].X
@@ -1357,7 +1357,7 @@ type mstEdge struct {
 	From, To int
 	L1       int // マンハッタン距離
 	Path     []Pos
-	Rail     []int
+	Rail     []int8
 }
 
 type Graph struct {
