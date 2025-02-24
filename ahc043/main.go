@@ -107,13 +107,16 @@ func ChokudaiSearch(in Input) string {
 					if t[0] == STATION && len(t) > 1 {
 						if t[len(t)-1] == STATION && len(t) > 2 {
 							t[0], t[len(t)-2] = t[len(t)-2], t[0]
+							p[0], p[len(p)-2] = p[len(p)-2], p[0]
 						} else {
 							t[0], t[len(t)-1] = t[len(t)-1], t[0]
+							p[0], p[len(p)-1] = p[len(p)-1], p[0]
 						}
 					}
 					newState := cur.Clone()
 					for k := 0; k < len(p); k++ {
-						for buildCost[k] > newState.state.money {
+						for buildCost[t[k]] > newState.state.money {
+							// 建築費用までお金を貯める
 							newState.state.do(Action{Kind: DO_NOTHING}, in, k == len(p)-1)
 						}
 						err := newState.state.do(Action{Kind: t[k], Y: p[k].Y, X: p[k].X}, in, k == len(p)-1)
@@ -134,7 +137,7 @@ func ChokudaiSearch(in Input) string {
 			}
 		}
 		elapsedTime := time.Since(startTime)
-		if elapsedTime > 1900*time.Millisecond || newCnt == 0 {
+		if elapsedTime > 2900*time.Millisecond {
 			break
 		}
 	}
@@ -732,13 +735,17 @@ func (f Field) CanBuildRail(path []Pos, typ []int) (bool, bool) {
 	connect := false
 	for i := 0; i < len(path); i++ {
 		y, x := path[i].Y, path[i].X
-		// 完成系が線路のとき、通れるのは同じ種類の線路または駅
-		if isRail(f.cell[y][x]) && (f.cell[y][x] != typ[i] && typ[i] != STATION) {
-			return false, false
+		// 完成形と線路の形が違うのはNG
+		if isRail(f.cell[y][x]) && isRail(typ[i]) {
+			if f.cell[y][x] != typ[i] {
+				return false, false
+			}
 		}
-		// 駅の時
-		if typ[i] == STATION && (isRail(f.cell[y][x]) || f.cell[y][x] == STATION) {
-			connect = true
+		// どちらかが駅の時
+		if typ[i] == STATION {
+			if isRail(f.cell[y][x]) || f.cell[y][x] == STATION {
+				connect = true
+			}
 		}
 		if f.cell[y][x] != EMPTY {
 			connect = true
@@ -1054,8 +1061,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 				dist := distance(s0, s1)
 				edge := mstEdge{From: stationIndexMap[s0], To: stationIndexMap[s1], Path: path, Rail: types, L1: dist}
 				mstEdges = append(mstEdges, edge)
-				//log.Println("src", s0, "dst", s1, len(path))
-				//}
+				log.Println("append", s0, s1, dist)
 			}
 		}
 	}
@@ -1389,6 +1395,9 @@ type PriorityQueue2 []*bsState
 func (pq PriorityQueue2) Len() int { return len(pq) }
 
 func (pq PriorityQueue2) Less(i, j int) bool {
+	if pq[i].state.score == pq[j].state.score {
+		return pq[i].state.turn < pq[j].state.turn
+	}
 	return pq[i].state.score > pq[j].state.score
 }
 

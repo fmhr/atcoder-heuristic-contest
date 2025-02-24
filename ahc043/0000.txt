@@ -1,268 +1,268 @@
 #turn=1, 
+#money=16027, 
+#income=0
+ #Score=16027
+2 5 44
+#turn=2, 
+#money=15927, 
+#income=0
+ #Score=15927
+1 28 30
+#turn=3, 
+#money=15827, 
+#income=0
+ #Score=15827
+3 28 31
+#turn=4, 
+#money=15727, 
+#income=0
+ #Score=15727
+5 29 31
+#turn=5, 
+#money=15627, 
+#income=0
+ #Score=15627
+1 29 32
+#turn=6, 
+#money=15527, 
+#income=0
+ #Score=15527
+3 29 33
+#turn=7, 
+#money=15427, 
+#income=0
+ #Score=15427
+5 30 33
+#turn=8, 
+#money=15327, 
+#income=0
+ #Score=15327
+3 30 34
+#turn=9, 
+#money=15227, 
+#income=0
+ #Score=15227
+5 31 34
+#turn=10, 
+#money=15127, 
+#income=0
+ #Score=15127
+1 31 35
+#turn=11, 
+#money=15027, 
+#income=0
+ #Score=15027
+4 31 36
+#turn=12, 
+#money=14927, 
+#income=0
+ #Score=14927
+2 30 36
+#turn=13, 
+#money=14827, 
+#income=0
+ #Score=14827
+6 29 36
+#turn=14, 
+#money=14727, 
+#income=0
+ #Score=14727
+1 29 37
+#turn=15, 
+#money=14627, 
+#income=0
+ #Score=14627
+4 29 38
+#turn=16, 
+#money=14527, 
+#income=0
+ #Score=14527
+6 28 38
+#turn=17, 
+#money=14427, 
+#income=0
+ #Score=14427
+4 28 39
+#turn=18, 
+#money=14327, 
+#income=0
+ #Score=14327
+2 27 39
+#turn=19, 
+#money=14227, 
+#income=0
+ #Score=14227
+2 26 39
+#turn=20, 
+#money=14127, 
+#income=0
+ #Score=14127
+2 25 39
+#turn=21, 
+#money=14027, 
+#income=0
+ #Score=14027
+2 24 39
+#turn=22, 
+#money=13927, 
+#income=0
+ #Score=13927
+6 23 39
+#turn=23, 
+#money=13827, 
+#income=0
+ #Score=13827
+1 23 40
+#turn=24, 
+#money=13727, 
+#income=0
+ #Score=13727
+1 23 41
+#turn=25, 
+#money=13627, 
+#income=0
+ #Score=13627
+1 23 42
+#turn=26, 
+#money=13527, 
+#income=0
+ #Score=13527
+1 23 43
+#turn=27, 
+#money=13427, 
+#income=0
+ #Score=13427
+1 23 44
+#turn=28, 
+#money=13327, 
+#income=0
+ #Score=13327
+1 23 45
+#turn=29, 
+#money=13227, 
+#income=0
+ #Score=13227
+4 23 46
+#turn=30, 
+#money=13127, 
+#income=0
+ #Score=13127
+2 22 46
+#turn=31, 
+#money=13027, 
+#income=0
+ #Score=13027
+3 21 46
+#turn=32, 
+#money=12927, 
+#income=0
+ #Score=12927
+5 21 45
+#turn=33, 
+#money=12827, 
+#income=0
+ #Score=12827
+2 20 45
+#turn=34, 
+#money=12727, 
+#income=0
+ #Score=12727
+3 19 45
+#turn=35, 
+#money=12627, 
+#income=0
+ #Score=12627
+5 19 44
+#turn=36, 
+#money=12527, 
+#income=0
+ #Score=12527
+2 18 44
+#turn=37, 
+#money=12427, 
+#income=0
+ #Score=12427
+3 17 44
+#turn=38, 
+#money=12327, 
+#income=0
+ #Score=12327
+5 17 43
+#turn=39, 
+#money=12227, 
+#income=0
+ #Score=12227
+2 16 43
+#turn=40, 
+#money=12127, 
+#income=0
+ #Score=12127
+2 15 43
+#turn=41, 
+#money=12027, 
+#income=0
+ #Score=12027
+3 14 43
+#turn=42, 
+#money=11927, 
+#income=0
+ #Score=11927
+5 14 42
+#turn=43, 
+#money=11827, 
+#income=0
+ #Score=11827
+2 13 42
+#turn=44, 
+#money=11727, 
+#income=0
+ #Score=11727
+2 12 42
+#turn=45, 
+#money=11627, 
+#income=0
+ #Score=11627
+2 11 42
+#turn=46, 
+#money=11527, 
+#income=0
+ #Score=11527
+2 10 42
+#turn=47, 
+#money=11427, 
+#income=0
+ #Score=11427
+2 9 42
+#turn=48, 
+#money=11327, 
+#income=0
+ #Score=11327
+2 8 42
+#turn=49, 
+#money=11227, 
+#income=0
+ #Score=11227
+6 7 42
+#turn=50, 
 #money=11127, 
 #income=0
  #Score=11127
-0 28 29
-#turn=2, 
+4 7 43
+#turn=51, 
 #money=11027, 
 #income=0
  #Score=11027
-1 28 30
-#turn=3, 
+6 6 43
+#turn=52, 
 #money=10927, 
 #income=0
  #Score=10927
-3 28 31
-#turn=4, 
-#money=10827, 
-#income=0
- #Score=10827
-5 29 31
-#turn=5, 
-#money=10727, 
-#income=0
- #Score=10727
-1 29 32
-#turn=6, 
-#money=10627, 
-#income=0
- #Score=10627
-3 29 33
-#turn=7, 
-#money=10527, 
-#income=0
- #Score=10527
-5 30 33
-#turn=8, 
-#money=10427, 
-#income=0
- #Score=10427
-3 30 34
-#turn=9, 
-#money=10327, 
-#income=0
- #Score=10327
-5 31 34
-#turn=10, 
-#money=10227, 
-#income=0
- #Score=10227
-1 31 35
-#turn=11, 
-#money=10127, 
-#income=0
- #Score=10127
-4 31 36
-#turn=12, 
-#money=10027, 
-#income=0
- #Score=10027
-2 30 36
-#turn=13, 
-#money=9927, 
-#income=0
- #Score=9927
-6 29 36
-#turn=14, 
-#money=9827, 
-#income=0
- #Score=9827
-1 29 37
-#turn=15, 
-#money=9727, 
-#income=0
- #Score=9727
-1 29 38
-#turn=16, 
-#money=9627, 
-#income=0
- #Score=9627
-4 29 39
-#turn=17, 
-#money=9527, 
-#income=0
- #Score=9527
-2 28 39
-#turn=18, 
-#money=9427, 
-#income=0
- #Score=9427
-2 27 39
-#turn=19, 
-#money=9327, 
-#income=0
- #Score=9327
-2 26 39
-#turn=20, 
-#money=9227, 
-#income=0
- #Score=9227
-2 25 39
-#turn=21, 
-#money=9127, 
-#income=0
- #Score=9127
-2 24 39
-#turn=22, 
-#money=9027, 
-#income=0
- #Score=9027
-6 23 39
-#turn=23, 
-#money=8927, 
-#income=0
- #Score=8927
-1 23 40
-#turn=24, 
-#money=8827, 
-#income=0
- #Score=8827
-1 23 41
-#turn=25, 
-#money=8727, 
-#income=0
- #Score=8727
-1 23 42
-#turn=26, 
-#money=8627, 
-#income=0
- #Score=8627
-1 23 43
-#turn=27, 
-#money=8527, 
-#income=0
- #Score=8527
-1 23 44
-#turn=28, 
-#money=8427, 
-#income=0
- #Score=8427
-1 23 45
-#turn=29, 
-#money=8327, 
-#income=0
- #Score=8327
-4 23 46
-#turn=30, 
-#money=8227, 
-#income=0
- #Score=8227
-2 22 46
-#turn=31, 
-#money=8127, 
-#income=0
- #Score=8127
-3 21 46
-#turn=32, 
-#money=8027, 
-#income=0
- #Score=8027
-5 21 45
-#turn=33, 
-#money=7927, 
-#income=0
- #Score=7927
-2 20 45
-#turn=34, 
-#money=7827, 
-#income=0
- #Score=7827
-3 19 45
-#turn=35, 
-#money=7727, 
-#income=0
- #Score=7727
-5 19 44
-#turn=36, 
-#money=7627, 
-#income=0
- #Score=7627
-2 18 44
-#turn=37, 
-#money=7527, 
-#income=0
- #Score=7527
-3 17 44
-#turn=38, 
-#money=7427, 
-#income=0
- #Score=7427
-5 17 43
-#turn=39, 
-#money=7327, 
-#income=0
- #Score=7327
-2 16 43
-#turn=40, 
-#money=7227, 
-#income=0
- #Score=7227
-2 15 43
-#turn=41, 
-#money=7127, 
-#income=0
- #Score=7127
-3 14 43
-#turn=42, 
-#money=7027, 
-#income=0
- #Score=7027
-5 14 42
-#turn=43, 
-#money=6927, 
-#income=0
- #Score=6927
-2 13 42
-#turn=44, 
-#money=6827, 
-#income=0
- #Score=6827
-2 12 42
-#turn=45, 
-#money=6727, 
-#income=0
- #Score=6727
-2 11 42
-#turn=46, 
-#money=6627, 
-#income=0
- #Score=6627
-2 10 42
-#turn=47, 
-#money=6527, 
-#income=0
- #Score=6527
-2 9 42
-#turn=48, 
-#money=6427, 
-#income=0
- #Score=6427
-2 8 42
-#turn=49, 
-#money=6327, 
-#income=0
- #Score=6327
-6 7 42
-#turn=50, 
-#money=6227, 
-#income=0
- #Score=6227
-4 7 43
-#turn=51, 
-#money=6127, 
-#income=0
- #Score=6127
-6 6 43
-#turn=52, 
-#money=6027, 
-#income=0
- #Score=6027
 4 6 44
 #turn=53, 
 #money=5927, 
 #income=0
  #Score=5927
-2 5 44
+0 28 29
 #turn=54, 
 #money=968, 
 #income=41
