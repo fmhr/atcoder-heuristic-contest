@@ -142,7 +142,7 @@ func ChokudaiSearch(in Input) string {
 					if newState.state.score > bestScore {
 						bestState = newState.Clone()
 						bestScore = newState.state.score
-						log.Println(i, j, "bestScore", bestScore)
+						//log.Println(i, j, "bestScore", bestScore)
 					}
 				}
 				elapsedTime = time.Since(startTime)
@@ -162,6 +162,12 @@ func ChokudaiSearch(in Input) string {
 
 	sb := strings.Builder{}
 	for _, act := range bestState.state.actions {
+		if act.Kind == DO_NOTHING && act.Num > 0 {
+			log.Println("DO_NOTHING:", act.Num)
+			for i := 0; i < int(act.Num); i++ {
+				sb.WriteString("-1\n")
+			}
+		}
 		sb.WriteString(act.String())
 	}
 	for i := 0; i < in.T-bestState.state.turn; i++ {
@@ -230,11 +236,11 @@ func BuildGraph(in Input, stations []Pos) {
 		stationGrid[i] = -1
 	}
 	for i, s := range stations {
-		stationGrid[s.Y*50+s.X] = i
+		stationGrid[index(s.Y, s.X)] = i
 		for d := 0; d < 13; d++ {
 			y, x := s.Y+ddy[d], s.X+ddx[d]
 			if y >= 0 && y < N && x >= 0 && x < N {
-				stationGrid[y*50+x] = i
+				stationGrid[index(s.Y, s.X)] = i
 			}
 		}
 	}
@@ -429,6 +435,7 @@ func calBuildCost(act []int8) (cost int) {
 type Action struct {
 	Kind    int8
 	Y, X    int8
+	Num     int16
 	comment *string
 }
 
@@ -919,13 +926,18 @@ func (s *State) do(act Action, in Input, last bool) error {
 	s.turn++
 	s.money += s.income
 	s.score = s.money + s.income*(in.T-s.turn)
-	ATCODER = true
-	if !ATCODER {
-		if act.comment == nil {
-			act.comment = new(string)
+	//if !ATCODER {
+	if act.comment == nil {
+		act.comment = new(string)
+	}
+	*act.comment = fmt.Sprintf("#turn=%d, \n#money=%d, \n#income=%d\n #Score=%d\n",
+		s.turn, s.money, s.income, s.score)
+	//}
+	if len(s.actions) > 0 {
+		if s.actions[len(s.actions)-1].Kind == DO_NOTHING && act.Kind == DO_NOTHING {
+			s.actions[len(s.actions)-1].Num++
+			return nil
 		}
-		*act.comment = fmt.Sprintf("#turn=%d, \n#money=%d, \n#income=%d\n #Score=%d\n",
-			s.turn, s.money, s.income, s.score)
 	}
 	s.actions = append(s.actions, act)
 	return nil
