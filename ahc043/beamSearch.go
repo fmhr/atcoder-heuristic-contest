@@ -67,13 +67,13 @@ func beamSearch(in Input) string {
 				t := make([]int8, 0, len(acts.typ))
 				tmp := beamStates[i].state.field // これはcloneしていないので使わない
 				for k := 0; k < len(acts.path); k++ {
-					if acts.typ[k] == tmp.cell[acts.path[k].Y][acts.path[k].X] {
+					if acts.typ[k] == tmp.cell[acts.path[k].Index()] {
 						continue
 					}
-					if isRail(acts.typ[k]) && tmp.cell[acts.path[k].Y][acts.path[k].X] == STATION {
+					if isRail(acts.typ[k]) && tmp.cell[acts.path[k].Index()] == STATION {
 						continue
 					}
-					if isRail(acts.typ[k]) && isRail(tmp.cell[acts.path[k].Y][acts.path[k].X]) {
+					if isRail(acts.typ[k]) && isRail(tmp.cell[acts.path[k].Index()]) {
 						// 両方線路で種類が違う時
 						break NEWSTATE
 					}
@@ -83,25 +83,25 @@ func beamSearch(in Input) string {
 				if len(p) == 0 {
 					continue
 				}
-				// 孤立するのは作らない
-				isolated := true
-				if len(beamStates[i].state.field.stations) > 0 {
-					for l := 0; l < len(p) && isolated; l++ {
-						for d := 0; d < 4; d++ {
-							y, x := int(p[l].Y)+int(dy[d]), int(p[l].X)+int(dx[d])
-							if y < 0 || y >= 50 || x < 0 || x >= 50 {
-								continue
-							}
-							if checkConnec(tmp.cell[p[l].Y][p[l].X], d, true) && checkConnec(tmp.cell[y][x], d, false) {
-								isolated = false
-								break
-							}
-						}
-					}
-					if isolated {
-						continue
-					}
-				}
+				// 孤立するのは作らない stationsを削除したのでコメントアウト
+				//isolated := true
+				//if len(beamStates[i].state.field.stations) > 0 {
+				//for l := 0; l < len(p) && isolated; l++ {
+				//for d := 0; d < 4; d++ {
+				//y, x := int(p[l].Y)+int(dy[d]), int(p[l].X)+int(dx[d])
+				//if y < 0 || y >= 50 || x < 0 || x >= 50 {
+				//continue
+				//}
+				//if checkConnec(tmp.cell[p[l].Y][p[l].X], d, true) && checkConnec(tmp.cell[y][x], d, false) {
+				//isolated = false
+				//break
+				//}
+				//}
+				//}
+				//if isolated {
+				//continue
+				//}
+				//}
 				costMoney := calBuildCost(t) //純粋なコスト(money)
 				if beamStates[i].state.money < costMoney && beamStates[i].state.income == 0 {
 					// お金が足りない＋収入がない時はスキップ

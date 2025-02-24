@@ -99,7 +99,7 @@ func ChokudaiSearch(in Input) string {
 					t := make([]int8, 0, len(act.typ))
 					for k := 0; k < len(act.path); k++ {
 						typ := act.typ[k]
-						now := cur.state.field.cell[act.path[k].Y][act.path[k].X]
+						now := cur.state.field.cell[act.path[k].Index()]
 						if typ == now || now == STATION {
 							continue
 						}
@@ -306,7 +306,7 @@ func BuildGraph(in Input, stations []Pos) {
 			continue
 		}
 		for i := 0; i < len(path); i++ {
-			if typ[i] == STATION || f.cell[path[i].Y][path[i].X] == STATION {
+			if typ[i] == STATION || f.cell[path[i].Index()] == STATION {
 				continue
 			}
 			if err := f.Build(Action{Kind: typ[i], Y: path[i].Y, X: path[i].X}); err != nil {
@@ -450,7 +450,7 @@ func (a Action) String() (str string) {
 }
 
 type Field struct {
-	cell [N][N]int8
+	cell [N * N]int8
 	//stations []Pos
 	coverd BitSet //駅によってカバーされた位置
 }
@@ -462,9 +462,9 @@ func NewField(n int) *Field {
 		panic("n need to be 50")
 	}
 	f := new(Field)
-	for i := 0; i < n; i++ {
-		for j := 0; j < n; j++ {
-			f.cell[i][j] = EMPTY
+	for i := int8(0); i < int8(n); i++ {
+		for j := int8(0); j < int8(n); j++ {
+			f.cell[index(i, j)] = EMPTY
 		}
 	}
 	//f.stations = make([]Pos, 0)
@@ -476,13 +476,13 @@ func (f *Field) Clone() *Field {
 		return nil
 	}
 	newField := &Field{
-		cell: [N][N]int8{},
+		cell: [N * N]int8{},
 		//stations: make([]Pos, len(f.stations)),
 	}
 	//copy(newField.stations, f.stations)
 	for i := 0; i < N; i++ {
 		for j := 0; j < N; j++ {
-			newField.cell[i][j] = f.cell[i][j]
+			newField.cell[i*50+j] = f.cell[i*50+j]
 		}
 	}
 	newField.coverd = f.coverd
@@ -500,7 +500,7 @@ func (f Field) ToString() string {
 	for i := 0; i < N; i++ {
 		str += fmt.Sprintf("%2d ", i)
 		for j := 0; j < N; j++ {
-			str += railMap[f.cell[i][j]]
+			str += railMap[f.cell[i*50+j]]
 		}
 		str += "\n"
 	}
@@ -517,25 +517,26 @@ func (f *Field) Build(act Action) error {
 		return fmt.Errorf("invalid kind:%s", fmt.Sprint(act.Kind))
 	}
 	// すでになにか立っていて、問題がある
-	if f.cell[act.Y][act.X] != EMPTY {
-		if !(act.Kind == STATION && f.cell[act.Y][act.X] >= 1 && f.cell[act.Y][act.X] <= 6) {
+	yx := index(act.Y, act.X)
+	if f.cell[yx] != EMPTY {
+		if !(act.Kind == STATION && f.cell[yx] >= 1 && f.cell[yx] <= 6) {
 			// 駅は線路の上に建てることができる
 			//log.Println(f.cellString())
-			log.Printf("try to build: typ:%d Y:%d X:%d but already built %d\n", act.Kind, act.Y, act.X, f.cell[act.Y][act.X])
+			log.Printf("try to build: typ:%d Y:%d X:%d but already built %d\n", act.Kind, act.Y, act.X, f.cell[yx])
 			return fmt.Errorf("already built")
 		}
-		if isRail(act.Kind) && f.cell[act.Y][act.X] == STATION {
+		if isRail(act.Kind) && f.cell[yx] == STATION {
 			panic("駅の上に線路を建てることはできません")
 		}
-		if isRail(act.Kind) && isRail(f.cell[act.Y][act.X]) && act.Kind != f.cell[act.Y][act.X] {
+		if isRail(act.Kind) && isRail(f.cell[yx]) && act.Kind != f.cell[yx] {
 			panic("線路の上に線路を建てることはできません")
 		}
-		if act.Kind == f.cell[act.Y][act.X] {
+		if act.Kind == f.cell[yx] {
 			panic("同じ線路を建てることはできません")
 		}
 	}
 	// 建設
-	f.cell[act.Y][act.X] = act.Kind
+	f.cell[yx] = act.Kind
 
 	// 駅がカバーしている範囲を更新
 	if act.Kind == STATION {
@@ -579,10 +580,11 @@ func (f *Field) FindNewPath(a, b Pos) (path []Pos) {
 		que = que[1:]
 		for d := 0; d < 4; d++ {
 			y, x := p.Y+dy[d], p.X+dx[d]
+			yx := index(y, x)
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				continue
 			}
-			if f.cell[y][x] != EMPTY && f.cell[y][x] != STATION {
+			if f.cell[yx] != EMPTY && f.cell[yx] != STATION {
 				continue
 			}
 			if dist[int(y)*50+int(x)] > dist[int(p.Y)*50+int(p.X)]+1 {
@@ -600,6 +602,7 @@ func (f *Field) FindNewPath(a, b Pos) (path []Pos) {
 		p := path[len(path)-1]
 		for d := 0; d < 4; d++ {
 			y, x := p.Y+dy[d], p.X+dx[d]
+			yx := index(y, x)
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				continue
 			}
@@ -607,7 +610,7 @@ func (f *Field) FindNewPath(a, b Pos) (path []Pos) {
 				path = append(path, Pos{Y: y, X: x})
 				break
 			}
-			if f.cell[y][x] != EMPTY && f.cell[y][x] != STATION {
+			if f.cell[yx] != EMPTY && f.cell[yx] != STATION {
 				continue
 			}
 			if dist[int(y)*50+int(x)] == dist[int(p.Y)*50+int(p.X)]-1 {
@@ -719,7 +722,7 @@ func (f Field) canMove(a, b Pos) bool {
 		log.Println("distance", a, b, distance(a, b))
 		return false
 	}
-	if f.cell[b.Y][b.X] == WALL {
+	if f.cell[index(b.Y, b.X)] == WALL {
 		return false
 	}
 	// directionはaからbに移動する向き
@@ -738,14 +741,14 @@ func (f Field) canMove(a, b Pos) bool {
 		log.Fatal("canMove: invalid direction")
 	}
 	// aのレールが繋がっていなかったらfalse
-	if isRail(f.cell[a.Y][a.X]) {
-		if !checkConnec(f.cell[a.Y][a.X], direction, true) {
+	if isRail(f.cell[index(a.Y, a.X)]) {
+		if !checkConnec(f.cell[index(a.Y, a.X)], direction, true) {
 			return false
 		}
 	}
 	// bのレールが繋がっていなかったらfalse
-	if isRail(f.cell[b.Y][b.X]) {
-		if !checkConnec(f.cell[b.Y][b.X], direction, false) {
+	if isRail(f.cell[index(b.Y, b.X)]) {
+		if !checkConnec(f.cell[index(b.Y, b.X)], direction, false) {
 			return false
 		}
 	}
@@ -763,18 +766,18 @@ func (f Field) CanBuildRail(path []Pos, typ []int8) (bool, bool) {
 	for i := 0; i < len(path); i++ {
 		y, x := path[i].Y, path[i].X
 		// 完成形と線路の形が違うのはNG
-		if isRail(f.cell[y][x]) && isRail(typ[i]) {
-			if f.cell[y][x] != typ[i] {
+		if isRail(f.cell[index(y, x)]) && isRail(typ[i]) {
+			if f.cell[index(y, x)] != typ[i] {
 				return false, false
 			}
 		}
 		// どちらかが駅の時
 		if typ[i] == STATION {
-			if isRail(f.cell[y][x]) || f.cell[y][x] == STATION {
+			if isRail(f.cell[index(y, x)]) || f.cell[index(y, x)] == STATION {
 				connect = true
 			}
 		}
-		if f.cell[y][x] != EMPTY {
+		if f.cell[index(y, x)] != EMPTY {
 			connect = true
 		}
 	}
@@ -798,10 +801,10 @@ func (f Field) canConnect(a, b Pos) ([]Pos, error) {
 			break
 		}
 
-		direction := railDirection(f.cell[p.Y][p.X])
+		direction := railDirection(f.cell[p.Index()])
 
 		if len(direction) == 0 {
-			log.Println(f.cell[p.Y][p.X])
+			log.Println(f.cell[p.Index()])
 			panic("invalid rail")
 		}
 		for _, d := range direction {
@@ -809,13 +812,13 @@ func (f Field) canConnect(a, b Pos) ([]Pos, error) {
 			if y < 0 || y >= 50 || x < 0 || x >= 50 {
 				continue
 			}
-			if f.cell[y][x] == EMPTY || f.cell[y][x] == STATION {
+			if f.cell[index(y, x)] == EMPTY || f.cell[index(y, x)] == STATION {
 				if dist[int(y)*50+int(x)] > dist[int(p.Y)*50+int(p.X)]+1 {
 					dist[int(y)*50+int(x)] = dist[int(p.Y)*50+int(p.X)] + 1
 					q = append(q, Pos{Y: y, X: x})
 				}
 			}
-			if isRail(f.cell[y][x]) && checkConnec(f.cell[y][x], int(d), false) {
+			if isRail(f.cell[index(y, x)]) && checkConnec(f.cell[index(y, x)], int(d), false) {
 				if dist[int(y)*50+int(x)] > dist[int(p.Y)*50+int(p.X)]+1 {
 					dist[int(y)*50+int(x)] = dist[int(p.Y)*50+int(p.X)] + 1
 					q = append(q, Pos{Y: y, X: x})
@@ -947,6 +950,10 @@ type Pos struct {
 	Y, X int8
 }
 
+func (p Pos) Index() int {
+	return int(p.Y)*50 + int(p.X)
+}
+
 func index(y, x int8) int {
 	return int(y)*50 + int(x)
 }
@@ -1032,7 +1039,7 @@ func constructMSTRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 			}
 			// すでに建築済みまたは駅がある場合はスキップ
 			for i := 1; i < len(path)-1; i++ {
-				if field.cell[path[i].Y][path[i].X] == STATION || field.cell[path[i].Y][path[i].X] == types[i] {
+				if field.cell[path[i].Index()] == STATION || field.cell[path[i].Index()] == types[i] {
 					// すでに駅があり線路が必要ない時 または、すでに建築予定の線路がある時
 					continue
 				}
@@ -1055,14 +1062,14 @@ func constructMSTRailway(in Input, stations []Pos) ([]mstEdge, *Field) {
 	field2 := NewField(in.N) // mstEdgesで使われている場所だけを使う
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
-			field2.cell[i][j] = WALL
+			field2.cell[i*50+j] = WALL
 		}
 	}
 	for _, edge := range mstEdges {
 		for _, p := range edge.Path {
-			if isRail(field.cell[p.Y][p.X]) || field.cell[p.Y][p.X] == STATION {
-				field2.cell[p.Y][p.X] = EMPTY // WALLの強制解除
-				_ = field2.Build(Action{Kind: field.cell[p.Y][p.X], Y: p.Y, X: p.X})
+			if isRail(field.cell[p.Index()]) || field.cell[p.Index()] == STATION {
+				field2.cell[p.Index()] = EMPTY // WALLの強制解除
+				_ = field2.Build(Action{Kind: field.cell[p.Index()], Y: p.Y, X: p.X})
 				// 駅->線路の順番で建築するときエラーを吐くが無視できる
 			}
 		}
@@ -1162,20 +1169,20 @@ NEXTSTATION:
 				if used[next.Y][next.X] {
 					continue
 				}
-				if f.cell[next.Y][next.X] == EMPTY {
+				if f.cell[next.Index()] == EMPTY {
 					used[next.Y][next.X] = true
 					q = append(q, next)
-				} else if f.cell[next.Y][next.X] == STATION {
+				} else if f.cell[next.Index()] == STATION {
 					path, err := f.canConnect(s, next)
 					if err != nil {
 						panic(err)
 					}
 					types := f.SelectRails(path)
 					for k := 1; k < len(path)-1; k++ {
-						if f.cell[path[k].Y][path[k].X] == STATION {
+						if f.cell[path[k].Index()] == STATION {
 							continue
 						}
-						if isRail(types[k]) && f.cell[path[k].Y][path[k].X] != types[k] {
+						if isRail(types[k]) && f.cell[path[k].Index()] != types[k] {
 							err := f.Build(Action{Kind: types[k], Y: path[k].Y, X: path[k].X})
 							if err != nil {
 								log.Println("k", k)

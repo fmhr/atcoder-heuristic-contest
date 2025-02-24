@@ -16,16 +16,16 @@ func TestShortestPaht(t *testing.T) {
 	f := NewField(50)
 	for i := 0; i < 50; i++ {
 		for j := 0; j < 50; j++ {
-			f.cell[i][j] = EMPTY
+			f.cell[i*50+j] = EMPTY
 			if rand.Intn(100) < 5 {
-				f.cell[i][j] = WALL
+				f.cell[i*50+j] = WALL
 			}
 		}
 	}
 	a := Pos{Y: int8(rand.Intn(50)), X: int8(rand.Intn(50))}
 	b := Pos{Y: int8(rand.Intn(50)), X: int8(rand.Intn(50))}
-	f.cell[a.Y][a.X] = STATION
-	f.cell[b.Y][b.X] = STATION
+	f.cell[a.Index()] = STATION
+	f.cell[b.Index()] = STATION
 	//t.Log(f.cellString())
 	path := f.FindNewPath(a, b)
 	t.Log(path)
@@ -36,12 +36,12 @@ func TestShortestPaht(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		str := ""
 		for j := 0; j < 50; j++ {
-			str += railMap[f.cell[i][j]] + " "
+			str += railMap[f.cell[i*50+j]] + " "
 		}
 	}
 	rtn := f.SelectRails(path)
 	for i := 0; i < len(rtn); i++ {
-		f.cell[path[i].Y][path[i].X] = rtn[i]
+		f.cell[path[i].Index()] = rtn[i]
 	}
 	t.Log(f.ToString())
 }
@@ -119,7 +119,8 @@ func TestChokudaiSearch(t *testing.T) {
 	t.Log(ans)
 }
 
-// go test -benchmem -run=^ -bench ^BenchmarkChokudaiSearch ahc043 -cpuprofile cpu.prof
+// go test -benchmem -run=^ -bench '^BenchmarkChokudaiSearch' ahc043 -cpuprofile cpu.prof
+// go test -benchmem -run='^$' -bench '^BenchmarkChokudaiSearch$' ahc043 -cpuprofile cpu.prof
 func BenchmarkChokudaiSearch(b *testing.B) {
 	ATCODER = true
 	log.SetOutput(io.Discard)
@@ -140,7 +141,7 @@ func TestDebugBeamSearch(t *testing.T) {
 	}
 	for i := int8(0); i < 50; i++ {
 		for j := int8(0); j < 50; j++ {
-			if isRail(f.cell[i][j]) {
+			if isRail(f.cell[index(i, j)]) {
 				if rand.Intn(10) < 5 {
 					err := f.Build(Action{Kind: STATION, X: j, Y: i})
 					if err != nil {
@@ -156,26 +157,26 @@ func TestDebugBeamSearch(t *testing.T) {
 // ベンチマークの使い方
 // go test . -bench . -run ^TestBeamSearch$ -v -cpuprofile cpu.prof
 // go tool pprof -http=:8080 cpu.prof
-func TestBeamSearch(t *testing.T) {
-	in, err := readInputFile("tools/in/0013.txt")
-	if err != nil {
-		t.Fatalf("failed to read input: %v", err)
-	}
-	beamSearch(*in)
-}
+//func TestBeamSearch(t *testing.T) {
+//in, err := readInputFile("tools/in/0013.txt")
+//if err != nil {
+//t.Fatalf("failed to read input: %v", err)
+//}
+//beamSearch(*in)
+//}
 
 // go test -bench=BenchmarkBeamSearch -benchtime=10s -cpuprofile cpu.prof -memprofile mem.prof -v .
-func BenchmarkBeamSearch(b *testing.B) {
-	ATCODER = true
-	log.SetOutput(io.Discard)
-	in, err := readInputFile("tools/in/0013.txt")
-	if err != nil {
-		b.Fatalf("failed to read input: %v", err)
-	}
-	for i := 0; i < b.N; i++ {
-		beamSearch(*in)
-	}
-}
+//func BenchmarkBeamSearch(b *testing.B) {
+//ATCODER = true
+//log.SetOutput(io.Discard)
+//in, err := readInputFile("tools/in/0013.txt")
+//if err != nil {
+//b.Fatalf("failed to read input: %v", err)
+//}
+//for i := 0; i < b.N; i++ {
+//beamSearch(*in)
+//}
+//}
 
 // CoseStationPosition のテスト
 func TestChoseStationPosition(t *testing.T) {
