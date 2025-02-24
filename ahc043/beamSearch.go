@@ -144,7 +144,7 @@ func beamSearch(in Input) string {
 					if j == len(p)-1 {
 						last = true
 					}
-					err := newState.state.do(Action{Kind: t[j], Y: int(p[j].Y), X: int(p[j].X)}, in, last)
+					err := newState.state.do(Action{Kind: t[j], Y: p[j].Y, X: p[j].X}, in, last)
 					if err != nil {
 						log.Println("j", j)
 						log.Println("actions", railToString(t))

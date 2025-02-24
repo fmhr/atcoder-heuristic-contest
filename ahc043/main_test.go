@@ -119,6 +119,19 @@ func TestChokudaiSearch(t *testing.T) {
 	t.Log(ans)
 }
 
+// go test -bench=BenchmarkBeamSearch -benchtime=10s -cpuprofile cpu.prof -memprofile mem.prof -v .
+func BenchmarkChokudaiSearch(b *testing.B) {
+	ATCODER = true
+	log.SetOutput(io.Discard)
+	in, err := readInputFile("tools/in/0013.txt")
+	if err != nil {
+		b.Fatalf("failed to read input: %v", err)
+	}
+	for i := 0; i < b.N; i++ {
+		ChokudaiSearch(*in)
+	}
+}
+
 func TestDebugBeamSearch(t *testing.T) {
 	// 線路上に駅を配置することができるのかを確認する
 	f, err := readGridFileToFild("test/t0000.txt")
@@ -204,7 +217,7 @@ func TestGridCalculation(t *testing.T) {
 		if next.Y < 0 || next.Y >= 50 || next.X < 0 || next.X >= 50 {
 			t.Log("out of range", next)
 		} else {
-			grid[next.Y*50+next.X] = i
+			grid[index(next.Y, next.X)] = i
 		}
 	}
 	t.Log("Grid result:" + gridToString(grid))
