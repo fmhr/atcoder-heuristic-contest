@@ -107,8 +107,7 @@ func ChokudaiSearch(in Input) string {
 					}
 					if len(p) == 0 {
 						cur.restActions = append(cur.restActions[:j], cur.restActions[j+1:]...)
-						//continue //時間無制限になる
-						break
+						continue
 					}
 					cost := calBuildCost(t)
 					if cost > cur.state.money+cur.state.income*(in.T-cur.state.turn) {
@@ -142,11 +141,15 @@ func ChokudaiSearch(in Input) string {
 					if newState.state.score > bestScore {
 						bestState = newState.Clone()
 						bestScore = newState.state.score
-						log.Println("bestScore", bestScore)
+						log.Println(i, j, "bestScore", bestScore)
 					}
+					log.Println(i, j)
 				}
 			}
-			//log.Println(i, pq[i].Len())
+			elapsedTime := time.Since(startTime)
+			if elapsedTime > 2900*time.Millisecond {
+				break
+			}
 		}
 		elapsedTime := time.Since(startTime)
 		if elapsedTime > 2900*time.Millisecond {
