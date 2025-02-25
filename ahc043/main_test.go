@@ -115,7 +115,7 @@ func TestChokudaiSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
-	ans := beamSearch(*in)
+	ans := ChokudaiSearch(*in)
 	t.Log(ans)
 }
 
@@ -338,6 +338,44 @@ func TestReadGridFile(t *testing.T) {
 				t.Fatalf("failed to build: %v", err)
 			}
 		}
+	}
+}
+
+func TestRailToString(t *testing.T) {
+	tests := []struct {
+		name     string
+		rails    []int8
+		expected string
+	}{
+		{
+			name:     "Empty rails",
+			rails:    []int8{},
+			expected: "",
+		},
+		{
+			name:     "Single rail",
+			rails:    []int8{RAIL_HORIZONTAL},
+			expected: " ─",
+		},
+		{
+			name:     "Multiple rails",
+			rails:    []int8{RAIL_HORIZONTAL, RAIL_VERTICAL, STATION},
+			expected: " ─ │ ◎",
+		},
+		{
+			name:     "All rail types",
+			rails:    []int8{RAIL_HORIZONTAL, RAIL_VERTICAL, RAIL_LEFT_DOWN, RAIL_LEFT_UP, RAIL_RIGHT_UP, RAIL_RIGHT_DOWN, STATION, WALL},
+			expected: "─ │ ┐ ┘ └ ┌ ◎ #",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := railToString(tt.rails)
+			if result != tt.expected {
+				t.Errorf("railToString(%v) = %q; expected %q", tt.rails, result, tt.expected)
+			}
+		})
 	}
 }
 

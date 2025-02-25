@@ -147,11 +147,11 @@ func ChokudaiSearch(in Input) string {
 				}
 				elapsedTime = time.Since(startTime)
 			}
-			if elapsedTime > 2900*time.Millisecond {
+			if elapsedTime > 29000*time.Millisecond {
 				break
 			}
 		}
-		if elapsedTime > 2900*time.Millisecond {
+		if elapsedTime > 29000*time.Millisecond {
 			break
 		}
 		loopCnt++
@@ -244,7 +244,7 @@ func BuildGraph(in Input, stations []Pos) {
 			}
 		}
 	}
-	//log.Println(gridToString(stationGrid))
+	log.Println(gridToString(stationGrid))
 	// すべてのsrc->dstを回して、経路が何回使われたかをカウントする
 	countPath_min_max := map[[2]int]int{} // 駅間のカウント
 	var sumDist int
@@ -1415,13 +1415,6 @@ func (b *BitSet) Get(index int) bool {
 		panic("index out of range")
 	}
 	return (b.bits[index/64] & (1 << (index % 64))) != 0
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func randShuffle(n int, swap func(i int, j int)) {
