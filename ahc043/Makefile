@@ -44,7 +44,7 @@ PADDING_NUM := $(shell printf "%04d" $(SEED))
 
 # Goのプログラムを実行してCPUプロファイルを作成し、結果を出力
 run_go:
-	go run main.go -cpuprofile cpu.prof < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+	/usr/bin/time -v go run main.go < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
 
 # 可視化ツールを実行
 run_vis:
