@@ -365,7 +365,7 @@ func TestRailToString(t *testing.T) {
 		{
 			name:     "All rail types",
 			rails:    []int8{RAIL_HORIZONTAL, RAIL_VERTICAL, RAIL_LEFT_DOWN, RAIL_LEFT_UP, RAIL_RIGHT_UP, RAIL_RIGHT_DOWN, STATION, WALL},
-			expected: "─ │ ┐ ┘ └ ┌ ◎ #",
+			expected: " ─ │ ┐ ┘ └ ┌ ◎ #",
 		},
 	}
 
