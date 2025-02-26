@@ -15,11 +15,13 @@ $(BINARY): $(SRC)
 	echo "Building $(BINARY) ..."
 	go build -o $(BINARY) $(SRC)
 
+# コンテスト後に不要なファイルを削除
 clear:
 	rm -rf bin/*
 	rm -rf out/*
 	rm -rf $(BINARY)
 	rm -rf *.prof
+	rm -f [0-9][0-9][0-9][0-9].txt
 
 seed:
 	seq 0 10000 > tools/seed.txt
@@ -44,7 +46,7 @@ PADDING_NUM := $(shell printf "%04d" $(SEED))
 
 # Goのプログラムを実行してCPUプロファイルを作成し、結果を出力
 run_go:
-	/usr/bin/time -v go run main.go < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+	/usr/bin/time -l go run main.go < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
 
 # 可視化ツールを実行
 run_vis:

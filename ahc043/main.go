@@ -144,14 +144,25 @@ func ChokudaiSearch(in Input) string {
 						bestScore = newState.state.score
 						//log.Println(i, j, "bestScore", bestScore)
 					}
+					//log.Println(pq[i+1].Len())
+					pq[i+1].ReSize(100)
+					//log.Println(pq[i+1].Len())
+					elapsedTime = time.Since(startTime)
+					if elapsedTime > 2900*time.Millisecond {
+						break
+					}
 				}
 				elapsedTime = time.Since(startTime)
+				if elapsedTime > 2900*time.Millisecond {
+					break
+				}
 			}
-			if elapsedTime > 29000*time.Millisecond {
+			elapsedTime = time.Since(startTime)
+			if elapsedTime > 2900*time.Millisecond {
 				break
 			}
 		}
-		if elapsedTime > 29000*time.Millisecond {
+		if elapsedTime > 2900*time.Millisecond {
 			break
 		}
 		loopCnt++
@@ -1455,6 +1466,12 @@ func (pq *PriorityQueue2) Pop() interface{} {
 	old[n-1] = nil
 	*pq = old[0 : n-1]
 	return item
+}
+
+func (pq *PriorityQueue2) ReSize(n int) {
+	for len(*pq) > n {
+		*pq = (*pq)[:n]
+	}
 }
 
 // //////////////////////////////////
