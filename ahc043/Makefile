@@ -2,8 +2,8 @@ BINARY = bin/a.out
 SRC = src/main.go
 
 # Reactive
-Reactive = true
-ifeq ($(Reactive), true)
+REACTIVE = false
+ifeq ($(REACTIVE), true)
 	RUN_CMD = ./tools/target/release/tester
 else
 	RUN_CMD = ./$(BINARY)
@@ -12,17 +12,16 @@ endif
 build: $(BINARY)
 
 $(BINARY): $(SRC)
-	echo "Building $(BINARY) ..."
+	@echo "Building $(BINARY) ..."
 	go build -o $(BINARY) $(SRC)
 
 # コンテスト後に不要なファイルを削除
 clear:
 	rm -rf bin/*
 	rm -rf out/*
-	rm -rf $(BINARY)
 	rm -rf *.prof
+	# Remove all files with a 4-digit number as the filename
 	rm -f [0-9][0-9][0-9][0-9].txt
-
 seed:
 	seq 0 10000 > tools/seed.txt
 	cd tools && cargo run -r --bin gen seed.txt
@@ -31,7 +30,7 @@ profile: build
 	$(RUN_CMD) -cpuprofile cpu.prof < tools/in/0008.txt > 8.out
 # flag.Pars() をわすれない
 
-cpuprofile:
+	@go tool pprof -http=:6060 cpu.prof 	
 	go tool pprof -http=:6060 cpu.prof 	
 
 test:
@@ -46,7 +45,7 @@ PADDING_NUM := $(shell printf "%04d" $(SEED))
 
 # Goのプログラムを実行してCPUプロファイルを作成し、結果を出力
 run_go:
-	/usr/bin/time -l $(BINARY) < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+	gtime -f "実行時間: %E, メモリ使用量: %M KB, CPU使用率: %P%" $(BINARY) < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
 
 # 可視化ツールを実行
 run_vis:
