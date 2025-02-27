@@ -1,3 +1,6 @@
 sample/
 *.txt
-*.prof
+*.pr
+
+# 他ユーザーの提出 コンテスト後の復習用
+montplusa/
