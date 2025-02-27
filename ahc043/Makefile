@@ -1,5 +1,5 @@
 BINARY = bin/a.out
-SRC = main.go
+SRC = src/main.go
 
 # Reactive
 Reactive = true
@@ -46,7 +46,7 @@ PADDING_NUM := $(shell printf "%04d" $(SEED))
 
 # Goのプログラムを実行してCPUプロファイルを作成し、結果を出力
 run_go:
-	/usr/bin/time -l go run src/main.go < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+	/usr/bin/time -l $(BINARY) < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
 
 # 可視化ツールを実行
 run_vis:
@@ -54,11 +54,11 @@ run_vis:
 #cd tools && cargo run -r --bin vis in/$(PADDING_NUM).txt ../$(PADDING_NUM).txt
 
 # 両方のコマンドをまとめて実行
-run: run_go run_vis
+run: build run_go run_vis
 
 #### reactive
 run_reactive:
-	$(RUN_CMD) go run main.go < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+	$(RUN_CMD) go run $(SRC) < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
 
 run_cpu:
-	$(RUN_CMD) go run main.go -cpuprofile cpu.prof < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+	$(RUN_CMD) go run $(SRC) -cpuprofile cpu.prof < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
