@@ -1,6 +1,6 @@
 #if ONLINE_JUDGE
 #define NDEBUG
-//#pragma GCC target("avx2")
+//#pragma GCC target("avx2") macOS doesn't support this
 #pragma GCC optimize("O3")
 #pragma GCC optimize("unroll-loops")
 #else
