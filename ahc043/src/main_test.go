@@ -12,6 +12,38 @@ import (
 	"testing"
 )
 
+func TestSAStations(t *testing.T) {
+	in, err := readInputFile("../tools/in/0000.txt")
+	if err != nil {
+		t.Fatalf("failed to read input: %v", err)
+	}
+	stationPos := ChooseStationPositionFast(*in)
+	t.Log("stations=", len(stationPos))
+
+	for i := 0; i < in.M; i++ {
+		var ok1, ok2 bool
+		home := in.src[i]
+		work := in.dst[i]
+		for _, s := range stationPos {
+			if distance(s, home) <= 2 {
+				ok1 = true
+			}
+			if distance(s, work) <= 2 {
+				ok2 = true
+			}
+		}
+		if !ok1 || !ok2 {
+			if !ok1 {
+				log.Println("home", home)
+			}
+			if !ok2 {
+				log.Println("work", work)
+			}
+			t.Error("no station")
+		}
+	}
+}
+
 func TestShortestPaht(t *testing.T) {
 	f := NewField(50)
 	for i := 0; i < 50; i++ {
@@ -48,7 +80,7 @@ func TestShortestPaht(t *testing.T) {
 
 func TestConstructMSTRailway(t *testing.T) {
 	// go test -timeout 30s -run ^TestConstructRailway$ ahc043 -v
-	in, err := readInputFile("tools/in/0013.txt")
+	in, err := readInputFile("../tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
@@ -78,7 +110,7 @@ func TestConstructMSTRailway(t *testing.T) {
 }
 
 func TestConstructRailway(t *testing.T) {
-	in, err := readInputFile("tools/in/0013.txt")
+	in, err := readInputFile("../tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
@@ -100,7 +132,7 @@ func TestConstructRailway(t *testing.T) {
 }
 
 func TestConstructGredyRailway(t *testing.T) {
-	in, err := readInputFile("tools/in/0013.txt")
+	in, err := readInputFile("../tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
@@ -111,7 +143,7 @@ func TestConstructGredyRailway(t *testing.T) {
 }
 
 func TestChokudaiSearch(t *testing.T) {
-	in, err := readInputFile("tools/in/0013.txt")
+	in, err := readInputFile("../tools/in/0013.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
@@ -124,7 +156,7 @@ func TestChokudaiSearch(t *testing.T) {
 func BenchmarkChokudaiSearch(b *testing.B) {
 	ATCODER = true
 	log.SetOutput(io.Discard)
-	in, err := readInputFile("tools/in/0013.txt")
+	in, err := readInputFile("../tools/in/0013.txt")
 	if err != nil {
 		b.Fatalf("failed to read input: %v", err)
 	}
@@ -180,7 +212,7 @@ func TestDebugBeamSearch(t *testing.T) {
 
 // CoseStationPosition のテスト
 func TestChoseStationPosition(t *testing.T) {
-	in, err := readInputFile("tools/in/0000.txt")
+	in, err := readInputFile("../tools/in/0000.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
@@ -189,7 +221,7 @@ func TestChoseStationPosition(t *testing.T) {
 }
 
 func BenchmarkChoseStationPosition(b *testing.B) {
-	in, err := readInputFile("tools/in/0000.txt")
+	in, err := readInputFile("../tools/in/0000.txt")
 	if err != nil {
 		b.Fatalf("failed to read input: %v", err)
 	}
@@ -199,7 +231,7 @@ func BenchmarkChoseStationPosition(b *testing.B) {
 }
 
 func TestReadInput(t *testing.T) {
-	in, err := readInputFile("tools/in/0000.txt")
+	in, err := readInputFile("../tools/in/0000.txt")
 	if err != nil {
 		t.Fatalf("failed to read input: %v", err)
 	}
