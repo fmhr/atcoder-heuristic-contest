@@ -40,6 +40,7 @@ func main() {
 	writer := bufio.NewWriter(os.Stdout)
 	defer writer.Flush()
 	in := readInput(reader)
+	return
 	_ = in
 	//ans := beamSearch(*in)
 	ans := ChokudaiSearch(*in)
