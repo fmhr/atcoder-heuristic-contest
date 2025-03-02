@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -24,21 +25,213 @@ func main() {
 	frand = rand.New(rand.NewSource(1))
 	startTime = time.Now()
 	in := readInput()
-	ans := solver(in)
-	fmt.Println(ans)
+	ans := beamSearch(in)
+	for _, a := range ans {
+		fmt.Println(a)
+	}
 	log.Printf("in: %+v\n", in)
+}
+
+func beamSearch(in In) (ans []Action) {
+	root := &Node{parent: nil}
+	// 初期状態
+	initialState := newState(in)
+	initialState.showGrid()
+	act := initialState.generateAction()
+	log.Println(act)
+	initialState.act = root
+	// ビーム幅
+	beamWidth := 10
+	states := make([]*State, 0, beamWidth)
+	states = append(states, initialState)
+	nextStates := make([]*State, 0, beamWidth)
+	for i := 0; i < 10; i++ {
+		// ビーム幅分の状態を生成
+		for j := 0; j < len(states); j++ {
+			actions := states[j].generateAction()
+			log.Println(i, j, len(actions))
+			for _, action := range actions {
+				newState := states[j].Clone()
+				if newState.Do(action) {
+					newState.act = &Node{act: action, parent: states[j].act}
+					nextStates = append(nextStates, newState)
+				} else {
+					log.Println("Do failed", action)
+				}
+			}
+		}
+		log.Println(i, len(nextStates))
+		sort.Slice(nextStates, func(i, j int) bool {
+			return nextStates[i].score > nextStates[j].score
+		})
+		states = make([]*State, 0, len(nextStates))
+		copy(states, nextStates)
+		nextStates = make([]*State, 0)
+	}
+	lastAct := states[0].act
+	for lastAct != nil {
+		ans = append(ans, lastAct.act)
+		lastAct = lastAct.parent
+	}
+	return ans
+}
+
+func index(y, x int) int {
+	return y*GridSize + x
 }
 
 type State struct {
 	grid  [GridSize * GridSize]byte
 	pos   Pos
 	score int
+	act   *Node
 }
 
-func (s *State) Do(a Action) {
-	if s.grid[s.pos.y][s.pos.x] == '.' {
-		s.score++
+func (s State) showGrid() {
+	for i := 0; i < 20; i++ {
+		log.Println(string(s.grid[i*20 : i*20+20]))
 	}
+}
+
+func (s State) Clone() *State {
+	newState := &State{}
+	copy(newState.grid[:], s.grid[:])
+	newState.pos = s.pos
+	newState.score = s.score
+	return newState
+}
+
+func newState(in In) *State {
+	s := &State{}
+	copy(s.grid[:], in.grid[:])
+	for i := 0; i < 20*20; i++ {
+		if in.grid[i] == 'A' {
+			s.pos = Pos{i / 20, i % 20}
+		}
+	}
+	return s
+}
+
+func (s *State) Do(a Action) bool {
+	// 移動は全てグリッドの中
+	if a.dict == Up && s.pos.y == 0 {
+		return false
+	}
+	if a.dict == Down && s.pos.y == 19 {
+		return false
+	}
+	if a.dict == Left && s.pos.x == 0 {
+		return false
+	}
+	if a.dict == Right && s.pos.x == 19 {
+		return false
+	}
+	if a.act == Carry && s.grid[index(s.pos.y, s.pos.x)] == '.' {
+		return false
+	}
+	if a.act == Carry && isHole(s.grid[index(s.pos.y, s.pos.x)]) {
+		return false
+	}
+	if a.act == Roll && s.grid[index(s.pos.y, s.pos.x)] == '.' {
+		return false
+	}
+	if a.act == Roll && isHole(s.grid[index(s.pos.y, s.pos.x)]) {
+		return false
+	}
+	// 移動先に鉱石か岩があったら運べない、転がせない
+	if a.act == Carry || a.act == Roll {
+		nextPos := Pos{s.pos.y + dy[a.dict], s.pos.x + dx[a.dict]}
+		if isRock(s.grid[index(nextPos.y, nextPos.x)]) || isHole(s.grid[index(nextPos.y, nextPos.x)]) {
+			return false
+		}
+	}
+	switch a.act {
+	case Move:
+		// 単純な移動
+		s.pos.y += dy[a.dict]
+		s.pos.x += dx[a.dict]
+	case Carry:
+		// 持って運ぶ　行き先は穴か空き地
+		nextPos := Pos{s.pos.y + dy[a.dict], s.pos.x + dx[a.dict]}
+		if isHole(s.grid[index(nextPos.y, nextPos.x)]) {
+			// 行き先が穴ならなんでも落ちる
+			if isStone(s.grid[index(s.pos.y, s.pos.x)]) {
+				if s.grid[index(s.pos.y, s.pos.x)] == s.grid[index(nextPos.y, nextPos.x)]-32 {
+					// 同じアルファベットの大文字と小文字
+					s.score++
+				} else {
+					log.Println("鉱石を違う穴に落とした")
+				}
+			} else if isRock(s.grid[index(s.pos.y, s.pos.x)]) {
+				// 岩を落とした
+				log.Println("岩を落とした")
+			}
+			// 穴に落としたら元のマスは空になる
+			s.grid[index(s.pos.y, s.pos.x)] = '.'
+		} else if s.grid[index(nextPos.y, nextPos.x)] == '.' {
+			s.grid[index(nextPos.y, nextPos.x)] = s.grid[index(s.pos.y, s.pos.x)]
+			s.grid[index(s.pos.y, s.pos.x)] = '.'
+		}
+	case Roll:
+		// 転がす 現在位置は動かない
+		nextPos := s.pos
+		prev := s.pos
+		// 進めるだけ進む
+		for nextPos.y >= 0 && nextPos.y < 20 && nextPos.x >= 0 && nextPos.x < 20 {
+			if s.grid[index(nextPos.y, nextPos.x)] == '.' {
+				prev = nextPos
+				nextPos.y += dy[a.dict]
+				nextPos.x += dx[a.dict]
+			} else {
+				// '.' 以外のマスに当たった
+				break
+			}
+		}
+		if isHole(s.grid[index(nextPos.y, nextPos.x)]) {
+			// 穴で止まる
+			if isStone(s.grid[index(s.pos.y, s.pos.x)]) {
+				if s.grid[index(s.pos.y, s.pos.x)] == s.grid[index(nextPos.y, nextPos.x)]-32 {
+					s.score++
+				} else {
+					log.Println("鉱石を違う穴に落とした")
+				}
+			}
+			if isRock(s.grid[index(s.pos.y, s.pos.x)]) {
+				// 岩を落とした
+			}
+		} else {
+			s.grid[index(prev.y, prev.x)] = s.grid[index(s.pos.y, s.pos.x)]
+		}
+		s.grid[index(s.pos.y, s.pos.x)] = '.'
+	}
+	return true
+}
+
+var dy = []int{0, -1, 1, 0, 0}
+var dx = []int{0, 0, 0, -1, 1}
+
+func (s State) generateAction() (actions []Action) {
+	actions = make([]Action, 0, 12)
+	// 全ての条件で使える行動
+	actions = append(actions, Action{act: Move, dict: Up})
+	actions = append(actions, Action{act: Move, dict: Up})
+	actions = append(actions, Action{act: Move, dict: Down})
+	actions = append(actions, Action{act: Move, dict: Left})
+	actions = append(actions, Action{act: Move, dict: Right})
+	if s.grid[index(s.pos.y, s.pos.x)] == '.' || isHole(s.grid[index(s.pos.y, s.pos.x)]) {
+		// 現在地が、空き地または穴の時は運ぶ、転がすはできない
+		return actions
+	}
+	// a-zの鉱山, または岩が存在する時
+	actions = append(actions, Action{act: Carry, dict: Up})
+	actions = append(actions, Action{act: Carry, dict: Down})
+	actions = append(actions, Action{act: Carry, dict: Left})
+	actions = append(actions, Action{act: Carry, dict: Right})
+	actions = append(actions, Action{act: Roll, dict: Up})
+	actions = append(actions, Action{act: Roll, dict: Down})
+	actions = append(actions, Action{act: Roll, dict: Left})
+	actions = append(actions, Action{act: Roll, dict: Right})
+	return actions
 }
 
 type Pos struct {
@@ -71,13 +264,37 @@ type Action struct {
 	dict Direction
 }
 
+func (a Action) String() string {
+	switch a.dict {
+	case Up:
+		return fmt.Sprintf("%d U\n", a.act)
+	case Down:
+		return fmt.Sprintf("%d D\n", a.act)
+	case Left:
+		return fmt.Sprintf("%d L\n", a.act)
+	case Right:
+		return fmt.Sprintf("%d R\n", a.act)
+	}
+	return ""
+}
+
+type Node struct {
+	act    Action
+	parent *Node
+}
+
 const GridSize = 20
 
-func solver(in In) (ans string) {
-	for i := 0; i < in.N; i++ {
-		log.Println(string(in.grid[i*GridSize : i*GridSize+in.N]))
-	}
-	return ans
+func isHole(c byte) bool {
+	return c >= 'A' && c <= 'Z'
+}
+
+func isStone(c byte) bool {
+	return c >= 'a' && c <= 'z'
+}
+
+func isRock(c byte) bool {
+	return c == '@'
 }
 
 type In struct {
@@ -105,4 +322,11 @@ func readInput() In {
 		}
 	}
 	return in
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
