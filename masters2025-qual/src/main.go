@@ -45,7 +45,7 @@ func beamSearch(in In) (ans []Action) {
 
 	//panic("stop")
 	// ビーム幅
-	beamWidth := 1
+	beamWidth := 10
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
@@ -119,7 +119,7 @@ func beamSearch(in In) (ans []Action) {
 		//log.Println(states[0].stones)
 	}
 	lastAct := states[0].act
-	for lastAct != nil {
+	for lastAct.parent != nil {
 		ans = append(ans, lastAct.act)
 		lastAct = lastAct.parent
 	}
@@ -382,6 +382,8 @@ const (
 	Right Direction = 4
 )
 
+var directionStrings = []string{"", "U", "D", "L", "R"}
+
 var directions = []Direction{Up, Down, Left, Right}
 
 type Action struct {
@@ -390,17 +392,7 @@ type Action struct {
 }
 
 func (a Action) String() string {
-	switch a.dict {
-	case Up:
-		return fmt.Sprintf("%d U", a.act)
-	case Down:
-		return fmt.Sprintf("%d D", a.act)
-	case Left:
-		return fmt.Sprintf("%d L", a.act)
-	case Right:
-		return fmt.Sprintf("%d R", a.act)
-	}
-	return ""
+	return fmt.Sprintf("%d %s", a.act, directionStrings[a.dict])
 }
 
 type Node struct {
