@@ -88,15 +88,46 @@ type State struct {
 }
 
 func (s State) eval() int {
+	// distance from pos
+	// @をさけて移動する時の距離
+	var distance [GridSize * GridSize]int
+	for i := 0; i < GridSize*GridSize; i++ {
+		distance[i] = 100000
+	}
+	distance[index(s.pos.y, s.pos.x)] = 0
+	que := make([]Pos, 0, 20*20)
+	que = append(que, s.pos)
+	for len(que) > 0 {
+		p := que[0]
+		que = que[1:]
+		for _, d := range directions {
+			nextPos := Pos{p.y + dy[d], p.x + dx[d]}
+			if !(nextPos.y >= 0 && nextPos.y < 20 && nextPos.x >= 0 && nextPos.x < 20) {
+				continue
+			}
+			if isRock(s.grid[index(nextPos.y, nextPos.x)]) {
+				continue
+			}
+			if distance[index(nextPos.y, nextPos.x)] > distance[index(p.y, p.x)]+1 {
+				distance[index(nextPos.y, nextPos.x)] = distance[index(p.y, p.x)] + 1
+				que = append(que, nextPos)
+			}
+		}
+	}
+	for i := 0; i < 20; i++ {
+		log.Println(i, distance[i*20:i*20+20])
+	}
+	panic("stop")
 
 	var minStoneDist int
 	// なにもないとき
 	// もっとも近い鉱石までの距離
-	minStoneDist = 100
+	minStoneDist = 1000
 	for i := 0; i < 20; i++ {
 		for j := 0; j < 20; j++ {
 			if isStone(s.grid[index(i, j)]) {
-				dist := abs(i-s.pos.y) + abs(j-s.pos.x)
+				//dist := abs(i-s.pos.y) + abs(j-s.pos.x)
+				dist := distance[index(i, j)]
 				minStoneDist = minInt(minStoneDist, dist)
 			}
 		}
@@ -104,11 +135,12 @@ func (s State) eval() int {
 	var minHoleDist int
 	// もっとも近い穴までの距離
 	if minStoneDist == 0 {
-		minHoleDist = 100
+		minHoleDist = 1000
 		for i := 0; i < 20; i++ {
 			for j := 0; j < 20; j++ {
 				if isHole(s.grid[index(i, j)]) {
-					dist := minInt(abs(i-s.pos.y), abs(j-s.pos.x))
+					//dist := minInt(abs(i-s.pos.y), abs(j-s.pos.x))
+					dist := distance[index(i, j)]
 					minHoleDist = minInt(minHoleDist, dist)
 				}
 			}
