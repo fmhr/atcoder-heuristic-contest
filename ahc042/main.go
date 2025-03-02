@@ -415,8 +415,8 @@ func randomOniMove(s State) (actionLogs []ActionLog, allStep int, success bool) 
 			} else {
 				return actionLogs, allStep, false
 			}
-			log.Println("LAST", oniPos[0].x, oniPos[0].y)
-			log.Println("action", actionStr(actionLogs[len(actionLogs)-1].act), actionLogs[len(actionLogs)-1].target)
+			//log.Println("LAST", oniPos[0].x, oniPos[0].y)
+			//log.Println("action", actionStr(actionLogs[len(actionLogs)-1].act), actionLogs[len(actionLogs)-1].target)
 			//for i := 0; i < 20; i++ {
 			//log.Printf("%s\n", string(s.state[i][:]))
 			//}

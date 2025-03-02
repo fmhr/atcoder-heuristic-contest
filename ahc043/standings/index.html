@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>AHC Standings</title>
+	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/select/1.7.0/css/select.dataTables.min.css">
+	<script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+	<script type="text/javascript" charset="utf8"
+		src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+	<script type="text/javascript" charset="utf8"
+		src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.2/math.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script
+		src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+</head>
+
+<body>
+	<p>
+		<label>
+			Input Filter:
+			<input type="text" id="input_filter" onchange="updateTable()">
+		</label>&emsp;
+		<text id="input_keys"></text>&emsp;
+		<text id="num_inputs">Loading...</text>
+		<span style="position: absolute; right:0;"><a href="./usage.html">Usage</a>&emsp;</span>
+	</p>
+	<table id="resultTable" class="display compact">
+	</table>
+	<hr>
+	<p>
+		<label>
+			X-axis:
+			<input type="text" id="x_axis" onchange="plotChart()">
+		</label>&emsp;
+		<label>
+			Type:
+			<select id="type_selector" onchange="plotChart()">
+				<option value="line">Line</option>
+				<option value="scatter">Scatter</option>
+				<option value="versus">Versus</option>
+			</select>
+		</label>&emsp;
+		<label>
+			Skip Failed
+			<input type="checkbox" id="skip_failed" checked onchange="plotChart()"></input>
+		</label>&emsp;
+		<button id="deselectAll">Deselect All</button>
+	</p>
+
+	<canvas id="resultChart" style="user-select: none;"></canvas>
+
+	<script>
+		const contest = (new URL(document.location)).searchParams.get("contest");
+		const addParam = (new URL(document.location)).searchParams.get("add");
+		const add = addParam ? addParam.split(',') : [];
+		let score_type = (new URL(document.location)).searchParams.get("score_type");
+		let base = 1000000000;
+
+		let inputs = [];
+		let result = [];
+		let bests;
+		let vis = '';
+
+		async function loadInputCSV() {
+			const response = await fetch(`./${contest}/input.csv`);
+			if (!response.ok) {
+				$('#num_inputs').text(`./${contest}/input.csv is not found`);
+				return;
+
+			}
+			const csvText = await response.text();
+			const lines = csvText.trim().split('\n');
+			const headers = lines[0].split(',');
+			const keys = headers.filter(h => h != 'file' && h != 'seed');
+			$('#input_keys').text(`features = {${keys}}`);
+			inputs = lines.slice(1).map(line => {
+				const values = line.split(',');
+				const rowObj = { file: '', seed: '', features: {} };
+				headers.forEach((header, index) => {
+					if (header == 'file') {
+						rowObj.file = values[index];
+					} else if (header == 'seed') {
+						rowObj.seed = values[index];
+					} else {
+						rowObj.features[header] = parseFloat(values[index]);
+					}
+				});
+				return rowObj;
+			});
+			$('#x_axis').val(headers.find(s => s != 'file' && s != 'seed'));
+		}
+
+		async function loadResultCSV() {
+			let lines = [];
+			for (name of ['result'].concat(add)) {
+				const response = await fetch(`./${contest}/${name}.csv`);
+				if (!response.ok) {
+					$('#num_inputs').text(`./${contest}/${name}.csv is not found`);
+					return;
+				}
+				const csvText = await response.text();
+				lines.push(...csvText.trim().split('\n'));
+			}
+			const headers = lines[0].split(',');
+			if (score_type == null) {
+				score_type = headers[0];
+			}
+			if (headers.length >= 2 && headers[1].length > 0) {
+				base = parseInt(headers[1], 10);
+			}
+			if (headers.length >= 3) {
+				vis = headers[2];
+			}
+			result = lines.slice(1).map(line => {
+				const values = line.split(',');
+				const rowObj = { name: values[0], rank: 0, scores: values.slice(1).map(v => parseInt(v, 10)) };
+				return rowObj;
+			});
+			const n = result[0].scores.length;
+			if (score_type == 'raw') {
+			} else if (score_type == 'max') {
+				for (let i = 0; i < n; i++) {
+					const max = result.reduce((v, r) => r.scores[i] >= 0 ? Math.max(v, r.scores[i]) : v, 0);
+					result.forEach(r => {
+						if (r.scores[i] >= 0) {
+							r.scores[i] = Math.round(base * r.scores[i] / max);
+						}
+					});
+				}
+			} else if (score_type == 'min') {
+				for (let i = 0; i < n; i++) {
+					const min = result.reduce((v, r) => r.scores[i] >= 0 ? Math.min(v, r.scores[i]) : v, Infinity);
+					result.forEach(r => {
+						if (r.scores[i] >= 0) {
+							r.scores[i] = Math.round(base * min / r.scores[i]);
+						}
+					});
+				}
+			} else if (score_type == 'rank_min' || score_type == 'rank_max') {
+				for (let i = 0; i < n; i++) {
+					let sorted = result
+						.map((s, idx) => ({ score: s.scores[i], index: idx }))
+						.filter(s => s.score >= 0)
+						.sort((a, b) => a.score - b.score);
+					if (score_type === "rank_max") {
+						sorted.reverse();
+					}
+					let s = 0;
+					while (s < sorted.length) {
+						let t = s + 1;
+						while (t < sorted.length && sorted[s].score === sorted[t].score) {
+							t++;
+						}
+						let r = s + (t - s - 1) * 0.5;
+						let v = Math.round(base * (1.0 - r / result.length));
+						for (let j = s; j < t; j++) {
+							result[sorted[j].index].scores[i] = v;
+						}
+						s = t;
+					}
+				}
+			} else {
+				alert(`Illegal contest type: ${score_type}`);
+				return;
+			}
+			let sums = result.map(r => {
+				let scoreSum = r.scores.map(s => Math.max(s, 0)).reduce((acc, val) => acc + val, 0);
+				return { score: scoreSum, data: r };
+			});
+			sums.sort((a, b) => b.score - a.score);
+			let rank = 0;
+			for (let i = 0; i < sums.length; i++) {
+				if (i === 0 || sums[i - 1].score !== sums[i].score) {
+					rank = i + 1;
+				}
+				sums[i].data.rank = rank;
+			}
+			result = sums.map(item => item.data);
+		}
+
+		Promise.all([loadInputCSV(), loadResultCSV()]).then(() => {
+			bests = Array.from({ length: inputs.length }, (_, i) => {
+				let max = 0;
+				let count = 0;
+				for (const r of result) {
+					if (max < r.scores[i]) {
+						max = r.scores[i];
+						count = 1;
+					} else if (max == r.scores[i]) {
+						count += 1;
+					}
+				}
+				return [max, count];
+			});
+			updateTable();
+		});
+
+		function color(val) {
+			const clampedVal = Math.min(1.0, Math.max(0.0, val));
+			let r, g, b;
+			if (clampedVal < 0.5) {
+				const x = clampedVal * 2.0;
+				r = 30.0 * (1.0 - x) + 144.0 * x;
+				g = 144.0 * (1.0 - x) + 255.0 * x;
+				b = 255.0 * (1.0 - x) + 30.0 * x;
+			} else {
+				const x = clampedVal * 2.0 - 1.0;
+				r = 144.0 * (1.0 - x) + 255.0 * x;
+				g = 255.0 * (1.0 - x) + 30.0 * x;
+				b = 30.0 * (1.0 - x) + 70.0 * x;
+			}
+			return `rgb(${r},${g},${b})`;
+		}
+
+
+		let resultChart;
+		let table;
+
+		$('#deselectAll').on('click', function () {
+			table.rows({ selected: true }).deselect();
+			plotChart();
+		});
+
+		function openVis(evt) {
+			const activePoints = resultChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+			if (activePoints.length > 0) {
+				const seed = activePoints[0].element.$context.raw.seed;
+				if (seed != '') {
+					window.open(`${vis}?seed=${seed}`, '_blank');
+				}
+			}
+		}
+
+		function plotChart() {
+			if (!table || inputs.length == 0 || result.length == 0) {
+				return;
+			}
+			const filter = $('#input_filter').val().trim();
+			let input_ids;
+			try {
+				input_ids = Array.from({ length: inputs.length }, (_, i) => i).filter(i => filter == '' ? true : math.evaluate(filter, { ...inputs[i].features }));
+			} catch (err) {
+				console.log(err);
+				return;
+			}
+			const x_axis = $("#x_axis").val().trim();
+			const xs = input_ids.map(i => {
+				if (x_axis === "") {
+					return parseInt(inputs[i].file, 10);
+				} else {
+					return math.evaluate(x_axis, { ...inputs[i].features });
+				}
+			});
+			const users = table.rows({ selected: true }).indexes().toArray();
+			const type = $("#type_selector").val();
+			const skip_failed = $("#skip_failed").prop("checked");
+			if (type === "scatter") {
+				const datasets = users.map(u => {
+					const r = result[u];
+					return {
+						label: r.name,
+						data: input_ids.filter((id, i) => !skip_failed || r.scores[id] >= 0).map((id, i) => {
+							return {
+								x: xs[i],
+								y: Math.max(0, r.scores[id]),
+								title: `user: ${r.name}\ninput: ${inputs[id].file} ${JSON.stringify(inputs[id].features).replace(/\"/g, "")}\nscore: ${r.scores[id]}`,
+								seed: inputs[id].seed
+							}
+						}),
+					}
+				});
+				if (resultChart) {
+					resultChart.destroy();
+				}
+				const ctx = document.getElementById('resultChart').getContext('2d');
+				resultChart = new Chart(ctx, {
+					type: 'scatter',
+					data: {
+						datasets: datasets
+					},
+					options: {
+						scales: {
+							x: {
+								type: 'linear',
+								position: 'bottom'
+							}
+						},
+						animation: {
+							duration: 0
+						},
+						plugins: {
+							tooltip: {
+								callbacks: {
+									title: function (context) {
+										return context[0].raw.title
+									}
+								}
+							},
+						}
+					}
+				});
+				if (vis != '') {
+					$('#resultChart').off('dblclick', openVis);
+					$('#resultChart').on('dblclick', openVis);
+				}
+			} else if (type == "line") {
+				const id_xs = input_ids.map((id, i) => [id, xs[i]]);
+				id_xs.sort((a, b) => a[1] - b[1]);
+				const uniq = [];
+				id_xs.forEach(ix => {
+					if (uniq.length == 0 || uniq[uniq.length - 1] != ix[1]) {
+						uniq.push(ix[1]);
+					}
+				});
+				const D = Math.min(uniq.length, 50);
+				const datasets = users.map(u => {
+					const r = result[u];
+					const data = [];
+					let j = 0;
+					for (let i = 0; i < D; i++) {
+						const s = Math.floor(uniq.length * i / D);
+						const t = Math.floor(uniq.length * (i + 1) / D);
+						let sum_x = 0;
+						let sum_y = 0;
+						let num = 0;
+						while (j < id_xs.length && (t == uniq.length || id_xs[j][1] < uniq[t])) {
+							if (!skip_failed || r.scores[id_xs[j][0]] >= 0) {
+								sum_x += id_xs[j][1];
+								sum_y += Math.max(0, r.scores[id_xs[j][0]]);
+								num += 1;
+							}
+							j += 1;
+						}
+						if (num > 0) {
+							const avg_y = Math.round(sum_y / num);
+							data.push({
+								x: sum_x / num,
+								y: avg_y,
+								title: `user: ${r.name}\nrange: [${uniq[s]}, ${uniq[t - 1]}]\n#inputs: ${num}\naverage: ${avg_y}`
+							});
+						}
+					}
+					return {
+						label: r.name,
+						data: data,
+						cubicInterpolationMode: 'monotone',
+					}
+				});
+				if (resultChart) {
+					resultChart.destroy();
+				}
+				const ctx = document.getElementById('resultChart').getContext('2d');
+				resultChart = new Chart(ctx, {
+					type: 'line',
+					data: {
+						datasets: datasets
+					},
+					options: {
+						scales: {
+							x: {
+								type: 'linear',
+								position: 'bottom'
+							}
+						},
+						animation: {
+							duration: 0
+						},
+						plugins: {
+							tooltip: {
+								callbacks: {
+									title: function (context) {
+										return context[0].raw.title
+									}
+								}
+							},
+						}
+					},
+				});
+				if (vis != '') {
+					$('#resultChart').off('dblclick', openVis);
+				}
+			} else if (type === "versus") {
+				if (users.length == 2) {
+					const min = xs.reduce((v, x) => Math.min(v, x), Infinity);
+					const max = xs.reduce((v, x) => Math.max(v, x), -Infinity);
+					const datasets = [{
+						label: `${result[users[0]].name} (x) vs ${result[users[1]].name} (y)`,
+						data: input_ids.filter(id => !skip_failed || result[users[0]].scores[id] >= 0 && result[users[1]].scores[id] >= 0).map(id => {
+							return {
+								x: Math.max(0, result[users[0]].scores[id]),
+								y: Math.max(0, result[users[1]].scores[id]),
+								title: `input: ${inputs[id].file} ${JSON.stringify(inputs[id].features).replace(/\"/g, "")}`,
+								seed: inputs[id].seed
+							}
+						}),
+						backgroundColor: xs.map(x => color(min == max ? 0.5 : (x - min) / (max - min)))
+					}];
+					if (resultChart) {
+						resultChart.destroy();
+					}
+					const ctx = document.getElementById('resultChart').getContext('2d');
+					const minScore = Math.min(...datasets[0].data.map(d => Math.min(d.x, d.y)));
+					const maxScore = Math.max(...datasets[0].data.map(d => Math.max(d.x, d.y)));
+					resultChart = new Chart(ctx, {
+						type: 'scatter',
+						data: {
+							datasets: datasets
+						},
+						options: {
+							scales: {
+								x: {
+									type: 'linear',
+									position: 'bottom',
+									suggestedMin: minScore,
+									suggestedMax: maxScore,
+								},
+								y: {
+									suggestedMin: minScore,
+									suggestedMax: maxScore,
+								}
+							},
+							animation: {
+								duration: 0
+							},
+							plugins: {
+								tooltip: {
+									callbacks: {
+										title: function (context) {
+											return context[0].raw.title
+										}
+									}
+								},
+								annotation: {
+									annotations: {
+										line1: {
+											type: 'line',
+											value: 0,
+											endValue: 10,
+											borderColor: 'rgba(128, 128, 128, 0.25)',
+											borderWidth: 1,
+											label: {
+												enabled: false
+											}
+										}
+									}
+								}
+							}
+						}
+					});
+					if (vis != '') {
+						$('#resultChart').off('dblclick', openVis);
+						$('#resultChart').on('dblclick', openVis);
+					}
+				} else {
+					if (resultChart) {
+						resultChart.destroy();
+					}
+				}
+			} else {
+				console.log("unknown type", type);
+			}
+		}
+
+		function updateTable() {
+			if (inputs.length == 0 || result.length == 0) {
+				return;
+			}
+			const filter = $('#input_filter').val().trim();
+			let input_ids;
+			try {
+				input_ids = Array.from({ length: inputs.length }, (_, i) => i).filter(i => filter == '' ? true : math.evaluate(filter, { ...inputs[i].features }));
+			} catch (err) {
+				console.log(err);
+				$("#num_inputs").html("Invalid");
+				return;
+			}
+			$("#num_inputs").html(`#inputs = ${input_ids.length}`);
+			const data = result.map(r => {
+				let ac_scores = input_ids.filter(i => r.scores[i] >= 0).map(i => r.scores[i]);
+				return {
+					name: r.name,
+					rank: r.rank,
+					score: input_ids.map(i => Math.max(r.scores[i], 0)).reduce((a, b) => a + b, 0),
+					mean: ac_scores.length > 0 ? Math.round(math.mean(ac_scores)) : 0,
+					std: ac_scores.length > 0 ? Math.round(math.std(ac_scores, 'uncorrected')) : 0,
+					best: input_ids.filter(i => r.scores[i] == bests[i][0]).length,
+					unique: input_ids.filter(i => r.scores[i] == bests[i][0] && bests[i][1] == 1).length,
+					fail: input_ids.filter(i => r.scores[i] < 0).length,
+				};
+			});
+			const sorted = data.map((_, i) => i).sort((a, b) => data[b].score - data[a].score);
+			let rank = 0;
+			for (let i = 0; i < data.length; i++) {
+				if (i == 0 || data[sorted[i - 1]].score != data[sorted[i]].score) {
+					rank = i + 1;
+				}
+				data[sorted[i]].subsetRank = rank;
+			}
+			const dataSet = data.map(d => [d.rank, d.subsetRank, d.name, d.score.toLocaleString('en-US'), `${d.mean.toLocaleString('en-US')} ± ${d.std.toLocaleString('en-US')}`, d.best, d.unique, d.fail]);
+			if (table) {
+				const users = table.rows({ selected: true }).indexes();
+				table.clear();
+				table.rows.add(dataSet);
+				table.draw();
+				table.rows(users).select();
+			} else {
+				table = $('#resultTable').DataTable({
+					data: dataSet,
+					pageLength: 10,
+					select: {
+						style: 'multi'
+					},
+					columns: [
+						{ title: "Rank" },
+						{ title: "SubRank" },
+						{ title: "User" },
+						{ title: "Score" },
+						{ title: "Mean ± SD" },
+						{ title: "#Best" },
+						{ title: "#Unique" },
+						{ title: "#Fail" }
+					],
+				});
+				$('#resultTable tbody').on('click', 'tr', function () {
+					const data = table.row(this).data();
+					const user = data[2];
+					setTimeout(() => {
+						plotChart(user);
+					}, 0);
+				});
+			}
+			plotChart();
+		}
+	</script>
+
+</body>
+
+</html>
