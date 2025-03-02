@@ -44,7 +44,7 @@ func beamSearch(in In) (ans []Action) {
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 5000; i++ {
 		// ビーム幅分の状態を生成
 		for j := range states {
 			actions := states[j].generateAction()
@@ -65,8 +65,12 @@ func beamSearch(in In) (ans []Action) {
 		states = make([]*State, minInt(beamWidth, len(nextStates)))
 		copy(states, nextStates)
 		nextStates = make([]*State, 0)
-		log.Println(i, states[0].score, states[0].eval(), states[0].act.act)
-		states[0].showGrid()
+		//log.Println(i, states[0].score, states[0].eval(), states[0].act.act)
+		//states[0].showGrid()
+		if states[0].stones[0]+states[0].stones[1]+states[0].stones[2] == 0 {
+			log.Println("finish")
+			break
+		}
 	}
 	lastAct := states[0].act
 	for lastAct != nil {
@@ -81,10 +85,11 @@ func index(y, x int) int {
 }
 
 type State struct {
-	grid  [GridSize * GridSize]byte
-	pos   Pos
-	score int
-	act   *Node
+	grid   [GridSize * GridSize]byte
+	stones [3]int
+	pos    Pos
+	score  int
+	act    *Node
 }
 
 func (s State) eval() int {
@@ -114,15 +119,14 @@ func (s State) eval() int {
 			}
 		}
 	}
-	for i := 0; i < 20; i++ {
-		log.Println(i, distance[i*20:i*20+20])
-	}
-	panic("stop")
+	//for i := 0; i < 20; i++ {
+	//log.Println(i, distance[i*20:i*20+20])
+	//}
+	//panic("stop")
 
-	var minStoneDist int
 	// なにもないとき
 	// もっとも近い鉱石までの距離
-	minStoneDist = 1000
+	minStoneDist := 1000
 	for i := 0; i < 20; i++ {
 		for j := 0; j < 20; j++ {
 			if isStone(s.grid[index(i, j)]) {
@@ -148,8 +152,9 @@ func (s State) eval() int {
 	}
 	bonus := 0
 	if minStoneDist == 0 {
-		bonus = 10
+		bonus = 100
 	}
+	//log.Println("minStoneDist", minStoneDist, "minHoleDist", minHoleDist, "bonus", bonus)
 	return s.score*1000 - minStoneDist - minHoleDist + bonus
 }
 
@@ -165,6 +170,7 @@ func (s State) Clone() *State {
 	copy(newState.grid[:], s.grid[:])
 	newState.pos = s.pos
 	newState.score = s.score
+	newState.stones = s.stones
 	return newState
 }
 
@@ -174,6 +180,9 @@ func newState(in In) *State {
 	for i := 0; i < 20*20; i++ {
 		if in.grid[i] == 'A' {
 			s.pos = Pos{i / 20, i % 20}
+		}
+		if in.grid[i] == 'a' {
+			s.stones[0]++
 		}
 	}
 	log.Println("start pos", s.pos)
@@ -209,7 +218,7 @@ func (s *State) Do(a Action) bool {
 	// 移動先に鉱石か岩があったら運べない、転がせない
 	if a.act == Carry || a.act == Roll {
 		nextPos := Pos{s.pos.y + dy[a.dict], s.pos.x + dx[a.dict]}
-		if isRock(s.grid[index(nextPos.y, nextPos.x)]) || isHole(s.grid[index(nextPos.y, nextPos.x)]) {
+		if isRock(s.grid[index(nextPos.y, nextPos.x)]) || isStone(s.grid[index(nextPos.y, nextPos.x)]) {
 			return false
 		}
 	}
@@ -226,13 +235,24 @@ func (s *State) Do(a Action) bool {
 			if isStone(s.grid[index(s.pos.y, s.pos.x)]) {
 				if s.grid[index(s.pos.y, s.pos.x)] == s.grid[index(nextPos.y, nextPos.x)]+32 {
 					// 同じアルファベットの大文字と小文字
-					s.score++
+					s.grid[index(s.pos.y, s.pos.x)] = '.'
 					log.Println("鉱石を穴に落とした")
+					s.score++
 				} else {
+					s.grid[index(s.pos.y, s.pos.x)] = '.'
 					log.Println("鉱石を違う穴に落とした")
+				}
+				switch s.grid[index(s.pos.y, s.pos.x)] {
+				case 'a':
+					s.stones[0]--
+				case 'b':
+					s.stones[1]--
+				case 'c':
+					s.stones[2]--
 				}
 			} else if isRock(s.grid[index(s.pos.y, s.pos.x)]) {
 				// 岩を落とした
+				s.grid[index(s.pos.y, s.pos.x)] = '.'
 				log.Println("岩を落とした")
 			}
 			// 穴に落としたら元のマスは空になる
@@ -240,8 +260,8 @@ func (s *State) Do(a Action) bool {
 		} else if s.grid[index(nextPos.y, nextPos.x)] == '.' {
 			s.grid[index(nextPos.y, nextPos.x)] = s.grid[index(s.pos.y, s.pos.x)]
 			s.grid[index(s.pos.y, s.pos.x)] = '.'
-			s.pos = nextPos
 		}
+		s.pos = nextPos
 	case Roll:
 		// 転がす 現在位置は動かない
 		nextPos := s.pos
@@ -261,7 +281,7 @@ func (s *State) Do(a Action) bool {
 				break
 			}
 		}
-		log.Println("next", nextPos, "prev", prev, string(s.grid[index(nextPos.y, nextPos.x)]))
+		//log.Println("next", nextPos, "prev", prev, string(s.grid[index(nextPos.y, nextPos.x)]))
 		if isHole(s.grid[index(nextPos.y, nextPos.x)]) {
 			// 穴で止まる
 			if isStone(s.grid[index(s.pos.y, s.pos.x)]) {
@@ -272,6 +292,15 @@ func (s *State) Do(a Action) bool {
 					log.Println(s.grid[index(s.pos.y, s.pos.x)], s.grid[index(nextPos.y, nextPos.x)])
 					log.Println("鉱石を違う穴に落とした")
 				}
+				switch s.grid[index(s.pos.y, s.pos.x)] {
+				case 'a':
+					s.stones[0]--
+				case 'b':
+					s.stones[1]--
+				case 'c':
+					s.stones[2]--
+				}
+
 			}
 			if isRock(s.grid[index(s.pos.y, s.pos.x)]) {
 				// 岩を落とした
