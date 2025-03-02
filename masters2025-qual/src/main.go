@@ -45,9 +45,9 @@ func beamSearch(in In) (ans []Action) {
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
-	for i := 0; i < 10; i++ {
+	for i := range [10]int{} {
 		// ビーム幅分の状態を生成
-		for j := 0; j < len(states); j++ {
+		for j := range states {
 			actions := states[j].generateAction()
 			log.Println(i, j, len(actions))
 			for _, action := range actions {
@@ -67,6 +67,7 @@ func beamSearch(in In) (ans []Action) {
 		states = make([]*State, 0, len(nextStates))
 		copy(states, nextStates)
 		nextStates = make([]*State, 0)
+		log.Println(len(states), len(nextStates))
 	}
 	lastAct := states[0].act
 	for lastAct != nil {
