@@ -49,7 +49,7 @@ run_go:
 
 # 可視化ツールを実行
 run_vis:
-	./tools/target/release/vis tools/in/$(PADDING_NUM).txt $(PADDING_NUM).txt
+	./tools/target/release/score tools/in/$(PADDING_NUM).txt $(PADDING_NUM).txt
 #cd tools && cargo run -r --bin vis in/$(PADDING_NUM).txt ../$(PADDING_NUM).txt
 
 # 両方のコマンドをまとめて実行
@@ -57,7 +57,7 @@ run: build run_go run_vis
 
 #### reactive
 run_reactive:
-	$(RUN_CMD) go run $(SRC) < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+	$(RUN_CMD) go run $(SRC) < tools/inA/$(PADDING_NUM).txt > $(PADDING_NUM).txt
 
 run_cpu:
-	$(RUN_CMD) go run $(SRC) -cpuprofile cpu.prof < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+	$(RUN_CMD) go run $(SRC) -cpuprofile cpu.prof < tools/inA/$(PADDING_NUM).txt > $(PADDING_NUM).txt

@@ -30,15 +30,20 @@ func main() {
 		fmt.Println(a)
 	}
 	//log.Printf("in: %+v\n", in)
+	log.Printf("time=%v", time.Since(startTime))
 }
 
 func beamSearch(in In) (ans []Action) {
 	root := &Node{parent: nil}
 	// 初期状態
 	initialState := newState(in)
-	initialState.showGrid()
+	//initialState.showGrid()
 	initialState.act = root
 	log.Println("initialState.eval()", initialState.eval())
+	//ant := initialState.generateAction()
+	//log.Println(ant)
+
+	//panic("stop")
 	// ビーム幅
 	beamWidth := 1
 	states := make([]*State, 0, beamWidth)
@@ -47,14 +52,54 @@ func beamSearch(in In) (ans []Action) {
 	for i := 0; i < 5000; i++ {
 		// ビーム幅分の状態を生成
 		for j := range states {
-			actions := states[j].generateAction()
-			for _, action := range actions {
+			//actions := states[j].generateAction()
+			for _, action := range allactions {
+				g := states[j].grid[index(states[j].pos.y, states[j].pos.x)]
+				if g == '.' && (action.act == Carry || action.act == Roll) {
+					continue
+				}
+				if isHole(g) && (action.act == Carry || action.act == Roll) {
+					continue
+				}
+				a := action
+				s := states[j]
+				if a.dict == Up && s.pos.y == 0 {
+					continue
+				}
+				if a.dict == Down && s.pos.y == 19 {
+					continue
+				}
+				if a.dict == Left && s.pos.x == 0 {
+					continue
+				}
+				if a.dict == Right && s.pos.x == 19 {
+					continue
+				}
+				if a.act == Carry && s.grid[index(s.pos.y, s.pos.x)] == '.' {
+					continue
+				}
+				if a.act == Carry && isHole(s.grid[index(s.pos.y, s.pos.x)]) {
+					continue
+				}
+				if a.act == Roll && s.grid[index(s.pos.y, s.pos.x)] == '.' {
+					continue
+				}
+				if a.act == Roll && isHole(s.grid[index(s.pos.y, s.pos.x)]) {
+					continue
+				}
+				// 移動先に鉱石か岩があったら運べない、転がせない
+				if a.act == Carry || a.act == Roll {
+					nextPos := Pos{s.pos.y + dy[a.dict], s.pos.x + dx[a.dict]}
+					if isRock(s.grid[index(nextPos.y, nextPos.x)]) || isStone(s.grid[index(nextPos.y, nextPos.x)]) {
+						continue
+					}
+				}
 				newState := states[j].Clone()
 				if newState.Do(action) {
 					newState.act = &Node{act: action, parent: states[j].act}
 					nextStates = append(nextStates, newState)
 				} else {
-					//log.Println("Do failed", action)
+					log.Println("Do failed", action)
 				}
 			}
 		}
@@ -71,12 +116,17 @@ func beamSearch(in In) (ans []Action) {
 			log.Println("finish")
 			break
 		}
+		//log.Println(states[0].stones)
 	}
 	lastAct := states[0].act
 	for lastAct != nil {
 		ans = append(ans, lastAct.act)
 		lastAct = lastAct.parent
 	}
+	for i := 0; i < len(ans)/2; i++ {
+		ans[i], ans[len(ans)-1-i] = ans[len(ans)-1-i], ans[i]
+	}
+	log.Println(len(ans))
 	return ans
 }
 
@@ -92,10 +142,14 @@ type State struct {
 	act    *Node
 }
 
+var distance [GridSize * GridSize]int
+
 func (s State) eval() int {
+	if s.stones[0]+s.stones[1]+s.stones[2] == 0 {
+		return s.score * 10000000
+	}
 	// distance from pos
 	// @をさけて移動する時の距離
-	var distance [GridSize * GridSize]int
 	for i := 0; i < GridSize*GridSize; i++ {
 		distance[i] = 100000
 	}
@@ -190,38 +244,7 @@ func newState(in In) *State {
 }
 
 func (s *State) Do(a Action) bool {
-	// 移動は全てグリッドの中
-	if a.dict == Up && s.pos.y == 0 {
-		return false
-	}
-	if a.dict == Down && s.pos.y == 19 {
-		return false
-	}
-	if a.dict == Left && s.pos.x == 0 {
-		return false
-	}
-	if a.dict == Right && s.pos.x == 19 {
-		return false
-	}
-	if a.act == Carry && s.grid[index(s.pos.y, s.pos.x)] == '.' {
-		return false
-	}
-	if a.act == Carry && isHole(s.grid[index(s.pos.y, s.pos.x)]) {
-		return false
-	}
-	if a.act == Roll && s.grid[index(s.pos.y, s.pos.x)] == '.' {
-		return false
-	}
-	if a.act == Roll && isHole(s.grid[index(s.pos.y, s.pos.x)]) {
-		return false
-	}
-	// 移動先に鉱石か岩があったら運べない、転がせない
-	if a.act == Carry || a.act == Roll {
-		nextPos := Pos{s.pos.y + dy[a.dict], s.pos.x + dx[a.dict]}
-		if isRock(s.grid[index(nextPos.y, nextPos.x)]) || isStone(s.grid[index(nextPos.y, nextPos.x)]) {
-			return false
-		}
-	}
+
 	switch a.act {
 	case Move:
 		// 単純な移動
@@ -233,16 +256,14 @@ func (s *State) Do(a Action) bool {
 		if isHole(s.grid[index(nextPos.y, nextPos.x)]) {
 			// 行き先が穴ならなんでも落ちる
 			if isStone(s.grid[index(s.pos.y, s.pos.x)]) {
+				stone := s.grid[index(s.pos.y, s.pos.x)]
 				if s.grid[index(s.pos.y, s.pos.x)] == s.grid[index(nextPos.y, nextPos.x)]+32 {
-					// 同じアルファベットの大文字と小文字
-					s.grid[index(s.pos.y, s.pos.x)] = '.'
-					log.Println("鉱石を穴に落とした")
+					//log.Println("鉱石を穴に落とした")
 					s.score++
 				} else {
-					s.grid[index(s.pos.y, s.pos.x)] = '.'
 					log.Println("鉱石を違う穴に落とした")
 				}
-				switch s.grid[index(s.pos.y, s.pos.x)] {
+				switch stone {
 				case 'a':
 					s.stones[0]--
 				case 'b':
@@ -252,7 +273,6 @@ func (s *State) Do(a Action) bool {
 				}
 			} else if isRock(s.grid[index(s.pos.y, s.pos.x)]) {
 				// 岩を落とした
-				s.grid[index(s.pos.y, s.pos.x)] = '.'
 				log.Println("岩を落とした")
 			}
 			// 穴に落としたら元のマスは空になる
@@ -266,8 +286,11 @@ func (s *State) Do(a Action) bool {
 		// 転がす 現在位置は動かない
 		nextPos := s.pos
 		prev := s.pos
-		nextPos.y += dy[a.dict]
-		nextPos.x += dx[a.dict]
+		//nextPos.y += dy[a.dict]
+		//nextPos.x += dx[a.dict]
+		//log.Println("now", s.pos, string(s.grid[index(s.pos.y, s.pos.x)]))
+		//log.Println("prev", prev, string(s.grid[index(prev.y, prev.x)]))
+		//log.Println("next", nextPos, string(s.grid[index(nextPos.y, nextPos.x)]))
 		// 進めるだけ進む
 		for {
 			prev = nextPos
@@ -277,22 +300,26 @@ func (s *State) Do(a Action) bool {
 				nextPos = prev
 				break
 			}
+			//log.Println(nextPos, string(s.grid[index(nextPos.y, nextPos.x)]))
 			if s.grid[index(nextPos.y, nextPos.x)] != '.' {
 				break
 			}
 		}
+		itemToRall := s.grid[index(s.pos.y, s.pos.x)]
+		s.grid[index(s.pos.y, s.pos.x)] = '.'
 		//log.Println("next", nextPos, "prev", prev, string(s.grid[index(nextPos.y, nextPos.x)]))
 		if isHole(s.grid[index(nextPos.y, nextPos.x)]) {
 			// 穴で止まる
-			if isStone(s.grid[index(s.pos.y, s.pos.x)]) {
-				if s.grid[index(s.pos.y, s.pos.x)] == s.grid[index(nextPos.y, nextPos.x)]+32 {
-					log.Println("鉱石を穴に落とした")
+			if isStone(itemToRall) {
+				// 石が落ちる
+				if itemToRall == s.grid[index(nextPos.y, nextPos.x)]+32 {
+					//log.Println("鉱石を穴に落とした")
 					s.score++
 				} else {
 					log.Println(s.grid[index(s.pos.y, s.pos.x)], s.grid[index(nextPos.y, nextPos.x)])
 					log.Println("鉱石を違う穴に落とした")
 				}
-				switch s.grid[index(s.pos.y, s.pos.x)] {
+				switch itemToRall {
 				case 'a':
 					s.stones[0]--
 				case 'b':
@@ -300,44 +327,36 @@ func (s *State) Do(a Action) bool {
 				case 'c':
 					s.stones[2]--
 				}
-
-			}
-			if isRock(s.grid[index(s.pos.y, s.pos.x)]) {
-				// 岩を落とした
-				log.Println("岩を穴に落とした")
 			}
 		} else {
-			s.grid[index(prev.y, prev.x)] = s.grid[index(s.pos.y, s.pos.x)]
+			// 穴ではないので転がってグリッドの上に残る
+			if s.grid[index(prev.y, prev.x)] != '.' {
+				log.Println("now", s.pos, string(s.grid[index(s.pos.y, s.pos.x)]))
+				log.Println("prev", prev, string(s.grid[index(prev.y, prev.x)]))
+				log.Println("next", nextPos, string(s.grid[index(nextPos.y, nextPos.x)]))
+				panic("stop")
+			}
+			s.grid[index(prev.y, prev.x)] = itemToRall
 		}
-		s.grid[index(s.pos.y, s.pos.x)] = '.'
 	}
 	return true
 }
 
 var dy = []int{0, -1, 1, 0, 0}
 var dx = []int{0, 0, 0, -1, 1}
-
-func (s State) generateAction() (actions []Action) {
-	actions = make([]Action, 0, 12)
-	// 全ての条件で使える行動
-	actions = append(actions, Action{act: Move, dict: Up})
-	actions = append(actions, Action{act: Move, dict: Down})
-	actions = append(actions, Action{act: Move, dict: Left})
-	actions = append(actions, Action{act: Move, dict: Right})
-	if s.grid[index(s.pos.y, s.pos.x)] == '.' || isHole(s.grid[index(s.pos.y, s.pos.x)]) {
-		// 現在地が、空き地または穴の時は運ぶ、転がすはできない
-		return actions
-	}
-	// a-zの鉱山, または岩が存在する時
-	actions = append(actions, Action{act: Carry, dict: Up})
-	actions = append(actions, Action{act: Carry, dict: Down})
-	actions = append(actions, Action{act: Carry, dict: Left})
-	actions = append(actions, Action{act: Carry, dict: Right})
-	actions = append(actions, Action{act: Roll, dict: Up})
-	actions = append(actions, Action{act: Roll, dict: Down})
-	actions = append(actions, Action{act: Roll, dict: Left})
-	actions = append(actions, Action{act: Roll, dict: Right})
-	return actions
+var allactions = []Action{
+	{act: Move, dict: Up},
+	{act: Move, dict: Down},
+	{act: Move, dict: Left},
+	{act: Move, dict: Right},
+	{act: Carry, dict: Up},
+	{act: Carry, dict: Down},
+	{act: Carry, dict: Left},
+	{act: Carry, dict: Right},
+	{act: Roll, dict: Up},
+	{act: Roll, dict: Down},
+	{act: Roll, dict: Left},
+	{act: Roll, dict: Right},
 }
 
 type Pos struct {
