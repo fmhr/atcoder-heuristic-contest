@@ -326,6 +326,21 @@ func newState(in In) *State {
 		}
 	}
 	log.Println("start pos", s.pos)
+	// Holeの上下左右を'a'にする
+	for _, hole := range holes {
+		for d := 1; d < 5; d++ {
+			ny, nx := hole.y+dy[d], hole.x+dx[d]
+			for ny >= 0 && ny < 20 && nx >= 0 && nx < 20 {
+				if s.grid[index(ny, nx)] == '@' {
+					s.grid[index(ny, nx)] = 'a'
+					s.stones[0]++
+				}
+				ny += dy[d]
+				nx += dx[d]
+			}
+		}
+	}
+	s.showGrid()
 	return s
 }
 
