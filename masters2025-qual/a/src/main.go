@@ -39,7 +39,7 @@ func beamSearch(in In) (ans []Action) {
 	// 初期状態
 	initialState := newState(in)
 	initialState.act = root
-	log.Println("initialState.eval()", initialState.eval())
+	log.Println("initialState.eval()", initialState.calEval())
 	// 初期状態でのallDistanceを計算
 	calcAllDistance(initialState)
 	beamWidth := 5 // ビーム幅
@@ -99,7 +99,7 @@ func beamSearch(in In) (ans []Action) {
 		}
 		//log.Println(i, len(nextStates))
 		sort.Slice(nextStates, func(i, j int) bool {
-			return nextStates[i].eval() > nextStates[j].eval()
+			return nextStates[i].eval > nextStates[j].eval
 		})
 		states = make([]*State, minInt(beamWidth, len(nextStates)))
 		copy(states, nextStates)
@@ -136,6 +136,7 @@ type State struct {
 	pos    Pos
 	score  int
 	act    *Node
+	eval   int
 }
 
 var distance [GridSize * GridSize]int
@@ -233,7 +234,7 @@ func (s State) distanceFromHole(typ byte) (dist [GridSize * GridSize]int) {
 	return dist
 }
 
-func (s State) eval() int {
+func (s State) calEval() int {
 	if s.stones[0]+s.stones[1]+s.stones[2] == 0 {
 		return s.score * 10000000
 	}
@@ -291,12 +292,17 @@ func (s State) eval() int {
 	if minStoneDist == 0 {
 		bonus = 100
 	}
+	log.Println(minStoneDist, minHoleDist, bonus)
+	if minStoneDist == 1000 {
+		s.showGrid()
+		os.Exit(1)
+	}
 	//log.Println("minStoneDist", minStoneDist, "minHoleDist", minHoleDist, "bonus", bonus)
-	return s.score*1000 - minStoneDist - minHoleDist + bonus
+	return s.score*10000 - minStoneDist - minHoleDist + bonus
 }
 
 func (s State) showGrid() {
-	log.Println("Pos:", s.pos, "score:", s.score, "eval", s.eval(), "have", string(s.grid[index(s.pos.y, s.pos.x)]))
+	log.Println("Pos:", s.pos, "score:", s.score, "eval", s.eval, "have", string(s.grid[index(s.pos.y, s.pos.x)]))
 	for i := 0; i < 20; i++ {
 		log.Println(i, string(s.grid[i*20:i*20+20]))
 	}
@@ -308,6 +314,7 @@ func (s State) Clone() *State {
 	newState.pos = s.pos
 	newState.score = s.score
 	newState.stones = s.stones
+	newState.eval = s.eval
 	return newState
 }
 
@@ -327,20 +334,20 @@ func newState(in In) *State {
 	}
 	log.Println("start pos", s.pos)
 	// Holeの上下左右を'a'にする
-	for _, hole := range holes {
-		for d := 1; d < 5; d++ {
-			ny, nx := hole.y+dy[d], hole.x+dx[d]
-			for ny >= 0 && ny < 20 && nx >= 0 && nx < 20 {
-				if s.grid[index(ny, nx)] == '@' {
-					s.grid[index(ny, nx)] = 'a'
-					s.stones[0]++
-				}
-				ny += dy[d]
-				nx += dx[d]
+	log.Println("holes", holes)
+	hole := holes[0]
+	for d := 1; d < 5; d++ {
+		ny, nx := hole.y+dy[d], hole.x+dx[d]
+		for ny >= 0 && ny < 20 && nx >= 0 && nx < 20 {
+			if s.grid[index(ny, nx)] == '@' {
+				s.grid[index(ny, nx)] = 'a'
+				s.stones[0]++
 			}
+			ny += dy[d]
+			nx += dx[d]
 		}
 	}
-	s.showGrid()
+	//s.showGrid()
 	return s
 }
 
@@ -427,6 +434,7 @@ func (s *State) Do(a Action) bool {
 			s.grid[index(prev.y, prev.x)] = itemToRall
 		}
 	}
+	s.eval = s.calEval()
 	return true
 }
 

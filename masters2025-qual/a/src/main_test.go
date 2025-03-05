@@ -22,7 +22,9 @@ func TestDistanceFromHole(t *testing.T) {
 	}
 }
 
-// go test -benchmem -run='^$' -bench '^BenchmarkChokudaiSearch$' ahc043 -cpuprofile cpu.prof
+// src/ディレクトリで実行
+// go test -benchmem -run='^$' -bench '^BenchmarkBeamSearch$' -cpuprofile cpu.prof
+// go tool pprof -http=:8080 cpu.prof
 func BenchmarkBeamSearch(b *testing.B) {
 	ATCODER = true
 	log.SetOutput(io.Discard)
