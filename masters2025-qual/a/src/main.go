@@ -286,7 +286,8 @@ func (s State) calEval() int {
 	for i := 0; i < 20; i++ {
 		for j := 0; j < 20; j++ {
 			if isStone(s.grid[index(i, j)]) {
-				dist := distance[index(i, j)]
+				//dist := distance[index(i, j)]
+				dist := abs(s.pos.y-i) + abs(s.pos.x-j)
 				minStoneDist = minInt(minStoneDist, dist)
 				if minStoneDist == 1000 {
 					nearStone = Pos{i, j}
@@ -300,11 +301,8 @@ func (s State) calEval() int {
 		stone := s.grid[index(s.pos.y, s.pos.x)] - 'a'
 		y, x := holes[stone].y, holes[stone].x
 		minHoleDist = minInt(dist2[index(y, x)], 1000)
-		// 持ってる穴の同じ、y,xまでの直線距離を追加して最短で投げれるようにする
-		//minHoleDist += minInt(abs(y-s.pos.y), abs(x-s.pos.x))
 	}
 
-	bonus := 0
 	if minStoneDist == 1000 {
 		// 鉱石が@に囲まれている
 		// 乱数を入れて、周りの岩を操作するようにする
@@ -315,7 +313,7 @@ func (s State) calEval() int {
 	}
 	//log.Println("minStoneDist", minStoneDist, "minHoleDist", minHoleDist, "bonus", bonus)
 	//log.Println("eval", s.score*10000-minStoneDist-minHoleDist+bonus-sumDist2)
-	return s.score*10000 - minStoneDist - minHoleDist + bonus - sumDist2
+	return s.score*10000 - minStoneDist - minHoleDist - sumDist2
 }
 
 func (s State) showGrid() {
