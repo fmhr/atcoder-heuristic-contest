@@ -150,8 +150,6 @@ func (s State) outputState() {
 	}
 }
 
-var distance [GridSize * GridSize]int
-
 // 岩を避けて移動する時の全点間の距離
 // Warshall Floyd
 func calcAllDistance(s *State) {
@@ -249,31 +247,6 @@ func (s State) distanceFromHole(typ byte) (dist [GridSize * GridSize]int) {
 func (s State) calEval() int {
 	if s.stones[0]+s.stones[1]+s.stones[2] == 0 {
 		return s.score * 10000000
-	}
-	// distance from pos
-	// 現在の位置から@をさけて移動する時の距離
-	for i := 0; i < GridSize*GridSize; i++ {
-		distance[i] = math.MaxInt
-	}
-	distance[index(s.pos.y, s.pos.x)] = 0
-	que := make([]Pos, 0, 20*20)
-	que = append(que, s.pos)
-	for len(que) > 0 {
-		p := que[0]
-		que = que[1:]
-		for _, d := range directions {
-			nextPos := Pos{p.y + dy[d], p.x + dx[d]}
-			if !(nextPos.y >= 0 && nextPos.y < 20 && nextPos.x >= 0 && nextPos.x < 20) {
-				continue
-			}
-			if isRock(s.grid[index(nextPos.y, nextPos.x)]) {
-				continue
-			}
-			if distance[index(nextPos.y, nextPos.x)] > distance[index(p.y, p.x)]+1 {
-				distance[index(nextPos.y, nextPos.x)] = distance[index(p.y, p.x)] + 1
-				que = append(que, nextPos)
-			}
-		}
 	}
 
 	dist2 := s.distanceFromHole('A')
