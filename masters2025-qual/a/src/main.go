@@ -288,7 +288,7 @@ func (s State) calEval() int {
 	if minStoneDist == 0 { // 鉱石を持っている
 		stone := s.grid[index(s.pos.y, s.pos.x)] - 'a'
 		y, x := holes[stone].y, holes[stone].x
-		minHoleDist = distance[index(y, x)]
+		minHoleDist = minInt(distance[index(y, x)], 1000)
 		// 持ってる穴の同じ、y,xまでの直線距離を追加して最短で投げれるようにする
 		minHoleDist += minInt(abs(y-s.pos.y), abs(x-s.pos.x))
 	}
@@ -342,19 +342,7 @@ func newState(in In) *State {
 	}
 	log.Println("start pos", s.pos)
 	// Holeの上下左右を'a'にする
-	log.Println("holes", holes)
-	hole := holes[0]
-	for d := 1; d < 5; d++ {
-		ny, nx := hole.y+dy[d], hole.x+dx[d]
-		for ny >= 0 && ny < 20 && nx >= 0 && nx < 20 {
-			if s.grid[index(ny, nx)] == '@' {
-				s.grid[index(ny, nx)] = 'a'
-				s.stones[0]++
-			}
-			ny += dy[d]
-			nx += dx[d]
-		}
-	}
+
 	//s.showGrid()
 	return s
 }
