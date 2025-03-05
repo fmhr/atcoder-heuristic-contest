@@ -237,6 +237,7 @@ func (s State) eval() int {
 		stone := s.grid[index(s.pos.y, s.pos.x)] - 'a'
 		y, x := holes[stone].y, holes[stone].x
 		minHoleDist = distance[index(y, x)]
+		// 持ってる穴の同じ、y,xまでの直線距離を追加して最短で投げれるようにする
 		minHoleDist += minInt(abs(y-s.pos.y), abs(x-s.pos.x))
 	}
 
