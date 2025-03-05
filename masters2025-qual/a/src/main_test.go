@@ -66,3 +66,62 @@ func readFile(filename string) (in In) {
 	}
 	return
 }
+
+// 下の形式のファイルを読み込む
+// [2 0 0]
+// {18 16}
+// 38
+// 379961
+// ...................A
+// ............@.......
+// ........@...........
+// ................@...
+// .................@@.
+// ...........@@.......
+// .................@..
+// ...@.....@..........
+// ............@.@.@@..
+// ......@..@...@.@....
+// ............@.......
+// @.....@..@........@.
+// .......@@.........@.
+// ........@..@........
+// .....@..@....@..@...
+// ....................
+// .........@..........
+// @......a............
+// ...@.a.@.@..........
+// ....................
+func readState(filename string) (s State) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	scaner := bufio.NewScanner(file)
+	scaner.Scan()
+	fmt.Sscanf(scaner.Text(), "[%d %d %d]", &s.stones[0], &s.stones[1], &s.stones[2])
+	scaner.Scan()
+	fmt.Sscanf(scaner.Text(), "{%d %d}", &s.pos.y, &s.pos.x)
+	scaner.Scan()
+	fmt.Sscanf(scaner.Text(), "%d", &s.score)
+	scaner.Scan()
+	fmt.Sscanf(scaner.Text(), "%d", &s.eval)
+
+	for i := 0; i < GridSize; i++ {
+		scaner.Scan()
+		line := scaner.Text()
+		for j := 0; j < GridSize; j++ {
+			s.grid[i*GridSize+j] = line[j]
+		}
+	}
+
+	s.showGrid()
+	return s
+}
+
+func TestEval(t *testing.T) {
+	s := readState("test/eval_test.txt")
+	e := s.calEval()
+	log.Printf("eval: %d neweval:%d\n", s.eval, e)
+}
