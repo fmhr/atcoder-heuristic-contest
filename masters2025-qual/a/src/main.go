@@ -42,7 +42,7 @@ func beamSearch(in In) (ans []Action) {
 	log.Println("initialState.eval()", initialState.calEval())
 	// 初期状態でのallDistanceを計算
 	//calcAllDistance(initialState)
-	beamWidth := 20 // ビーム幅
+	beamWidth := 30 // ビーム幅
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
@@ -105,10 +105,10 @@ func beamSearch(in In) (ans []Action) {
 		copy(states, nextStates)
 		nextStates = make([]*State, 0)
 		//log.Println(i, states[0].score, states[0].eval(), states[0].act.act)
-		states[0].outputState()
+		//states[0].outputState()
 
+		// 終了条件
 		if states[0].stones[0]+states[0].stones[1]+states[0].stones[2] == 0 {
-			log.Println("finish")
 			break
 		}
 		//log.Println(states[0].stones)
@@ -299,15 +299,12 @@ func (s State) calEval() int {
 	if minStoneDist == 0 { // 鉱石を持っている
 		stone := s.grid[index(s.pos.y, s.pos.x)] - 'a'
 		y, x := holes[stone].y, holes[stone].x
-		minHoleDist = minInt(distance[index(y, x)], 1000)
+		minHoleDist = minInt(dist2[index(y, x)], 1000)
 		// 持ってる穴の同じ、y,xまでの直線距離を追加して最短で投げれるようにする
-		minHoleDist += minInt(abs(y-s.pos.y), abs(x-s.pos.x))
+		//minHoleDist += minInt(abs(y-s.pos.y), abs(x-s.pos.x))
 	}
 
 	bonus := 0
-	if minStoneDist == 0 {
-		bonus = 100
-	}
 	if minStoneDist == 1000 {
 		// 鉱石が@に囲まれている
 		// 乱数を入れて、周りの岩を操作するようにする
