@@ -9,7 +9,19 @@ import (
 	"testing"
 )
 
-// go test -benchmem -run=^ -bench '^BenchmarkChokudaiSearch' ahc043 -cpuprofile cpu.prof
+func TestDistanceFromHole(t *testing.T) {
+	in := readFile("../tools/in/0000.txt")
+	s := newState(in)
+	s.showGrid()
+	dist := s.distanceFromHole('A')
+	if dist[0] != 4 {
+		t.Errorf("dist[0] = %d, want %d", dist[0], 4)
+	}
+	if dist[GridSize*GridSize-1] != 21 {
+		t.Errorf("dist[0] = %d, want %d", dist[GridSize*GridSize-1], 21)
+	}
+}
+
 // go test -benchmem -run='^$' -bench '^BenchmarkChokudaiSearch$' ahc043 -cpuprofile cpu.prof
 func BenchmarkBeamSearch(b *testing.B) {
 	ATCODER = true
@@ -37,14 +49,17 @@ func readFile(filename string) (in In) {
 	defer file.Close()
 	scaner := bufio.NewScanner(file)
 	scaner.Scan()
+	line := scaner.Text()
+	_, err = fmt.Sscan(line, &in.N, &in.M)
+	if err != nil {
+		log.Fatal(err)
+	}
 	// 1行ずつ読み込む
-	for scaner.Scan() {
+	for i := 0; i < in.N; i++ {
+		scaner.Scan()
 		line := scaner.Text()
-		fmt.Sscan(line, &in.N, &in.M)
-		for i := 0; i < in.N; i++ {
-			scaner.Scan()
-			line = scaner.Text()
-			fmt.Sscan(line, &in.grid[i])
+		for j := 0; j < in.N; j++ {
+			in.grid[i*GridSize+j] = line[j]
 		}
 	}
 	return

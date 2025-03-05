@@ -35,18 +35,14 @@ func main() {
 }
 
 func beamSearch(in In) (ans []Action) {
-
 	root := &Node{parent: nil}
 	// 初期状態
 	initialState := newState(in)
-	//initialState.showGrid()
 	initialState.act = root
 	log.Println("initialState.eval()", initialState.eval())
-	//ant := initialState.generateAction()
 	// 初期状態でのallDistanceを計算
 	calcAllDistance(initialState)
-	// ビーム幅
-	beamWidth := 5
+	beamWidth := 5 // ビーム幅
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
@@ -57,9 +53,6 @@ func beamSearch(in In) (ans []Action) {
 			for _, action := range allactions {
 				g := states[j].grid[index(states[j].pos.y, states[j].pos.x)]
 				if g == '.' && (action.act == Carry || action.act == Roll) {
-					continue
-				}
-				if isHole(g) && (action.act == Carry || action.act == Roll) {
 					continue
 				}
 				a := action
@@ -127,7 +120,7 @@ func beamSearch(in In) (ans []Action) {
 	for i := 0; i < len(ans)/2; i++ {
 		ans[i], ans[len(ans)-1-i] = ans[len(ans)-1-i], ans[i]
 	}
-	log.Println(len(ans))
+	log.Printf("turn=%d\n", len(ans))
 	return ans
 }
 
@@ -181,6 +174,65 @@ func calcAllDistance(s *State) {
 	}
 }
 
+// distanceFromHole 穴までの距離を計算する
+// typ = 'A' 'B' 'C'
+// holeの上下左右の空きますには1をいれる
+func (s State) distanceFromHole(typ byte) (dist [GridSize * GridSize]int) {
+	var start Pos // 開始位置
+	for _, p := range holes {
+		if s.grid[index(p.y, p.x)] == typ {
+			start = p
+			break
+		}
+	}
+	// 初期化
+	for i := 0; i < GridSize*GridSize; i++ {
+		dist[i] = math.MaxInt
+	}
+	dist[index(start.y, start.x)] = 0
+	q := make([]Pos, 0, 20*20)
+	q = append(q, start)
+	// 上下左右の空きますには1をいれる
+	for d := 1; d < 5; d++ {
+		ny, nx := start.y+dy[d], start.x+dx[d]
+		for {
+			if ny >= 0 && ny < 20 && nx >= 0 && nx < 20 && s.grid[index(ny, nx)] != '@' {
+				dist[index(ny, nx)] = 1
+				q = append(q, Pos{ny, nx})
+				ny, nx = ny+dy[d], nx+dx[d]
+			} else {
+				break
+			}
+		}
+	}
+	for len(q) > 0 {
+		p := q[0]
+		q = q[1:]
+		for d := 1; d < 5; d++ {
+			ny, nx := p.y+dy[d], p.x+dx[d]
+			if ny >= 0 && ny < 20 && nx >= 0 && nx < 20 && s.grid[index(ny, nx)] != '@' {
+				if dist[index(ny, nx)] > dist[index(p.y, p.x)]+1 {
+					dist[index(ny, nx)] = dist[index(p.y, p.x)] + 1
+					q = append(q, Pos{ny, nx})
+				}
+			}
+		}
+	}
+	for i := 0; i < 20; i++ {
+		line := ""
+		for j := 0; j < 20; j++ {
+			d := dist[index(i, j)]
+			if d == math.MaxInt {
+				line += " XX"
+			} else {
+				line += fmt.Sprintf("%3d", d)
+			}
+		}
+		log.Println(line)
+	}
+	return dist
+}
+
 func (s State) eval() int {
 	if s.stones[0]+s.stones[1]+s.stones[2] == 0 {
 		return s.score * 10000000
@@ -210,10 +262,6 @@ func (s State) eval() int {
 			}
 		}
 	}
-	//for i := 0; i < 20; i++ {
-	//log.Println(i, distance[i*20:i*20+20])
-	//}
-	//panic("stop")
 
 	// なにもないとき
 	// もっとも近い鉱石までの距離
@@ -224,7 +272,6 @@ func (s State) eval() int {
 		for i := 0; i < 20; i++ {
 			for j := 0; j < 20; j++ {
 				if isStone(s.grid[index(i, j)]) {
-					//dist := abs(i-s.pos.y) + abs(j-s.pos.x)
 					dist := distance[index(i, j)]
 					minStoneDist = minInt(minStoneDist, dist)
 				}
@@ -232,7 +279,6 @@ func (s State) eval() int {
 		}
 	}
 	var minHoleDist int
-	// もっとも近い穴までの距離
 	if minStoneDist == 0 { // 鉱石を持っている
 		stone := s.grid[index(s.pos.y, s.pos.x)] - 'a'
 		y, x := holes[stone].y, holes[stone].x
@@ -284,7 +330,6 @@ func newState(in In) *State {
 }
 
 func (s *State) Do(a Action) bool {
-
 	switch a.act {
 	case Move:
 		// 単純な移動
@@ -398,8 +443,6 @@ const (
 	Carry Act = 2
 	Roll  Act = 3
 )
-
-var acts = []Act{Move, Carry, Roll}
 
 type Direction int
 
