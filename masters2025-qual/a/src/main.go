@@ -42,7 +42,7 @@ func beamSearch(in In) (ans []Action) {
 	log.Println("initialState.eval()", initialState.calEval())
 	// 初期状態でのallDistanceを計算
 	calcAllDistance(initialState)
-	beamWidth := 5 // ビーム幅
+	beamWidth := 20 // ビーム幅
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
@@ -267,6 +267,7 @@ func (s State) calEval() int {
 	// なにもないとき
 	// もっとも近い鉱石までの距離
 	minStoneDist := 1000
+	nearStone := Pos{-1, -1}
 	if isStone(s.grid[index(s.pos.y, s.pos.x)]) {
 		minStoneDist = 0
 	} else {
@@ -275,6 +276,9 @@ func (s State) calEval() int {
 				if isStone(s.grid[index(i, j)]) {
 					dist := distance[index(i, j)]
 					minStoneDist = minInt(minStoneDist, dist)
+					if minStoneDist == 1000 {
+						nearStone = Pos{i, j}
+					}
 				}
 			}
 		}
@@ -292,10 +296,12 @@ func (s State) calEval() int {
 	if minStoneDist == 0 {
 		bonus = 100
 	}
-	log.Println(minStoneDist, minHoleDist, bonus)
 	if minStoneDist == 1000 {
-		s.showGrid()
-		os.Exit(1)
+		// 鉱石が@に囲まれている
+		//log.Println(s.score, minStoneDist, minHoleDist, bonus, nearStone, s.pos)
+		minStoneDist = abs(nearStone.y-s.pos.y) + abs(nearStone.x-s.pos.x)
+		//s.showGrid()
+		//os.Exit(1)
 	}
 	//log.Println("minStoneDist", minStoneDist, "minHoleDist", minHoleDist, "bonus", bonus)
 	return s.score*10000 - minStoneDist - minHoleDist + bonus
