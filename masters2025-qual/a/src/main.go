@@ -41,8 +41,8 @@ func beamSearch(in In) (ans []Action) {
 	initialState.act = root
 	log.Println("initialState.eval()", initialState.calEval())
 	// 初期状態でのallDistanceを計算
-	calcAllDistance(initialState)
-	beamWidth := 20 // ビーム幅
+	//calcAllDistance(initialState)
+	beamWidth := 30 // ビーム幅
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
@@ -105,9 +105,10 @@ func beamSearch(in In) (ans []Action) {
 		copy(states, nextStates)
 		nextStates = make([]*State, 0)
 		//log.Println(i, states[0].score, states[0].eval(), states[0].act.act)
-		//states[0].showGrid()
+		//states[0].outputState()
+
+		// 終了条件
 		if states[0].stones[0]+states[0].stones[1]+states[0].stones[2] == 0 {
-			log.Println("finish")
 			break
 		}
 		//log.Println(states[0].stones)
@@ -139,7 +140,15 @@ type State struct {
 	eval   int
 }
 
-var distance [GridSize * GridSize]int
+func (s State) outputState() {
+	log.Println(s.stones)
+	log.Println(s.pos)
+	log.Println(s.score)
+	log.Println(s.eval)
+	for i := 0; i < 20; i++ {
+		log.Println(string(s.grid[i*20 : i*20+20]))
+	}
+}
 
 // 岩を避けて移動する時の全点間の距離
 // Warshall Floyd
@@ -219,18 +228,19 @@ func (s State) distanceFromHole(typ byte) (dist [GridSize * GridSize]int) {
 			}
 		}
 	}
-	for i := 0; i < 20; i++ {
-		line := ""
-		for j := 0; j < 20; j++ {
-			d := dist[index(i, j)]
-			if d == math.MaxInt {
-				line += " XX"
-			} else {
-				line += fmt.Sprintf("%3d", d)
-			}
-		}
-		log.Println(line)
-	}
+	// デバッグ用
+	//	for i := 0; i < 20; i++ {
+	//line := ""
+	//for j := 0; j < 20; j++ {
+	//d := dist[index(i, j)]
+	//if d == math.MaxInt {
+	//line += " XX"
+	//} else {
+	//line += fmt.Sprintf("%3d", d)
+	//}
+	//}
+	//log.Println(line)
+	//}
 	return dist
 }
 
@@ -238,48 +248,24 @@ func (s State) calEval() int {
 	if s.stones[0]+s.stones[1]+s.stones[2] == 0 {
 		return s.score * 10000000
 	}
-	// distance from pos
-	// @をさけて移動する時の距離
-	for i := 0; i < GridSize*GridSize; i++ {
-		distance[i] = math.MaxInt
-	}
-	distance[index(s.pos.y, s.pos.x)] = 0
-	que := make([]Pos, 0, 20*20)
-	que = append(que, s.pos)
-	for len(que) > 0 {
-		p := que[0]
-		que = que[1:]
-		for _, d := range directions {
-			nextPos := Pos{p.y + dy[d], p.x + dx[d]}
-			if !(nextPos.y >= 0 && nextPos.y < 20 && nextPos.x >= 0 && nextPos.x < 20) {
-				continue
-			}
-			if isRock(s.grid[index(nextPos.y, nextPos.x)]) {
-				continue
-			}
-			if distance[index(nextPos.y, nextPos.x)] > distance[index(p.y, p.x)]+1 {
-				distance[index(nextPos.y, nextPos.x)] = distance[index(p.y, p.x)] + 1
-				que = append(que, nextPos)
-			}
-		}
-	}
+
+	dist2 := s.distanceFromHole('A')
+	sumDist2 := 0 // すべての'a'の穴までの距離の合計
 
 	// なにもないとき
 	// もっとも近い鉱石までの距離
 	minStoneDist := 1000
 	nearStone := Pos{-1, -1}
-	if isStone(s.grid[index(s.pos.y, s.pos.x)]) {
-		minStoneDist = 0
-	} else {
-		for i := 0; i < 20; i++ {
-			for j := 0; j < 20; j++ {
-				if isStone(s.grid[index(i, j)]) {
-					dist := distance[index(i, j)]
-					minStoneDist = minInt(minStoneDist, dist)
-					if minStoneDist == 1000 {
-						nearStone = Pos{i, j}
-					}
+	for i := 0; i < 20; i++ {
+		for j := 0; j < 20; j++ {
+			if isStone(s.grid[index(i, j)]) {
+				//dist := distance[index(i, j)]
+				dist := abs(s.pos.y-i) + abs(s.pos.x-j)
+				minStoneDist = minInt(minStoneDist, dist)
+				if minStoneDist == 1000 {
+					nearStone = Pos{i, j}
 				}
+				sumDist2 += minInt(dist2[index(i, j)], 1000) // holeまでの距離
 			}
 		}
 	}
@@ -287,24 +273,20 @@ func (s State) calEval() int {
 	if minStoneDist == 0 { // 鉱石を持っている
 		stone := s.grid[index(s.pos.y, s.pos.x)] - 'a'
 		y, x := holes[stone].y, holes[stone].x
-		minHoleDist = distance[index(y, x)]
-		// 持ってる穴の同じ、y,xまでの直線距離を追加して最短で投げれるようにする
-		minHoleDist += minInt(abs(y-s.pos.y), abs(x-s.pos.x))
+		minHoleDist = minInt(dist2[index(y, x)], 1000)
 	}
 
-	bonus := 0
-	if minStoneDist == 0 {
-		bonus = 100
-	}
 	if minStoneDist == 1000 {
 		// 鉱石が@に囲まれている
+		// 乱数を入れて、周りの岩を操作するようにする
 		//log.Println(s.score, minStoneDist, minHoleDist, bonus, nearStone, s.pos)
-		minStoneDist = abs(nearStone.y-s.pos.y) + abs(nearStone.x-s.pos.x)
+		minStoneDist = abs(nearStone.y-s.pos.y) + abs(nearStone.x-s.pos.x) + rand.Intn(5)
 		//s.showGrid()
 		//os.Exit(1)
 	}
 	//log.Println("minStoneDist", minStoneDist, "minHoleDist", minHoleDist, "bonus", bonus)
-	return s.score*10000 - minStoneDist - minHoleDist + bonus
+	//log.Println("eval", s.score*10000-minStoneDist-minHoleDist+bonus-sumDist2)
+	return s.score*10000 - minStoneDist - minHoleDist - sumDist2
 }
 
 func (s State) showGrid() {
@@ -340,19 +322,7 @@ func newState(in In) *State {
 	}
 	log.Println("start pos", s.pos)
 	// Holeの上下左右を'a'にする
-	log.Println("holes", holes)
-	hole := holes[0]
-	for d := 1; d < 5; d++ {
-		ny, nx := hole.y+dy[d], hole.x+dx[d]
-		for ny >= 0 && ny < 20 && nx >= 0 && nx < 20 {
-			if s.grid[index(ny, nx)] == '@' {
-				s.grid[index(ny, nx)] = 'a'
-				s.stones[0]++
-			}
-			ny += dy[d]
-			nx += dx[d]
-		}
-	}
+
 	//s.showGrid()
 	return s
 }
