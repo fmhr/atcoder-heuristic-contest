@@ -43,7 +43,7 @@ func beamSearch(in In) (ans []Action) {
 	log.Println("initialState.eval()", initialState.calEval())
 	// 初期状態でのallDistanceを計算
 	//calcAllDistance(initialState)
-	beamWidth := 20 // ビーム幅
+	beamWidth := 40 // ビーム幅
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
