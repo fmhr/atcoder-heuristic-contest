@@ -38,6 +38,7 @@ func beamSearch(in In) (ans []Action) {
 	root := &Node{parent: nil}
 	// 初期状態
 	initialState := newState(in)
+	//log.Printf("a=%d b=%d c=%d\n", initialState.stones[0], initialState.stones[1], initialState.stones[2])
 	initialState.act = root
 	log.Println("initialState.eval()", initialState.calEval())
 	// 初期状態でのallDistanceを計算
@@ -287,7 +288,7 @@ func (s State) calEval() int {
 	//log.Println("minStoneDist", minStoneDist, "minHoleDist", minHoleDist, "bonus", bonus)
 	//log.Println("eval", s.score*10000-minStoneDist-minHoleDist+bonus-sumDist2)
 	// s.scoreに40(GridSize*2)をかけることで、つぎの鉱石が遠くても穴に落とすようにする
-	return s.score*40 - minStoneDist - minHoleDist - sumDist2
+	return s.score*40 - minStoneDist - minHoleDist - sumDist2*13/10
 }
 
 func (s State) showGrid() {
