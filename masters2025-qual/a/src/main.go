@@ -286,7 +286,8 @@ func (s State) calEval() int {
 	}
 	//log.Println("minStoneDist", minStoneDist, "minHoleDist", minHoleDist, "bonus", bonus)
 	//log.Println("eval", s.score*10000-minStoneDist-minHoleDist+bonus-sumDist2)
-	return s.score*10000 - minStoneDist - minHoleDist - sumDist2
+	// s.scoreに40(GridSize*2)をかけることで、つぎの鉱石が遠くても穴に落とすようにする
+	return s.score*40 - minStoneDist - minHoleDist - sumDist2
 }
 
 func (s State) showGrid() {
