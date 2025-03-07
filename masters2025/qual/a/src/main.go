@@ -53,12 +53,12 @@ func beamSearch(in In) (ans []Action) {
 	log.Println("initialState.eval()", initialState.calEval())
 	// 初期状態でのallDistanceを計算
 	//calcAllDistance(initialState)
-	beamWidth := 60 // ビーム幅
+	beamWidth := 40 // ビーム幅
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
+	exits := make(map[uint64]bool)
 	for i := 0; i < 5000; i++ {
-		exits := make(map[uint64]bool)
 		// ビーム幅分の状態を生成
 		for j := range states {
 			//actions := states[j].generateAction()
@@ -167,7 +167,6 @@ func (s State) makeHash() (hash uint64) {
 	for i := 0; i < GridSize*GridSize; i++ {
 		hash ^= uint64(s.grid[i]) * primes[i+3]
 	}
-	//hash ^= uint64(s.score) * primes[499]
 	return
 }
 
@@ -188,7 +187,7 @@ func calcAllDistance(s *State) {
 	for i := 0; i < 20*20; i++ {
 		allDistance[i] = make([]int, 20*20)
 		for j := 0; j < 20*20; j++ {
-			allDistance[i][j] = math.MaxInt
+			allDistance[i][j] = math.MaxInt16
 		}
 	}
 	for i := 0; i < GridSize*GridSize; i++ {
@@ -290,7 +289,8 @@ func (s State) calEval() int {
 			if isStone(s.grid[index(i, j)]) {
 				dist := abs(s.pos.y-i) + abs(s.pos.x-j) // なにも持っていない時は、岩の上も通れるのでマンハッタン距離
 				nearestStoneFromNow = minInt(nearestStoneFromNow, dist)
-				sumDistStoneToHole += dist2[index(i, j)]
+				sumDistStoneToHole += dist2[index(i, j)]                                      // 穴までの手数
+				sumDistStoneToHole += distance(holes[s.grid[index(i, j)]-'a'], Pos{i, j}) / 2 // 穴までのマンハッタン距離
 			}
 		}
 	}
@@ -309,7 +309,8 @@ func (s State) calEval() int {
 	//log.Println("minStoneDist", minStoneDist, "minHoleDist", minHoleDist, "bonus", bonus)
 	//log.Println("eval", s.score*10000-minStoneDist-minHoleDist+bonus-sumDist2)
 	// s.scoreに40(GridSize*2)をかけることで、つぎの鉱石が遠くても穴に落とすようにする
-	return s.score*40 - nearestStoneFromNow - sumDistStoneToHole
+	// 42：w
+	return s.score*42 - nearestStoneFromNow - sumDistStoneToHole
 }
 
 func (s State) showGrid() {
@@ -458,6 +459,10 @@ var allactions = []Action{
 
 type Pos struct {
 	y, x int
+}
+
+func distance(a, b Pos) int {
+	return abs(a.y-b.y) + abs(a.x-b.x)
 }
 
 type Act int
