@@ -279,20 +279,13 @@ func (s State) calEval() int {
 	dist2 := s.distanceFromHole('A') // Aの穴までの距離
 	sumDistStoneToHole := 0          // すべての'a'の穴までの距離の合計
 
-	// なにもないとき
 	// もっとも近い鉱石までの距離
 	nearestStoneFromNow := 1000
-	//nearStone := Pos{-1, -1}
 	for i := 0; i < 20; i++ {
 		for j := 0; j < 20; j++ {
 			if isStone(s.grid[index(i, j)]) {
-				//dist := distance[index(i, j)]
-				dist := abs(s.pos.y-i) + abs(s.pos.x-j)
+				dist := abs(s.pos.y-i) + abs(s.pos.x-j) // なにも持っていない時は、岩の上も通れるのでマンハッタン距離
 				nearestStoneFromNow = minInt(nearestStoneFromNow, dist)
-				//if nearestStoneFromNow == 1000 {
-				//nearStone = Pos{i, j}
-				//}
-				//sumDistStoneToHole += minInt(dist2[index(i, j)], 1000) // holeまでの距離
 				sumDistStoneToHole += dist2[index(i, j)]
 			}
 		}
@@ -301,13 +294,6 @@ func (s State) calEval() int {
 	if nearestStoneFromNow == 1000 {
 		nearestStoneFromNow = 0
 	}
-	//var minHoleDist int
-	//	if minStoneDist == 0 { // 鉱石を持っている
-	//stone := s.grid[index(s.pos.y, s.pos.x)] - 'a'
-	//y, x := holes[stone].y, holes[stone].x
-	//minHoleDist = minInt(dist2[index(y, x)], 1000)
-	//}
-
 	//if nearestStoneFromNow == 1000 {
 	// 鉱石が@に囲まれている
 	// 乱数を入れて、周りの岩を操作するようにする
