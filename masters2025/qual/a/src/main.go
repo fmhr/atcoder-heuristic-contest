@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	crand "crypto/rand"
 	"fmt"
 	"io"
 	"log"
@@ -16,7 +17,14 @@ var ATCODER bool        // AtCoder環境かどうか
 var startTime time.Time // 開始時刻
 var frand *rand.Rand    // 固定用乱数生成機
 
+var primes [500]uint64
+
 func main() {
+	for i := 0; i < 500; i++ {
+		prime, _ := crand.Prime(crand.Reader, 64)
+		primes[i] = prime.Uint64()
+	}
+
 	if os.Getenv("ATCODER") == "1" {
 		ATCODER = true
 		log.Println("on AtCoder")
@@ -47,6 +55,7 @@ func beamSearch(in In) (ans []Action) {
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
+	exits := make(map[uint64]bool)
 	for i := 0; i < 5000; i++ {
 		// ビーム幅分の状態を生成
 		for j := range states {
@@ -91,8 +100,13 @@ func beamSearch(in In) (ans []Action) {
 				}
 				newState := states[j].Clone()
 				if newState.Do(action) {
-					newState.act = &Node{act: action, parent: states[j].act}
-					nextStates = append(nextStates, newState)
+					if !exits[newState.hash] {
+						newState.act = &Node{act: action, parent: states[j].act}
+						nextStates = append(nextStates, newState)
+						exits[newState.hash] = true
+					} else {
+						log.Println("exit", newState.hash)
+					}
 				} else {
 					log.Println("Do failed", action)
 				}
@@ -139,6 +153,17 @@ type State struct {
 	score  int
 	act    *Node
 	eval   int
+	hash   uint64
+}
+
+func (s State) makeHash() (hash uint64) {
+	hash = primes[0]
+	hash ^= uint64(s.pos.y) * primes[1]
+	hash ^= uint64(s.pos.x) * primes[2]
+	for i := 0; i < GridSize*GridSize; i++ {
+		hash ^= uint64(s.grid[i]) * primes[i+3]
+	}
+	return
 }
 
 func (s State) outputState() {
@@ -305,6 +330,7 @@ func (s State) Clone() *State {
 	newState.score = s.score
 	newState.stones = s.stones
 	newState.eval = s.eval
+	newState.hash = s.hash
 	return newState
 }
 
@@ -413,6 +439,7 @@ func (s *State) Do(a Action) bool {
 		}
 	}
 	s.eval = s.calEval()
+	s.hash = s.makeHash()
 	return true
 }
 
