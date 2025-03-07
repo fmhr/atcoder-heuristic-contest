@@ -19,12 +19,14 @@ var frand *rand.Rand    // 固定用乱数生成機
 
 var primes [500]uint64
 
-func main() {
+func init() {
 	for i := 0; i < 500; i++ {
 		prime, _ := crand.Prime(crand.Reader, 64)
 		primes[i] = prime.Uint64()
 	}
+}
 
+func main() {
 	if os.Getenv("ATCODER") == "1" {
 		ATCODER = true
 		log.Println("on AtCoder")
@@ -51,12 +53,12 @@ func beamSearch(in In) (ans []Action) {
 	log.Println("initialState.eval()", initialState.calEval())
 	// 初期状態でのallDistanceを計算
 	//calcAllDistance(initialState)
-	beamWidth := 40 // ビーム幅
+	beamWidth := 60 // ビーム幅
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
-	exits := make(map[uint64]bool)
 	for i := 0; i < 5000; i++ {
+		exits := make(map[uint64]bool)
 		// ビーム幅分の状態を生成
 		for j := range states {
 			//actions := states[j].generateAction()
@@ -123,6 +125,8 @@ func beamSearch(in In) (ans []Action) {
 		//states[0].outputState()
 
 		// 終了条件
+		//fmt.Println(i, len(states))
+		//states[0].outputState()
 		if states[0].stones[0]+states[0].stones[1]+states[0].stones[2] == 0 {
 			break
 		}

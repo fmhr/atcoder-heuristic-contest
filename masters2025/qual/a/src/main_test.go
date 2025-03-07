@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"testing"
@@ -27,7 +26,7 @@ func TestDistanceFromHole(t *testing.T) {
 // go tool pprof -http=:8080 cpu.prof
 func BenchmarkBeamSearch(b *testing.B) {
 	ATCODER = true
-	log.SetOutput(io.Discard)
+	//log.SetOutput(io.Discard)
 	in := readFile("../tools/in/0000.txt")
 	for i := 0; i < b.N; i++ {
 		beamSearch(in)
