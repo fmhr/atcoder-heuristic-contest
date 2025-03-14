@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	crand "crypto/rand"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,15 @@ import (
 var ATCODER bool        // AtCoder環境かどうか
 var startTime time.Time // 開始時刻
 var frand *rand.Rand    // 固定用乱数生成機
+
+var primes [500]uint64
+
+func init() {
+	for i := 0; i < 500; i++ {
+		prime, _ := crand.Prime(crand.Reader, 64)
+		primes[i] = prime.Uint64()
+	}
+}
 
 func main() {
 	if os.Getenv("ATCODER") == "1" {
@@ -47,6 +57,7 @@ func beamSearch(in In) (ans []Action) {
 	states := make([]*State, 0, beamWidth)
 	states = append(states, initialState)
 	nextStates := make([]*State, 0, beamWidth)
+	exits := make(map[uint64]bool)
 	for i := 0; i < 5000; i++ {
 		// ビーム幅分の状態を生成
 		for j := range states {
@@ -91,8 +102,13 @@ func beamSearch(in In) (ans []Action) {
 				}
 				newState := states[j].Clone()
 				if newState.Do(action) {
-					newState.act = &Node{act: action, parent: states[j].act}
-					nextStates = append(nextStates, newState)
+					if !exits[newState.hash] {
+						newState.act = &Node{act: action, parent: states[j].act}
+						nextStates = append(nextStates, newState)
+						exits[newState.hash] = true
+					} else {
+						//log.Println("exit", newState.hash)
+					}
 				} else {
 					log.Println("Do failed", action)
 				}
@@ -105,10 +121,12 @@ func beamSearch(in In) (ans []Action) {
 		states = make([]*State, minInt(beamWidth, len(nextStates)))
 		copy(states, nextStates)
 		nextStates = make([]*State, 0)
-		//log.Println(i, states[0].score, states[0].eval(), states[0].act.act)
+		//log.Println(i, states[0].score, states[0].eval, states[0].act.act, states[0].pos)
 		//states[0].outputState()
 
 		// 終了条件
+		//fmt.Println(i, len(states))
+		//states[0].outputState()
 		if states[0].stones[0]+states[0].stones[1]+states[0].stones[2] == 0 {
 			break
 		}
@@ -139,6 +157,17 @@ type State struct {
 	score  int
 	act    *Node
 	eval   int
+	hash   uint64
+}
+
+func (s State) makeHash() (hash uint64) {
+	hash = primes[0]
+	hash ^= uint64(s.pos.y) * primes[1]
+	hash ^= uint64(s.pos.x) * primes[2]
+	for i := 0; i < GridSize*GridSize; i++ {
+		hash ^= uint64(s.grid[i]) * primes[i+3]
+	}
+	return
 }
 
 func (s State) outputState() {
@@ -158,7 +187,7 @@ func calcAllDistance(s *State) {
 	for i := 0; i < 20*20; i++ {
 		allDistance[i] = make([]int, 20*20)
 		for j := 0; j < 20*20; j++ {
-			allDistance[i][j] = math.MaxInt
+			allDistance[i][j] = math.MaxInt16
 		}
 	}
 	for i := 0; i < GridSize*GridSize; i++ {
@@ -198,7 +227,7 @@ func (s State) distanceFromHole(typ byte) (dist [GridSize * GridSize]int) {
 	}
 	// 初期化
 	for i := 0; i < GridSize*GridSize; i++ {
-		dist[i] = math.MaxInt
+		dist[i] = math.MaxInt32
 	}
 	dist[index(start.y, start.x)] = 0
 	q := make([]Pos, 0, 20*20)
@@ -246,49 +275,42 @@ func (s State) distanceFromHole(typ byte) (dist [GridSize * GridSize]int) {
 }
 
 func (s State) calEval() int {
-	if s.stones[0]+s.stones[1]+s.stones[2] == 0 {
-		return s.score * 10000000
-	}
+	//if s.stones[0]+s.stones[1]+s.stones[2] == 0 {
+	//return s.score * 10000000
+	//}
 
-	dist2 := s.distanceFromHole('A')
-	sumDist2 := 0 // すべての'a'の穴までの距離の合計
+	dist2 := s.distanceFromHole('A') // Aの穴までの距離
+	sumDistStoneToHole := 0          // すべての'a'の穴までの距離の合計
 
-	// なにもないとき
 	// もっとも近い鉱石までの距離
-	minStoneDist := 1000
-	nearStone := Pos{-1, -1}
+	nearestStoneFromNow := 1000
 	for i := 0; i < 20; i++ {
 		for j := 0; j < 20; j++ {
 			if isStone(s.grid[index(i, j)]) {
-				//dist := distance[index(i, j)]
-				dist := abs(s.pos.y-i) + abs(s.pos.x-j)
-				minStoneDist = minInt(minStoneDist, dist)
-				if minStoneDist == 1000 {
-					nearStone = Pos{i, j}
-				}
-				sumDist2 += minInt(dist2[index(i, j)], 1000) // holeまでの距離
+				dist := abs(s.pos.y-i) + abs(s.pos.x-j) // なにも持っていない時は、岩の上も通れるのでマンハッタン距離
+				nearestStoneFromNow = minInt(nearestStoneFromNow, dist)
+				sumDistStoneToHole += dist2[index(i, j)]                                      // 穴までの手数
+				sumDistStoneToHole += distance(holes[s.grid[index(i, j)]-'a'], Pos{i, j}) / 2 // 穴までのマンハッタン距離
 			}
 		}
 	}
-	var minHoleDist int
-	if minStoneDist == 0 { // 鉱石を持っている
-		stone := s.grid[index(s.pos.y, s.pos.x)] - 'a'
-		y, x := holes[stone].y, holes[stone].x
-		minHoleDist = minInt(dist2[index(y, x)], 1000)
+	// 石がないときは0にする
+	if nearestStoneFromNow == 1000 {
+		nearestStoneFromNow = 0
 	}
-
-	if minStoneDist == 1000 {
-		// 鉱石が@に囲まれている
-		// 乱数を入れて、周りの岩を操作するようにする
-		//log.Println(s.score, minStoneDist, minHoleDist, bonus, nearStone, s.pos)
-		minStoneDist = abs(nearStone.y-s.pos.y) + abs(nearStone.x-s.pos.x) + rand.Intn(5)
-		//s.showGrid()
-		//os.Exit(1)
-	}
+	//if nearestStoneFromNow == 1000 {
+	// 鉱石が@に囲まれている
+	// 乱数を入れて、周りの岩を操作するようにする
+	//log.Println(s.score, minStoneDist, minHoleDist, bonus, nearStone, s.pos)
+	//nearestStoneFromNow = abs(nearStone.y-s.pos.y) + abs(nearStone.x-s.pos.x) + rand.Intn(5)
+	//s.showGrid()
+	//os.Exit(1)
+	//}
 	//log.Println("minStoneDist", minStoneDist, "minHoleDist", minHoleDist, "bonus", bonus)
 	//log.Println("eval", s.score*10000-minStoneDist-minHoleDist+bonus-sumDist2)
 	// s.scoreに40(GridSize*2)をかけることで、つぎの鉱石が遠くても穴に落とすようにする
-	return s.score*40 - minStoneDist - minHoleDist - sumDist2*13/10
+	// 42：w
+	return s.score*42 - nearestStoneFromNow - sumDistStoneToHole
 }
 
 func (s State) showGrid() {
@@ -305,6 +327,7 @@ func (s State) Clone() *State {
 	newState.score = s.score
 	newState.stones = s.stones
 	newState.eval = s.eval
+	newState.hash = s.hash
 	return newState
 }
 
@@ -413,6 +436,7 @@ func (s *State) Do(a Action) bool {
 		}
 	}
 	s.eval = s.calEval()
+	s.hash = s.makeHash()
 	return true
 }
 
@@ -435,6 +459,10 @@ var allactions = []Action{
 
 type Pos struct {
 	y, x int
+}
+
+func distance(a, b Pos) int {
+	return abs(a.y-b.y) + abs(a.x-b.x)
 }
 
 type Act int
