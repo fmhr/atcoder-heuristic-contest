@@ -23,8 +23,7 @@ type Point struct {
 
 type City struct {
 	Point
-	ID   int
-	area [4]int
+	ID int
 }
 
 func solver(in Input) {
@@ -33,30 +32,48 @@ func solver(in Input) {
 		cities[i].ID = i
 		cities[i].Y = (in.lxrxlyry[i*4+2] + in.lxrxlyry[i*4+3]) / 2
 		cities[i].X = (in.lxrxlyry[i*4+0] + in.lxrxlyry[i*4+1]) / 2
-		cities[i].area[0] = in.lxrxlyry[i*4+0]
-		cities[i].area[1] = in.lxrxlyry[i*4+1]
-		cities[i].area[2] = in.lxrxlyry[i*4+2]
-		cities[i].area[3] = in.lxrxlyry[i*4+3]
 	}
-	sortedCity := cities[:]
+	sortedCity := make([]int, N)
+	for i := 0; i < N; i++ {
+		sortedCity[i] = i
+	}
 	sort.Slice(sortedCity, func(i, j int) bool {
-		if sortedCity[i].Y == sortedCity[j].Y {
-			return sortedCity[i].X < sortedCity[j].X
+		if cities[sortedCity[i]].Y == cities[sortedCity[j]].Y {
+			return cities[sortedCity[i]].X < cities[sortedCity[j]].X
 		}
-		return sortedCity[i].Y < sortedCity[j].Y
+		return cities[sortedCity[i]].Y < cities[sortedCity[j]].Y
 	})
-	gropes := make([][]int, in.M)
+	groups := make([][]City, in.M)
 	index := 0
+	fmt.Println("!")
 	for i := 0; i < in.M; i++ {
-		gropes[i] = make([]int, in.G[i])
+		groups[i] = make([]City, in.G[i])
 		for j := 0; j < in.G[i]; j++ {
-			gropes[i][j] = sortedCity[index].ID
+			groups[i][j] = cities[sortedCity[index]]
 			index++
+			log.Println("groups", i, index, groups[i][j])
 		}
-		log.Println(i, in.G[i], gropes[i])
+		//log.Println(i, in.G[i], groups[i])
+		for j := 0; j < in.G[i]; j++ {
+			fmt.Print(groups[i][j].ID)
+			if j != in.G[i]-1 {
+				fmt.Print(" ")
+			} else {
+				fmt.Println()
+			}
+		}
+		log.Println("groups=", groups[i])
+		edge := createMST(groups[i])
+		if len(edge) == 0 {
+			log.Printf("Error: No edges returned for group %d\n", i)
+			continue
+		}
+		log.Println("edge=", edge)
+		for j := 0; j < len(edge); j++ {
+			fmt.Println(edge[j][0], edge[j][1])
+		}
 	}
 	// クエリの終了
-	fmt.Println("!")
 
 }
 
@@ -145,4 +162,31 @@ func Kruskal(n int, edges Edges) (int, []Edge) {
 		}
 	}
 	return mstWeight, mst
+}
+
+// cityからkruskal用のedgeを作成して、最小全域木を求める
+// kruskal用にcityを0からインデックスを振り直す
+// edgesには、cityのIDに変換して返す
+
+func createMST(cities []City) [][2]int {
+	newIndex := make([]int, len(cities))
+	for i := 0; i < len(cities); i++ {
+		newIndex[i] = cities[i].ID
+	}
+	edges := make(Edges, 0)
+	for i := 0; i < len(cities); i++ {
+		for j := i + 1; j < len(cities); j++ {
+			weight := (cities[i].X-cities[j].X)*(cities[i].X-cities[j].X) + (cities[i].Y-cities[j].Y)*(cities[i].Y-cities[j].Y)
+			edges = append(edges, Edge{From: i, To: j, Weight: weight})
+		}
+	}
+	cost, mst := Kruskal(len(cities), edges)
+	_ = cost
+	//log.Printf("cost=%d\n", cost)
+	newEdge := make([][2]int, len(mst))
+	for i := 0; i < len(mst); i++ {
+		newEdge[i][0] = newIndex[mst[i].From]
+		newEdge[i][1] = newIndex[mst[i].To]
+	}
+	return newEdge
 }
