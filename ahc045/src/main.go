@@ -116,3 +116,33 @@ func (uf *UnionFind) Union(x, y int) {
 func (uf *UnionFind) Same(x, y int) bool {
 	return uf.Find(x) == uf.Find(y)
 }
+
+type Edge struct {
+	From, To int
+	Weight   int
+}
+type Edges []Edge
+
+func (e Edges) Len() int {
+	return len(e)
+}
+func (e Edges) Less(i, j int) bool {
+	return e[i].Weight < e[j].Weight
+}
+func (e Edges) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
+}
+func Kruskal(n int, edges Edges) (int, []Edge) {
+	uf := NewUnionFind(n)
+	sort.Sort(edges)
+	var mst []Edge
+	mstWeight := 0
+	for _, edge := range edges {
+		if !uf.Same(edge.From, edge.To) {
+			uf.Union(edge.From, edge.To)
+			mst = append(mst, edge)
+			mstWeight += edge.Weight
+		}
+	}
+	return mstWeight, mst
+}
