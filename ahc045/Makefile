@@ -2,7 +2,7 @@ BINARY = bin/a.out
 SRC = src/main.go
 
 # Reactive
-REACTIVE = false
+REACTIVE = true
 ifeq ($(REACTIVE), true)
 	RUN_CMD = ./tools/target/release/tester
 else
@@ -43,6 +43,11 @@ SEED ?= 0
 # NUMを4桁にゼロパディングするための変数
 PADDING_NUM := $(shell printf "%04d" $(SEED))
 
+# 両方のコマンドをまとめて実行
+# normal : build run_go run_vis
+# reactive : build run_reactive 
+run: build run_reactive
+
 # Goのプログラムを実行してCPUプロファイルを作成し、結果を出力
 run_go:
 	gtime -f "実行時間: %E, メモリ使用量: %M KB, CPU使用率: %P%" $(BINARY) < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
@@ -52,12 +57,11 @@ run_vis:
 	./tools/target/release/vis tools/in/$(PADDING_NUM).txt $(PADDING_NUM).txt
 #cd tools && cargo run -r --bin vis in/$(PADDING_NUM).txt ../$(PADDING_NUM).txt
 
-# 両方のコマンドをまとめて実行
-run: build run_go run_vis
+
 
 #### reactive
 run_reactive:
-	$(RUN_CMD) go run $(SRC) < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
+	$(RUN_CMD) go run $(SRC) < tools/in/$(PADDING_NUM).txt > out/$(PADDING_NUM).txt
 
 run_cpu:
 	$(RUN_CMD) go run $(SRC) -cpuprofile cpu.prof < tools/in/$(PADDING_NUM).txt > $(PADDING_NUM).txt
