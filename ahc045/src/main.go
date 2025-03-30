@@ -27,6 +27,21 @@ type City struct {
 }
 
 func solver(in Input) {
+	log.Println(in.G[:in.M])
+	sortedGroup := make([]int, in.M)
+	for i := 0; i < in.M; i++ {
+		sortedGroup[i] = in.G[i]
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(sortedGroup)))
+	log.Println("sortedGroup=", sortedGroup)
+	// mappingは, in.Gの順番をsortedGroupのindexに変換する
+	mapping := makeMapping(in.G[:in.M], sortedGroup)
+	log.Println("mapping=", mapping)
+	for i := 0; i < in.M; i++ {
+		log.Println("request=", in.G[i], "mapping=", mapping[i], "sortedGroup[mapping[i]]=", sortedGroup[mapping[i]])
+	}
+	//log.Println("mapping=", mapping)
+
 	var cities [N]City
 	for i := 0; i < N; i++ {
 		cities[i].ID = i
@@ -51,7 +66,7 @@ func solver(in Input) {
 		for j := 0; j < in.G[i]; j++ {
 			groups[i][j] = cities[sortedCity[index]]
 			index++
-			log.Println("groups", i, index, groups[i][j])
+			//log.Println("groups", i, index, groups[i][j])
 		}
 		//log.Println(i, in.G[i], groups[i])
 		for j := 0; j < in.G[i]; j++ {
@@ -62,13 +77,17 @@ func solver(in Input) {
 				fmt.Println()
 			}
 		}
-		log.Println("groups=", groups[i])
+		//log.Println("groups=", groups[i])
 		edge := createMST(groups[i])
 		if len(edge) == 0 {
-			log.Printf("Error: No edges returned for group %d\n", i)
+			if len(groups[i]) == 1 {
+				// 1つの都市しかない場合は、エッジはない
+				continue
+			}
+			log.Printf("Error: No edges returned for group %d %v\n", i, len(groups[i]))
 			continue
 		}
-		log.Println("edge=", edge)
+		//log.Println("edge=", edge)
 		for j := 0; j < len(edge); j++ {
 			fmt.Println(edge[j][0], edge[j][1])
 		}
@@ -189,4 +208,19 @@ func createMST(cities []City) [][2]int {
 		newEdge[i][1] = newIndex[mst[i].To]
 	}
 	return newEdge
+}
+
+func makeMapping(a, b []int) []int {
+	mapping := make([]int, len(a))
+	used := make([]bool, len(a))
+	for i, v := range a {
+		for j, w := range b {
+			if v == w && !used[j] {
+				mapping[i] = j
+				used[j] = true
+				break
+			}
+		}
+	}
+	return mapping
 }
