@@ -26,6 +26,27 @@ type City struct {
 	ID int
 }
 
+// answer
+type ansGroup struct {
+	Citys []int
+	Edges [][2]int
+}
+
+// Output()は、回答形式に合わせてStringに変換する
+func (a ansGroup) Output() (str string) {
+	for i, city := range a.Citys {
+		if i < len(a.Citys)-1 {
+			str += fmt.Sprintf("%d ", city)
+		} else {
+			str += fmt.Sprintf("%d\n", city)
+		}
+	}
+	for _, edge := range a.Edges {
+		str += fmt.Sprintf("%d %d\n", edge[0], edge[1])
+	}
+	return str
+}
+
 func solver(in Input) {
 	log.Println(in.G[:in.M])
 	sortedGroup := make([]int, in.M)
@@ -60,6 +81,8 @@ func solver(in Input) {
 	})
 	groups := make([][]City, in.M)
 	index := 0
+	// 回答の出力
+	ans := make([]ansGroup, in.M)
 	fmt.Println("!")
 	for i := 0; i < in.M; i++ {
 		groups[i] = make([]City, in.G[i])
@@ -70,12 +93,7 @@ func solver(in Input) {
 		}
 		//log.Println(i, in.G[i], groups[i])
 		for j := 0; j < in.G[i]; j++ {
-			fmt.Print(groups[i][j].ID)
-			if j != in.G[i]-1 {
-				fmt.Print(" ")
-			} else {
-				fmt.Println()
-			}
+			ans[i].Citys = append(ans[i].Citys, groups[i][j].ID)
 		}
 		//log.Println("groups=", groups[i])
 		edge := createMST(groups[i])
@@ -87,13 +105,14 @@ func solver(in Input) {
 			log.Printf("Error: No edges returned for group %d %v\n", i, len(groups[i]))
 			continue
 		}
-		//log.Println("edge=", edge)
 		for j := 0; j < len(edge); j++ {
-			fmt.Println(edge[j][0], edge[j][1])
+			ans[i].Edges = append(ans[i].Edges, edge[j])
 		}
 	}
 	// クエリの終了
-
+	for i := 0; i < in.M; i++ {
+		fmt.Print(ans[i].Output())
+	}
 }
 
 const (
