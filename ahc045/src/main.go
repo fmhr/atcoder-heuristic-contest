@@ -56,15 +56,6 @@ func solver(in Input) {
 	// mappingは, in.Gの順番をsortedGroupのindexに変換する
 	mapping := makeMapping(in.G[:in.M], sortedGroup)
 	//log.Println("mapping=", mapping)
-	for i := 0; i < in.M; i++ {
-		//log.Println("request=", in.G[i], "mapping=", mapping[i], "sortedGroup[mapping[i]]=", sortedGroup[mapping[i]])
-	}
-	//log.Println("mapping=", mapping)
-
-	for i := 0; i < N; i++ {
-		//log.Println("lxrxlyry=", in.lxrxlyry[i*4+0], in.lxrxlyry[i*4+1], in.lxrxlyry[i*4+2], in.lxrxlyry[i*4+3])
-		//log.Println(i, in.lxrxlyry[i*4+1]-in.lxrxlyry[i*4+0], in.lxrxlyry[i*4+3]-in.lxrxlyry[i*4+2])
-	}
 
 	// 都市の初期値は範囲の中心とする
 	var cities [N]City
