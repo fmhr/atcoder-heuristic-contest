@@ -26,7 +26,7 @@ type City struct {
 	ID int
 }
 
-// answer
+// answerの出力用
 type ansGroup struct {
 	Citys []int
 	Edges [][2]int
@@ -48,21 +48,25 @@ func (a ansGroup) Output() (str string) {
 }
 
 func solver(in Input) {
-	log.Println(in.G[:in.M])
 	sortedGroup := make([]int, in.M)
 	for i := 0; i < in.M; i++ {
 		sortedGroup[i] = in.G[i]
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(sortedGroup)))
-	log.Println("sortedGroup=", sortedGroup)
 	// mappingは, in.Gの順番をsortedGroupのindexに変換する
 	mapping := makeMapping(in.G[:in.M], sortedGroup)
-	log.Println("mapping=", mapping)
+	//log.Println("mapping=", mapping)
 	for i := 0; i < in.M; i++ {
-		log.Println("request=", in.G[i], "mapping=", mapping[i], "sortedGroup[mapping[i]]=", sortedGroup[mapping[i]])
+		//log.Println("request=", in.G[i], "mapping=", mapping[i], "sortedGroup[mapping[i]]=", sortedGroup[mapping[i]])
 	}
 	//log.Println("mapping=", mapping)
 
+	for i := 0; i < N; i++ {
+		//log.Println("lxrxlyry=", in.lxrxlyry[i*4+0], in.lxrxlyry[i*4+1], in.lxrxlyry[i*4+2], in.lxrxlyry[i*4+3])
+		//log.Println(i, in.lxrxlyry[i*4+1]-in.lxrxlyry[i*4+0], in.lxrxlyry[i*4+3]-in.lxrxlyry[i*4+2])
+	}
+
+	// 都市の初期値は範囲の中心とする
 	var cities [N]City
 	for i := 0; i < N; i++ {
 		cities[i].ID = i
@@ -79,39 +83,94 @@ func solver(in Input) {
 		}
 		return cities[sortedCity[i]].Y < cities[sortedCity[j]].Y
 	})
-	groups := make([][]City, in.M)
-	index := 0
-	// 回答の出力
-	ans := make([]ansGroup, in.M)
-	fmt.Println("!")
-	for i := 0; i < in.M; i++ {
-		groups[i] = make([]City, in.G[i])
-		for j := 0; j < in.G[i]; j++ {
-			groups[i][j] = cities[sortedCity[index]]
-			index++
-			//log.Println("groups", i, index, groups[i][j])
-		}
-		//log.Println(i, in.G[i], groups[i])
-		for j := 0; j < in.G[i]; j++ {
-			ans[i].Citys = append(ans[i].Citys, groups[i][j].ID)
-		}
-		//log.Println("groups=", groups[i])
-		edge := createMST(groups[i])
-		if len(edge) == 0 {
-			if len(groups[i]) == 1 {
-				// 1つの都市しかない場合は、エッジはない
-				continue
-			}
-			log.Printf("Error: No edges returned for group %d %v\n", i, len(groups[i]))
-			continue
-		}
-		for j := 0; j < len(edge); j++ {
-			ans[i].Edges = append(ans[i].Edges, edge[j])
+
+	// 全都市間の距離を計算する
+	// Groupの都市数が多い順に、都市間が短いエッジを結ぶ
+	// Kruskal法に近いけど、エッジはGrpupと新しい都市を結ぶ時のみつなぐ
+	var allDistance [N][N]int
+	allEdge := make([]Edge, 0, N*(N-1)/2)
+	for i := 0; i < N; i++ {
+		allDistance[i][i] = 0
+		for j := i + 1; j < N; j++ {
+			allDistance[i][j] = (cities[i].X-cities[j].X)*(cities[i].X-cities[j].X) + (cities[i].Y-cities[j].Y)*(cities[i].Y-cities[j].Y)
+			allDistance[j][i] = allDistance[i][j]
+			allEdge = append(allEdge, Edge{From: i, To: j, Weight: allDistance[i][j]})
 		}
 	}
-	// クエリの終了
+	// allEdgeを重みが小さい順にソートする
+	sort.Slice(allEdge, func(i, j int) bool {
+		return allEdge[i].Weight < allEdge[j].Weight
+	})
+
+	uf := NewUnionFind(N) // 全体の森
+	var used [N]bool
+
+	ansGroup := make([]ansGroup, in.M)
 	for i := 0; i < in.M; i++ {
-		fmt.Print(ans[i].Output())
+		// sortedGroup[i]の都市をグループにする
+		size := sortedGroup[i]
+		var root int = -1
+		if size == 1 {
+			// size=1の時は、rootのみを探す
+			for j := 0; j < N; j++ {
+				if uf.size[j] == 1 && !used[j] {
+					root = j
+					used[j] = true
+					break
+				}
+			}
+			if root == -1 {
+				log.Println("Error: root not found")
+			}
+			ansGroup[i].Citys = append(ansGroup[i].Citys, cities[root].ID)
+		} else {
+			for j := 0; j < size; j++ {
+				if j == 0 {
+					// sortedGroup[i]の最初の都市は、グループの親(root)にする
+					for _, edge := range allEdge {
+						if uf.size[edge.From] == 1 && uf.size[edge.To] == 1 && !used[edge.From] && !used[edge.To] {
+							// 両方ともグループに属していない
+							root = edge.From
+							ansGroup[i].Citys = append(ansGroup[i].Citys, cities[edge.From].ID)
+							used[edge.From] = true
+							used[edge.To] = true
+							break
+						}
+					}
+					if root == -1 {
+						log.Println("Error: root not found")
+					}
+				} else {
+					// rootと繋がる都市を探す
+					for _, edge := range allEdge {
+						if uf.Find(edge.From) == root && uf.Find(edge.To) != root && uf.size[edge.To] == 1 {
+							// rootに繋がる都市を見つけた
+							ansGroup[i].Citys = append(ansGroup[i].Citys, cities[edge.To].ID)
+							ansGroup[i].Edges = append(ansGroup[i].Edges, [2]int{cities[edge.From].ID, cities[edge.To].ID})
+							uf.Union(edge.From, edge.To)
+							used[edge.To] = true
+							break
+						}
+						if uf.Find(edge.To) == root && uf.Find(edge.From) != root && uf.size[edge.From] == 1 {
+							// rootに繋がる都市を見つけた
+							ansGroup[i].Citys = append(ansGroup[i].Citys, cities[edge.From].ID)
+							ansGroup[i].Edges = append(ansGroup[i].Edges, [2]int{cities[edge.To].ID, cities[edge.From].ID})
+							uf.Union(edge.To, edge.From)
+							used[edge.From] = true
+							break
+						}
+					}
+				}
+			}
+			log.Println("request Size=", size, "root=", root, "size=", uf.size[root], "cities=", ansGroup[i].Citys)
+		}
+	}
+	log.Println("used=", used)
+
+	// クエリの終了
+	fmt.Println("!")
+	for i := 0; i < in.M; i++ {
+		fmt.Print(ansGroup[mapping[i]].Output())
 	}
 }
 
@@ -144,17 +203,22 @@ func readInput() (in Input) {
 
 type UnionFind struct {
 	parent []int // 親ノードのインデックス
+	size   []int // 各グループのサイズ rootのindexにアクセスする root以外は０にする
 }
 
 func NewUnionFind(n int) *UnionFind {
 	uf := &UnionFind{
 		parent: make([]int, n),
+		size:   make([]int, n),
 	}
 	for i := 0; i < n; i++ {
 		uf.parent[i] = i
+		uf.size[i] = 1
 	}
 	return uf
 }
+
+// Findは、xの親ノードを返す
 func (uf *UnionFind) Find(x int) int {
 	if uf.parent[x] != x {
 		uf.parent[x] = uf.Find(uf.parent[x])
@@ -167,6 +231,8 @@ func (uf *UnionFind) Union(x, y int) {
 	if rootX != rootY {
 		uf.parent[rootY] = rootX
 	}
+	uf.size[rootX] += uf.size[rootY]
+	uf.size[rootY] = 0 // rootYはrootXに統合されたので、サイズは0にする
 }
 func (uf *UnionFind) Same(x, y int) bool {
 	return uf.Find(x) == uf.Find(y)
