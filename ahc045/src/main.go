@@ -21,6 +21,10 @@ type Point struct {
 	Y, X int
 }
 
+func distance(a, b Point) int {
+	return (a.X-b.X)*(a.X-b.X) + (a.Y-b.Y)*(a.Y-b.Y)
+}
+
 type City struct {
 	Point
 	ID int
@@ -75,6 +79,10 @@ func solver(in Input) {
 		}
 		return cities[sortedCity[i]].Y < cities[sortedCity[j]].Y
 	})
+
+	// kd-treeを作成する
+	//kdt := NewKDTree(cities[:])
+	//printTree(kdt.Root, 0)
 
 	// 全都市間の距離を計算する
 	// Groupの都市数が多い順に、都市間が短いエッジを結ぶ
@@ -300,4 +308,61 @@ func makeMapping(a, b []int) []int {
 		}
 	}
 	return mapping
+}
+
+// kd-tree
+type Node struct {
+	Point
+	Index int
+	Left  *Node
+	Right *Node
+}
+
+type KDTree struct {
+	Root *Node
+}
+
+func NewKDTree(cities []City) *KDTree {
+	points := make([]Point, len(cities))
+	for i, city := range cities {
+		points[i] = Point{Y: city.Y, X: city.X}
+	}
+	nodes := make([]int, len(cities))
+	for i := range nodes {
+		nodes[i] = i
+	}
+	return &KDTree{Root: buildTree(points, nodes, 0)}
+}
+
+func buildTree(cities []Point, indices []int, depth int) *Node {
+	if len(indices) == 0 {
+		return nil
+	}
+
+	axis := depth % 2
+
+	sort.Slice(indices, func(i, j int) bool {
+		if axis == 0 {
+			return cities[indices[i]].X < cities[indices[j]].X
+		}
+		return cities[indices[i]].Y < cities[indices[j]].Y
+	})
+
+	mid := len(indices) / 2
+
+	return &Node{
+		Point: cities[indices[mid]],
+		Index: indices[mid],
+		Left:  buildTree(cities, indices[:mid], depth+1),
+		Right: buildTree(cities, indices[mid+1:], depth+1),
+	}
+}
+
+func printTree(node *Node, depth int) {
+	if node == nil {
+		return
+	}
+	fmt.Printf("%s(%d, %d)\n", string(' '+depth*2), node.X, node.Y)
+	printTree(node.Left, depth+1)
+	printTree(node.Right, depth+1)
 }
