@@ -21,7 +21,7 @@ func main() {
 	in := readInput()
 	log.Printf("M=%d L=%d W=%d\n", in.M, in.L, in.W)
 	solver(in)
-	log.Printf("elapsed=%s\n", time.Since(startTime))
+	log.Printf("elapsed=%.2f\n", float64(time.Since(startTime).Microseconds())/1000)
 }
 
 type Point struct {
@@ -188,89 +188,6 @@ func solver(in Input) {
 		}
 		log.Println("request Size=", size, "root=", root, "size=", uf.size[root], "cost=", ansGroup[i].Cost, "cities=", ansGroup[i].Citys)
 	}
-
-	// 山登り法でグループ間の都市をスワップして、コストを下げる
-	// Edgeは最後に更新する
-	// 都市がどこのグループに属しているかを管理する
-	group := make([]int, N)
-	groupSize := make([]int, in.M)
-	fullDist := 0
-	for i := 0; i < in.M; i++ {
-		dist := 0
-		for j, city := range ansGroup[i].Citys {
-			group[ansGroup[i].Citys[j]] = i
-			root := uf.Find(city)
-			dist += dist2(cities[city].Point, cities[root].Point)
-		}
-		groupSize[i] = dist
-		fullDist += dist
-	}
-	log.Println("group=", group)
-	log.Println("groupSize=", groupSize)
-
-	for i := 0; i < N; i++ {
-		log.Printf("city=%d grup=%d root=%d size=%d\n", i, group[i], uf.Find(i), uf.size[uf.Find(i)])
-		if uf.Find(i) != uf.parent[i] {
-			panic("Error: not root")
-		}
-	}
-	var swapCount int
-
-	for i := 0; i < 1000000; i++ {
-		a := frand.Intn(N)
-		b := frand.Intn(N)
-		if group[a] == group[b] {
-			continue
-		}
-		// root_a, aの距離, root_b, bの距離を計算する currentCost
-		// root_a, bの距離, root_b, aの距離を計算する nextCost
-		currentCost := dist2(cities[a].Point, cities[uf.Find(a)].Point) + dist2(cities[b].Point, cities[uf.Find(b)].Point)
-		nextCost := dist2(cities[a].Point, cities[uf.Find(b)].Point) + dist2(cities[b].Point, cities[uf.Find(a)].Point)
-		diff := nextCost - currentCost
-
-		if diff < 0 {
-			// グループのサイズを更新する
-			groupSize[group[a]] -= dist2(cities[a].Point, cities[uf.Find(a)].Point)
-			groupSize[group[a]] += dist2(cities[b].Point, cities[uf.Find(a)].Point)
-			groupSize[group[b]] -= dist2(cities[b].Point, cities[uf.Find(b)].Point)
-			groupSize[group[b]] += dist2(cities[a].Point, cities[uf.Find(b)].Point)
-
-			// スワップする
-			group[a], group[b] = group[b], group[a]
-			uf.parent[a], uf.parent[b] = uf.parent[b], uf.parent[a]
-			uf.size[a], uf.size[b] = uf.size[b], uf.size[a]
-			// 都市の座標をスワップする
-			//log.Printf("loop %d swap %d %d costDiff %d fullDist %d\n", i, a, b, nextCost-currentCost, fullDist)
-			swapCount++
-			fullDist += diff
-		}
-	}
-	log.Println("swapCount=", swapCount)
-	newAnsGroup := make([]AnsGroup, in.M)
-	for i := 0; i < in.M; i++ {
-		newAnsGroup[i].Citys = make([]int, 0)
-		newAnsGroup[i].Edges = make([][2]int, 0)
-		newAnsGroup[i].Cost = 0
-	}
-	for i := 0; i < N; i++ {
-		newAnsGroup[group[i]].Citys = append(newAnsGroup[group[i]].Citys, i)
-	}
-	for i := 0; i < in.M; i++ {
-		cities := make([]City, len(newAnsGroup[i].Citys))
-		for j, city := range newAnsGroup[i].Citys {
-			cities[j].ID = newAnsGroup[i].Citys[j]
-			cities[j].X = (in.lxrxlyry[city*4+0] + in.lxrxlyry[city*4+1]) / 2
-			cities[j].Y = (in.lxrxlyry[city*4+2] + in.lxrxlyry[city*4+3]) / 2
-		}
-		newAnsGroup[i].Edges = createMST(cities[:])
-	}
-
-	var newScore int
-	for i := 0; i < in.M; i++ {
-		newScore += newAnsGroup[i].calcScore(cities[:])
-	}
-	log.Printf("newscore=%d\n", newScore)
-
 	// 推定座標でスコアを計算
 	var score int
 	for i := 0; i < in.M; i++ {
