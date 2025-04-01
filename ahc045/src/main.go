@@ -30,6 +30,7 @@ type City struct {
 type ansGroup struct {
 	Citys []int
 	Edges [][2]int
+	Cost  int
 }
 
 // Output()は、回答形式に合わせてStringに変換する
@@ -124,7 +125,6 @@ func solver(in Input) {
 							root = edge.From
 							ansGroup[i].Citys = append(ansGroup[i].Citys, cities[edge.From].ID)
 							used[edge.From] = true
-							used[edge.To] = true
 							break
 						}
 					}
@@ -140,6 +140,7 @@ func solver(in Input) {
 							ansGroup[i].Edges = append(ansGroup[i].Edges, [2]int{cities[edge.From].ID, cities[edge.To].ID})
 							uf.Union(edge.From, edge.To)
 							used[edge.To] = true
+							ansGroup[i].Cost += edge.Weight
 							break
 						}
 						if uf.Find(edge.To) == root && uf.Find(edge.From) != root && uf.size[edge.From] == 1 {
@@ -148,15 +149,15 @@ func solver(in Input) {
 							ansGroup[i].Edges = append(ansGroup[i].Edges, [2]int{cities[edge.To].ID, cities[edge.From].ID})
 							uf.Union(edge.To, edge.From)
 							used[edge.From] = true
+							ansGroup[i].Cost += edge.Weight
 							break
 						}
 					}
 				}
 			}
-			log.Println("request Size=", size, "root=", root, "size=", uf.size[root], "cities=", ansGroup[i].Citys)
 		}
+		log.Println("request Size=", size, "root=", root, "size=", uf.size[root], "cost=", ansGroup[i].Cost, "cities=", ansGroup[i].Citys)
 	}
-	log.Println("used=", used)
 
 	// クエリの終了
 	fmt.Println("!")
