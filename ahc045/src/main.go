@@ -14,6 +14,7 @@ func init() {
 }
 
 var startTime time.Time
+var frand = rand.New(rand.NewSource(1333))
 
 func main() {
 	startTime = time.Now()
@@ -43,13 +44,13 @@ type City struct {
 }
 
 // answerの出力用
-type ansGroup struct {
+type AnsGroup struct {
 	Citys []int
 	Edges [][2]int
 	Cost  int
 }
 
-func (a ansGroup) calcScore(cities []City) int {
+func (a AnsGroup) calcScore(cities []City) int {
 	// エッジの長さの合計
 	score := 0
 	for _, edge := range a.Edges {
@@ -59,7 +60,7 @@ func (a ansGroup) calcScore(cities []City) int {
 }
 
 // Output()は、回答形式に合わせてStringに変換する
-func (a ansGroup) Output() (str string) {
+func (a AnsGroup) Output() (str string) {
 	for i, city := range a.Citys {
 		if i < len(a.Citys)-1 {
 			str += fmt.Sprintf("%d ", city)
@@ -126,7 +127,7 @@ func solver(in Input) {
 	uf := NewUnionFind(N) // 全体の森
 	var used [N]bool
 
-	ansGroup := make([]ansGroup, in.M)
+	ansGroup := make([]AnsGroup, in.M)
 	for i := 0; i < in.M; i++ {
 		// sortedGroup[i]の都市をグループにする
 		size := sortedGroup[i]
@@ -193,6 +194,7 @@ func solver(in Input) {
 	// 都市がどこのグループに属しているかを管理する
 	group := make([]int, N)
 	groupSize := make([]int, in.M)
+	fullDist := 0
 	for i := 0; i < in.M; i++ {
 		dist := 0
 		for j, city := range ansGroup[i].Citys {
@@ -201,6 +203,7 @@ func solver(in Input) {
 			dist += dist2(cities[city].Point, cities[root].Point)
 		}
 		groupSize[i] = dist
+		fullDist += dist
 	}
 	log.Println("group=", group)
 	log.Println("groupSize=", groupSize)
@@ -211,10 +214,11 @@ func solver(in Input) {
 			panic("Error: not root")
 		}
 	}
+	var swapCount int
 
-	for i := 0; i < 100000; i++ {
-		a := rand.Intn(N)
-		b := rand.Intn(N)
+	for i := 0; i < 1000000; i++ {
+		a := frand.Intn(N)
+		b := frand.Intn(N)
 		if group[a] == group[b] {
 			continue
 		}
@@ -223,6 +227,7 @@ func solver(in Input) {
 		currentCost := dist2(cities[a].Point, cities[uf.Find(a)].Point) + dist2(cities[b].Point, cities[uf.Find(b)].Point)
 		nextCost := dist2(cities[a].Point, cities[uf.Find(b)].Point) + dist2(cities[b].Point, cities[uf.Find(a)].Point)
 		diff := nextCost - currentCost
+
 		if diff < 0 {
 			// グループのサイズを更新する
 			groupSize[group[a]] -= dist2(cities[a].Point, cities[uf.Find(a)].Point)
@@ -232,11 +237,41 @@ func solver(in Input) {
 
 			// スワップする
 			group[a], group[b] = group[b], group[a]
-
+			uf.parent[a], uf.parent[b] = uf.parent[b], uf.parent[a]
+			uf.size[a], uf.size[b] = uf.size[b], uf.size[a]
 			// 都市の座標をスワップする
-			log.Printf("loop %d swap %d %d costDiff %d\n", i, a, b, nextCost-currentCost)
+			//log.Printf("loop %d swap %d %d costDiff %d fullDist %d\n", i, a, b, nextCost-currentCost, fullDist)
+			swapCount++
+			fullDist += diff
 		}
 	}
+	log.Println("swapCount=", swapCount)
+	newAnsGroup := make([]AnsGroup, in.M)
+	for i := 0; i < in.M; i++ {
+		newAnsGroup[i].Citys = make([]int, 0)
+		newAnsGroup[i].Edges = make([][2]int, 0)
+		newAnsGroup[i].Cost = 0
+	}
+	for i := 0; i < N; i++ {
+		newAnsGroup[group[i]].Citys = append(newAnsGroup[group[i]].Citys, i)
+	}
+	for i := 0; i < in.M; i++ {
+		cities := make([]City, len(newAnsGroup[i].Citys))
+		for j, city := range newAnsGroup[i].Citys {
+			cities[j].ID = newAnsGroup[i].Citys[j]
+			cities[j].X = (in.lxrxlyry[city*4+0] + in.lxrxlyry[city*4+1]) / 2
+			cities[j].Y = (in.lxrxlyry[city*4+2] + in.lxrxlyry[city*4+3]) / 2
+		}
+		newAnsGroup[i].Edges = createMST(cities[:])
+	}
+
+	var newScore int
+	for i := 0; i < in.M; i++ {
+		newScore += newAnsGroup[i].calcScore(cities[:])
+	}
+	log.Printf("newscore=%d\n", newScore)
+
+	// 推定座標でスコアを計算
 	var score int
 	for i := 0; i < in.M; i++ {
 		score += ansGroup[i].calcScore(cities[:])
