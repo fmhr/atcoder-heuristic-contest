@@ -3,26 +3,38 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
+	"math/rand"
 	"sort"
+	"time"
 )
 
 func init() {
 	log.SetFlags(log.Lshortfile)
 }
 
+var startTime time.Time
+
 func main() {
-	log.Println("Hello, World!")
+	startTime = time.Now()
 	in := readInput()
 	log.Printf("M=%d L=%d W=%d\n", in.M, in.L, in.W)
 	solver(in)
+	log.Printf("elapsed=%s\n", time.Since(startTime))
 }
 
 type Point struct {
 	Y, X int
 }
 
-func distance(a, b Point) int {
+// 大小関係がわかればいいので、√を取らない
+func dist2(a, b Point) int {
 	return (a.X-b.X)*(a.X-b.X) + (a.Y-b.Y)*(a.Y-b.Y)
+}
+
+// 小数点以下切り捨て
+func dist(a, b Point) int {
+	return int(math.Floor(math.Sqrt(float64(dist2(a, b)))))
 }
 
 type City struct {
@@ -35,6 +47,15 @@ type ansGroup struct {
 	Citys []int
 	Edges [][2]int
 	Cost  int
+}
+
+func (a ansGroup) calcScore(cities []City) int {
+	// エッジの長さの合計
+	score := 0
+	for _, edge := range a.Edges {
+		score += dist(cities[edge[0]].Point, cities[edge[1]].Point)
+	}
+	return score
 }
 
 // Output()は、回答形式に合わせてStringに変換する
@@ -167,6 +188,60 @@ func solver(in Input) {
 		log.Println("request Size=", size, "root=", root, "size=", uf.size[root], "cost=", ansGroup[i].Cost, "cities=", ansGroup[i].Citys)
 	}
 
+	// 山登り法でグループ間の都市をスワップして、コストを下げる
+	// Edgeは最後に更新する
+	// 都市がどこのグループに属しているかを管理する
+	group := make([]int, N)
+	groupSize := make([]int, in.M)
+	for i := 0; i < in.M; i++ {
+		dist := 0
+		for j, city := range ansGroup[i].Citys {
+			group[ansGroup[i].Citys[j]] = i
+			root := uf.Find(city)
+			dist += dist2(cities[city].Point, cities[root].Point)
+		}
+		groupSize[i] = dist
+	}
+	log.Println("group=", group)
+	log.Println("groupSize=", groupSize)
+
+	for i := 0; i < N; i++ {
+		log.Printf("city=%d grup=%d root=%d size=%d\n", i, group[i], uf.Find(i), uf.size[uf.Find(i)])
+		if uf.Find(i) != uf.parent[i] {
+			panic("Error: not root")
+		}
+	}
+
+	for i := 0; i < 100000; i++ {
+		a := rand.Intn(N)
+		b := rand.Intn(N)
+		if group[a] == group[b] {
+			continue
+		}
+		// root_a, aの距離, root_b, bの距離を計算する currentCost
+		// root_a, bの距離, root_b, aの距離を計算する nextCost
+		currentCost := dist2(cities[a].Point, cities[uf.Find(a)].Point) + dist2(cities[b].Point, cities[uf.Find(b)].Point)
+		nextCost := dist2(cities[a].Point, cities[uf.Find(b)].Point) + dist2(cities[b].Point, cities[uf.Find(a)].Point)
+		diff := nextCost - currentCost
+		if diff < 0 {
+			// グループのサイズを更新する
+			groupSize[group[a]] -= dist2(cities[a].Point, cities[uf.Find(a)].Point)
+			groupSize[group[a]] += dist2(cities[b].Point, cities[uf.Find(a)].Point)
+			groupSize[group[b]] -= dist2(cities[b].Point, cities[uf.Find(b)].Point)
+			groupSize[group[b]] += dist2(cities[a].Point, cities[uf.Find(b)].Point)
+
+			// スワップする
+			group[a], group[b] = group[b], group[a]
+
+			// 都市の座標をスワップする
+			log.Printf("loop %d swap %d %d costDiff %d\n", i, a, b, nextCost-currentCost)
+		}
+	}
+	var score int
+	for i := 0; i < in.M; i++ {
+		score += ansGroup[i].calcScore(cities[:])
+	}
+	log.Printf("score=%d\n", score)
 	// クエリの終了
 	fmt.Println("!")
 	for i := 0; i < in.M; i++ {
