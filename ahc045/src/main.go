@@ -94,7 +94,7 @@ func solver(in Input) {
 	sortByCenterCities := make([]City, N)
 	copy(sortByCenterCities, cities[:])
 	sort.Slice(sortByCenterCities[:], func(i, j int) bool {
-		return dist2(center, sortByCenterCities[i].Point) < dist2(center, sortByCenterCities[j].Point)
+		return dist2(center, sortByCenterCities[i].Point) > dist2(center, sortByCenterCities[j].Point)
 	})
 	tmp := make([]City, N)
 	copy(tmp, cities[:])
@@ -131,14 +131,17 @@ func solver(in Input) {
 			tmpCity[j] = cities[city]
 		}
 		ansGrops[i].Edges = createMST(tmpCity)
-		if len(ansGrops[i].Citys) > 1 {
+		if len(ansGrops[i].Citys) > 2 {
 			// query test
 			q := make([]int, 0, in.L)
 			for j := 0; j < in.L && j < len(ansGrops[i].Citys); j++ {
 				q = append(q, ansGrops[i].Citys[j])
 			}
 			edge := query(q)
-			log.Println(q, edge)
+			log.Println(in.L, len(ansGrops[i].Citys), q, edge)
+			if in.L >= len(ansGrops[i].Citys) {
+				ansGrops[i].Edges = edge
+			}
 		}
 	}
 	// クエリの終了
