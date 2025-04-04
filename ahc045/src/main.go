@@ -86,13 +86,13 @@ func solver(in Input) {
 		sortedGroup[i] = in.G[i]
 	}
 
-	bestAnc := make([]AnsGroup, in.M)
+	bestAns := make([]AnsGroup, in.M)
 	bestMapping := make([]int, in.M)
 	bestScore := 100000000
 	ansGrops := make([]AnsGroup, in.M)
 	mapping := make([]int, in.M)
 	var cities [N]City
-	for k := 0; k < 100; k++ {
+	for k := 0; k < intMin(100, in.M); k++ {
 		//sort.Sort(sort.Reverse(sort.IntSlice(sortedGroup)))
 		frand.Shuffle(len(sortedGroup), func(i, j int) {
 			sortedGroup[i], sortedGroup[j] = sortedGroup[j], sortedGroup[i]
@@ -169,18 +169,37 @@ func solver(in Input) {
 		//log.Printf("estCost=%d\n", allCost)
 		if allCost < bestScore {
 			bestScore = allCost
-			bestAnc = make([]AnsGroup, in.M)
-			copy(bestAnc, ansGrops[:])
+			bestAns = make([]AnsGroup, in.M)
+			for i := 0; i < in.M; i++ {
+				bestAns[i].Citys = make([]int, len(ansGrops[i].Citys))
+				bestAns[i].Edges = make([][2]int, len(ansGrops[i].Edges))
+				bestAns[i].Cost = ansGrops[i].Cost
+				copy(bestAns[i].Citys, ansGrops[i].Citys)
+				copy(bestAns[i].Edges, ansGrops[i].Edges)
+			}
 			copy(bestMapping, mapping[:])
 			log.Println(k, "update bestScore:", bestScore)
+			log.Println("bestAns[0].Citys=", bestAns[0].Citys)
+			log.Println("bestAns[0].Edges=", bestAns[0].Edges)
 		}
 	}
+	// queryを使ったedgeの最適化
+	log.Println("bestScore=", bestScore)
+	for i := 0; i < in.M; i++ {
+		if len(bestAns[i].Citys) > 2 && in.L >= len(bestAns[i].Citys) {
+			log.Println("old cities=", bestAns[i].Citys)
+			log.Println("old edges=", bestAns[i].Edges)
+			bestAns[i].Edges = query(bestAns[i].Citys)
+			log.Println("new edges=", bestAns[i].Edges)
+		}
+	}
+
 	//log.Println("mapping=", mapping)
 	//log.Println("ansGrops=", ansGrops)
 	// クエリの終了
 	fmt.Println("!")
 	for i := 0; i < in.M; i++ {
-		fmt.Print(bestAnc[bestMapping[i]].Output())
+		fmt.Print(bestAns[bestMapping[i]].Output())
 	}
 	log.Println("end")
 	// kd-treeを作成する
@@ -277,8 +296,10 @@ func solver(in Input) {
 	//log.Printf("score=%d\n", score)
 	if os.Getenv("ATCODER") != "1" {
 		var xy [N][2]float64
+		log.Println("read real xy")
 		for i := 0; i < N; i++ {
 			fmt.Scan(&xy[i][0], &xy[i][1])
+			log.Println(i, "xy=", xy[i][0], xy[i][1])
 		}
 		sumSqErr := 0.0
 		for i := 0; i < N; i++ {
@@ -493,16 +514,38 @@ func printTree(node *Node, depth int) {
 }
 
 // query
+var queryCount int
+
 func query(cities []int) (edges [][2]int) {
+	log.Println("query cities=", cities)
+	if queryCount >= Q {
+		panic("query count over")
+	}
 	str := fmt.Sprintf("? %d", len(cities))
 	for _, city := range cities {
 		str += fmt.Sprintf(" %d", city)
 	}
 	fmt.Println(str)
+	log.Println(str)
 	for i := 0; i < len(cities)-1; i++ {
 		var a, b int
 		fmt.Scan(&a, &b)
 		edges = append(edges, [2]int{a, b})
 	}
+	queryCount++
 	return edges
+}
+
+func intMax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func intMin(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
