@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
 	"sort"
 	"time"
 )
@@ -15,8 +16,13 @@ func init() {
 
 var startTime time.Time
 var frand = rand.New(rand.NewSource(1333))
+var ATCODER = "0" // 0:atcoder, 1:local
 
 func main() {
+	if os.Getenv("ATCODER") == "1" {
+		ATCODER = "1"
+	}
+	log.Println("ATCODER=", ATCODER)
 	startTime = time.Now()
 	in := readInput()
 	log.Printf("M=%d L=%d W=%d\n", in.M, in.L, in.W)
@@ -25,11 +31,11 @@ func main() {
 }
 
 type Point struct {
-	Y, X int
+	Y, X float64
 }
 
 // 大小関係がわかればいいので、√を取らない
-func dist2(a, b Point) int {
+func dist2(a, b Point) float64 {
 	return (a.X-b.X)*(a.X-b.X) + (a.Y-b.Y)*(a.Y-b.Y)
 }
 
@@ -79,78 +85,104 @@ func solver(in Input) {
 	for i := 0; i < in.M; i++ {
 		sortedGroup[i] = in.G[i]
 	}
-	sort.Sort(sort.Reverse(sort.IntSlice(sortedGroup)))
-	mapping := makeMapping(in.G[:in.M], sortedGroup)
 
-	// 都市の初期値は範囲の中心とする
-	var cities [N]City
-	for i := 0; i < N; i++ {
-		cities[i].ID = i
-		cities[i].Y = (in.lxrxlyry[i*4+2] + in.lxrxlyry[i*4+3]) / 2
-		cities[i].X = (in.lxrxlyry[i*4+0] + in.lxrxlyry[i*4+1]) / 2
-	}
-	center := Point{Y: 10000 / 2, X: 10000 / 2}
-	var used [N]bool
-	sortByCenterCities := make([]City, N)
-	copy(sortByCenterCities, cities[:])
-	sort.Slice(sortByCenterCities[:], func(i, j int) bool {
-		return dist2(center, sortByCenterCities[i].Point) > dist2(center, sortByCenterCities[j].Point)
-	})
-	tmp := make([]City, N)
-	copy(tmp, cities[:])
+	bestAnc := make([]AnsGroup, in.M)
+	bestMapping := make([]int, in.M)
+	bestScore := 100000000
 	ansGrops := make([]AnsGroup, in.M)
-	for i := 0; i < in.M; i++ {
-		// グループのrootを決める
-		groupRoot := -1
-		for _, city := range sortByCenterCities {
-			if !used[city.ID] {
-				groupRoot = city.ID
-				used[city.ID] = true
-				ansGrops[i].Citys = append(ansGrops[i].Citys, city.ID)
-				break
-			}
-		}
-		// rootからの距離が近い順にソートする
-		sort.Slice(tmp[:], func(i, j int) bool {
-			return dist2(cities[groupRoot].Point, tmp[i].Point) < dist2(cities[groupRoot].Point, tmp[j].Point)
+	mapping := make([]int, in.M)
+	var cities [N]City
+	for k := 0; k < 100; k++ {
+		//sort.Sort(sort.Reverse(sort.IntSlice(sortedGroup)))
+		frand.Shuffle(len(sortedGroup), func(i, j int) {
+			sortedGroup[i], sortedGroup[j] = sortedGroup[j], sortedGroup[i]
 		})
-		// グループに都市を追加する
-		// Edgesは、グループのrootと都市を結ぶエッジ
-		for _, city := range tmp {
-			if len(ansGrops[i].Citys) >= sortedGroup[i] {
-				break
+		mapping = makeMapping(in.G[:in.M], sortedGroup)
+		// 都市の初期値は範囲の中心とする
+		for i := 0; i < N; i++ {
+			cities[i].ID = i
+			cities[i].Y = float64((in.lxrxlyry[i*4+2] + in.lxrxlyry[i*4+3])) / 2
+			cities[i].X = float64((in.lxrxlyry[i*4+0] + in.lxrxlyry[i*4+1])) / 2
+		}
+		center := Point{Y: 10000 / 2, X: 10000 / 2}
+		var used [N]bool
+		sortByCenterCities := make([]City, N)
+		copy(sortByCenterCities, cities[:])
+		sort.Slice(sortByCenterCities[:], func(i, j int) bool {
+			return dist2(center, sortByCenterCities[i].Point) > dist2(center, sortByCenterCities[j].Point)
+		})
+		tmp := make([]City, N)
+		copy(tmp, cities[:])
+		ansGrops = make([]AnsGroup, in.M)
+		for i := 0; i < in.M; i++ {
+			// グループのrootを決める
+			groupRoot := -1
+			for _, city := range sortByCenterCities {
+				if !used[city.ID] {
+					groupRoot = city.ID
+					used[city.ID] = true
+					ansGrops[i].Citys = append(ansGrops[i].Citys, city.ID)
+					break
+				}
 			}
-			if !used[city.ID] {
-				ansGrops[i].Citys = append(ansGrops[i].Citys, city.ID)
-				used[city.ID] = true
+			// rootからの距離が近い順にソートする
+			sort.Slice(tmp[:], func(i, j int) bool {
+				return dist2(cities[groupRoot].Point, tmp[i].Point) < dist2(cities[groupRoot].Point, tmp[j].Point)
+			})
+			// グループに都市を追加する
+			// Edgesは、グループのrootと都市を結ぶエッジ
+			for _, city := range tmp {
+				if len(ansGrops[i].Citys) >= sortedGroup[i] {
+					break
+				}
+				if !used[city.ID] {
+					ansGrops[i].Citys = append(ansGrops[i].Citys, city.ID)
+					used[city.ID] = true
+				}
+			}
+			//log.Println("i:", i, "groupRoot:", groupRoot, "requre:", sortedGroup[i], "cities:", len(ansGrops[i].Citys))
+			tmpCity := make([]City, len(ansGrops[i].Citys))
+			for j, city := range ansGrops[i].Citys {
+				tmpCity[j] = cities[city]
+			}
+			ansGrops[i].Edges = createMST(tmpCity)
+			if len(ansGrops[i].Citys) > 2 && false {
+				// query test
+				q := make([]int, 0, in.L)
+				for j := 0; j < in.L && j < len(ansGrops[i].Citys); j++ {
+					q = append(q, ansGrops[i].Citys[j])
+				}
+				edge := query(q)
+				//log.Println(in.L, len(ansGrops[i].Citys), q, edge)
+				if in.L >= len(ansGrops[i].Citys) {
+					ansGrops[i].Edges = edge
+				}
 			}
 		}
-		//log.Println("i:", i, "groupRoot:", groupRoot, "requre:", sortedGroup[i], "cities:", len(ansGrops[i].Citys))
-		tmpCity := make([]City, len(ansGrops[i].Citys))
-		for j, city := range ansGrops[i].Citys {
-			tmpCity[j] = cities[city]
+		// 推定座標でcostの計算
+		allCost := 0
+		for i := 0; i < in.M; i++ {
+			for j := 0; j < len(ansGrops[i].Edges); j++ {
+				allCost += dist(cities[ansGrops[i].Edges[j][0]].Point, cities[ansGrops[i].Edges[j][1]].Point)
+			}
 		}
-		ansGrops[i].Edges = createMST(tmpCity)
-		if len(ansGrops[i].Citys) > 2 {
-			// query test
-			q := make([]int, 0, in.L)
-			for j := 0; j < in.L && j < len(ansGrops[i].Citys); j++ {
-				q = append(q, ansGrops[i].Citys[j])
-			}
-			edge := query(q)
-			log.Println(in.L, len(ansGrops[i].Citys), q, edge)
-			if in.L >= len(ansGrops[i].Citys) {
-				ansGrops[i].Edges = edge
-			}
+		//log.Printf("estCost=%d\n", allCost)
+		if allCost < bestScore {
+			bestScore = allCost
+			bestAnc = make([]AnsGroup, in.M)
+			copy(bestAnc, ansGrops[:])
+			copy(bestMapping, mapping[:])
+			log.Println(k, "update bestScore:", bestScore)
 		}
 	}
+	//log.Println("mapping=", mapping)
+	//log.Println("ansGrops=", ansGrops)
 	// クエリの終了
 	fmt.Println("!")
 	for i := 0; i < in.M; i++ {
-		fmt.Print(ansGrops[mapping[i]].Output())
+		fmt.Print(bestAnc[bestMapping[i]].Output())
 	}
-	return
-
+	log.Println("end")
 	// kd-treeを作成する
 	//kdt := NewKDTree(cities[:])
 	//printTree(kdt.Root, 0)
@@ -243,7 +275,25 @@ func solver(in Input) {
 	//score += ansGroup[i].calcScore(cities[:])
 	//}
 	//log.Printf("score=%d\n", score)
-
+	if os.Getenv("ATCODER") != "1" {
+		var xy [N][2]float64
+		for i := 0; i < N; i++ {
+			fmt.Scan(&xy[i][0], &xy[i][1])
+		}
+		sumSqErr := 0.0
+		for i := 0; i < N; i++ {
+			estX := float64(cities[i].X)
+			estY := float64(cities[i].Y)
+			realX := xy[i][0]
+			realY := xy[i][1]
+			sumSqErr += (estX - realX) * (estX - realX)
+			sumSqErr += (estY - realY) * (estY - realY)
+		}
+		mse := sumSqErr / float64(N) // 平均二乗誤差
+		rmse := math.Sqrt(mse)       // 平均二乗誤差の平方根
+		// 初期のRMSEは W/4.24　程度
+		log.Printf("RMSE=%.2f\n", rmse)
+	}
 }
 
 const (
@@ -312,7 +362,7 @@ func (uf *UnionFind) Same(x, y int) bool {
 
 type Edge struct {
 	From, To int
-	Weight   int
+	Weight   float64
 }
 type Edges []Edge
 
@@ -325,11 +375,11 @@ func (e Edges) Less(i, j int) bool {
 func (e Edges) Swap(i, j int) {
 	e[i], e[j] = e[j], e[i]
 }
-func Kruskal(n int, edges Edges) (int, []Edge) {
+func Kruskal(n int, edges Edges) (float64, []Edge) {
 	uf := NewUnionFind(n)
 	sort.Sort(edges)
 	var mst []Edge
-	mstWeight := 0
+	mstWeight := 0.0
 	for _, edge := range edges {
 		if !uf.Same(edge.From, edge.To) {
 			uf.Union(edge.From, edge.To)
