@@ -16,13 +16,13 @@ func init() {
 
 var startTime time.Time
 var frand = rand.New(rand.NewSource(1333))
-var ATCODER = "0" // 0:atcoder, 1:local
+var isAtcoder = "0" // 0:atcoder, 1:local
 
 func main() {
 	if os.Getenv("ATCODER") == "1" {
-		ATCODER = "1"
+		isAtcoder = "1"
 	}
-	log.Println("ATCODER=", ATCODER)
+	log.Println("ATCODER=", isAtcoder)
 	startTime = time.Now()
 	in := parseInput()
 	log.Printf("M=%d L=%d W=%d\n", in.M, in.L, in.W)
@@ -51,9 +51,9 @@ type City struct {
 
 // answerの出力用
 type AnsGroup struct {
-	Citys []int
-	Edges [][2]int
-	Cost  int
+	Cities []int
+	Edges  [][2]int
+	Cost   int
 }
 
 func (a AnsGroup) calcScore(cities []City) int {
@@ -67,8 +67,8 @@ func (a AnsGroup) calcScore(cities []City) int {
 
 // Output()は、回答形式に合わせてStringに変換する
 func (a AnsGroup) Output() (str string) {
-	for i, city := range a.Citys {
-		if i < len(a.Citys)-1 {
+	for i, city := range a.Cities {
+		if i < len(a.Cities)-1 {
 			str += fmt.Sprintf("%d ", city)
 		} else {
 			str += fmt.Sprintf("%d\n", city)
@@ -95,7 +95,7 @@ func solve(in Input) {
 	bestAns := make([]AnsGroup, in.M)
 	bestMapping := make([]int, in.M)
 	bestScore := 100000000
-	ansGrops := make([]AnsGroup, in.M)
+	ansGroups := make([]AnsGroup, in.M)
 	mapping := make([]int, in.M)
 	var cities [N]City
 	loop := 20
@@ -116,22 +116,22 @@ func solve(in Input) {
 		}
 		center := Point{Y: 10000 / 2, X: 10000 / 2}
 		var used [N]bool
-		sortByCenterCities := make([]City, N)
-		copy(sortByCenterCities, cities[:])
-		sort.Slice(sortByCenterCities[:], func(i, j int) bool {
-			return distSquared(center, sortByCenterCities[i].Point) > distSquared(center, sortByCenterCities[j].Point)
+		citiesSortedByCenter := make([]City, N)
+		copy(citiesSortedByCenter, cities[:])
+		sort.Slice(citiesSortedByCenter[:], func(i, j int) bool {
+			return distSquared(center, citiesSortedByCenter[i].Point) > distSquared(center, citiesSortedByCenter[j].Point)
 		})
 		tmp := make([]City, N)
 		copy(tmp, cities[:])
-		ansGrops = make([]AnsGroup, in.M)
+		ansGroups = make([]AnsGroup, in.M)
 		for i := 0; i < in.M; i++ {
 			// グループのrootを決める
 			groupRoot := -1
-			for _, city := range sortByCenterCities {
+			for _, city := range citiesSortedByCenter {
 				if !used[city.ID] {
 					groupRoot = city.ID
 					used[city.ID] = true
-					ansGrops[i].Citys = append(ansGrops[i].Citys, city.ID)
+					ansGroups[i].Cities = append(ansGroups[i].Cities, city.ID)
 					break
 				}
 			}
@@ -142,26 +142,26 @@ func solve(in Input) {
 			// グループに都市を追加する
 			// Edgesは、グループのrootと都市を結ぶエッジ
 			for _, city := range tmp {
-				if len(ansGrops[i].Citys) >= sortedGroup[i] {
+				if len(ansGroups[i].Cities) >= sortedGroup[i] {
 					break
 				}
 				if !used[city.ID] {
-					ansGrops[i].Citys = append(ansGrops[i].Citys, city.ID)
+					ansGroups[i].Cities = append(ansGroups[i].Cities, city.ID)
 					used[city.ID] = true
 				}
 			}
 			//log.Println("i:", i, "groupRoot:", groupRoot, "requre:", sortedGroup[i], "cities:", len(ansGrops[i].Citys))
-			tmpCity := make([]City, len(ansGrops[i].Citys))
-			for j, city := range ansGrops[i].Citys {
+			tmpCity := make([]City, len(ansGroups[i].Cities))
+			for j, city := range ansGroups[i].Cities {
 				tmpCity[j] = cities[city]
 			}
-			ansGrops[i].Edges = createMST(tmpCity)
+			ansGroups[i].Edges = createMST(tmpCity)
 		}
 		// 推定座標でcostの計算
 		allCost := 0
 		for i := 0; i < in.M; i++ {
-			for j := 0; j < len(ansGrops[i].Edges); j++ {
-				allCost += distance(cities[ansGrops[i].Edges[j][0]].Point, cities[ansGrops[i].Edges[j][1]].Point)
+			for j := 0; j < len(ansGroups[i].Edges); j++ {
+				allCost += distance(cities[ansGroups[i].Edges[j][0]].Point, cities[ansGroups[i].Edges[j][1]].Point)
 			}
 		}
 		//log.Printf("estCost=%d\n", allCost)
@@ -169,11 +169,11 @@ func solve(in Input) {
 			bestScore = allCost
 			bestAns = make([]AnsGroup, in.M)
 			for i := 0; i < in.M; i++ {
-				bestAns[i].Citys = make([]int, len(ansGrops[i].Citys))
-				bestAns[i].Edges = make([][2]int, len(ansGrops[i].Edges))
-				bestAns[i].Cost = ansGrops[i].Cost
-				copy(bestAns[i].Citys, ansGrops[i].Citys)
-				copy(bestAns[i].Edges, ansGrops[i].Edges)
+				bestAns[i].Cities = make([]int, len(ansGroups[i].Cities))
+				bestAns[i].Edges = make([][2]int, len(ansGroups[i].Edges))
+				bestAns[i].Cost = ansGroups[i].Cost
+				copy(bestAns[i].Cities, ansGroups[i].Cities)
+				copy(bestAns[i].Edges, ansGroups[i].Edges)
 			}
 			copy(bestMapping, mapping[:])
 		}
@@ -181,8 +181,8 @@ func solve(in Input) {
 	// queryを使ったedgeの最適化
 	log.Println("bestScore=", bestScore)
 	for i := 0; i < in.M; i++ {
-		if len(bestAns[i].Citys) > 2 && in.L >= len(bestAns[i].Citys) {
-			bestAns[i].Edges = sendQuery(bestAns[i].Citys)
+		if len(bestAns[i].Cities) > 2 && in.L >= len(bestAns[i].Cities) {
+			bestAns[i].Edges = sendQuery(bestAns[i].Cities)
 		}
 	}
 
@@ -500,7 +500,7 @@ func printTree(node *Node, depth int) {
 	if node == nil {
 		return
 	}
-	fmt.Printf("%s(%d, %d)\n", string(' '+depth*2), node.X, node.Y)
+	fmt.Printf("%s(%f, %f)\n", fmt.Sprint(' '+depth*2), node.X, node.Y)
 	printTree(node.Left, depth+1)
 	printTree(node.Right, depth+1)
 }
