@@ -24,9 +24,9 @@ func main() {
 	}
 	log.Println("ATCODER=", ATCODER)
 	startTime = time.Now()
-	in := readInput()
+	in := parseInput()
 	log.Printf("M=%d L=%d W=%d\n", in.M, in.L, in.W)
-	solver(in)
+	solve(in)
 	log.Printf("elapsed=%.2f\n", float64(time.Since(startTime).Microseconds())/1000)
 }
 
@@ -35,13 +35,13 @@ type Point struct {
 }
 
 // 大小関係がわかればいいので、√を取らない
-func dist2(a, b Point) float64 {
+func distSquared(a, b Point) float64 {
 	return (a.X-b.X)*(a.X-b.X) + (a.Y-b.Y)*(a.Y-b.Y)
 }
 
 // 小数点以下切り捨て
-func dist(a, b Point) int {
-	return int(math.Floor(math.Sqrt(float64(dist2(a, b)))))
+func distance(a, b Point) int {
+	return int(math.Floor(math.Sqrt(float64(distSquared(a, b)))))
 }
 
 type City struct {
@@ -60,7 +60,7 @@ func (a AnsGroup) calcScore(cities []City) int {
 	// エッジの長さの合計
 	score := 0
 	for _, edge := range a.Edges {
-		score += dist(cities[edge[0]].Point, cities[edge[1]].Point)
+		score += distance(cities[edge[0]].Point, cities[edge[1]].Point)
 	}
 	return score
 }
@@ -80,7 +80,13 @@ func (a AnsGroup) Output() (str string) {
 	return str
 }
 
-func solver(in Input) {
+// クエリをつかって、都市の座標を推定する
+// usenableQは使えるクエリの数
+func estimatePhase(in Input, usenableQ int) {
+	// TODO
+}
+
+func solve(in Input) {
 	sortedGroup := make([]int, in.M)
 	for i := 0; i < in.M; i++ {
 		sortedGroup[i] = in.G[i]
@@ -113,7 +119,7 @@ func solver(in Input) {
 		sortByCenterCities := make([]City, N)
 		copy(sortByCenterCities, cities[:])
 		sort.Slice(sortByCenterCities[:], func(i, j int) bool {
-			return dist2(center, sortByCenterCities[i].Point) > dist2(center, sortByCenterCities[j].Point)
+			return distSquared(center, sortByCenterCities[i].Point) > distSquared(center, sortByCenterCities[j].Point)
 		})
 		tmp := make([]City, N)
 		copy(tmp, cities[:])
@@ -131,7 +137,7 @@ func solver(in Input) {
 			}
 			// rootからの距離が近い順にソートする
 			sort.Slice(tmp[:], func(i, j int) bool {
-				return dist2(cities[groupRoot].Point, tmp[i].Point) < dist2(cities[groupRoot].Point, tmp[j].Point)
+				return distSquared(cities[groupRoot].Point, tmp[i].Point) < distSquared(cities[groupRoot].Point, tmp[j].Point)
 			})
 			// グループに都市を追加する
 			// Edgesは、グループのrootと都市を結ぶエッジ
@@ -155,7 +161,7 @@ func solver(in Input) {
 		allCost := 0
 		for i := 0; i < in.M; i++ {
 			for j := 0; j < len(ansGrops[i].Edges); j++ {
-				allCost += dist(cities[ansGrops[i].Edges[j][0]].Point, cities[ansGrops[i].Edges[j][1]].Point)
+				allCost += distance(cities[ansGrops[i].Edges[j][0]].Point, cities[ansGrops[i].Edges[j][1]].Point)
 			}
 		}
 		//log.Printf("estCost=%d\n", allCost)
@@ -176,7 +182,7 @@ func solver(in Input) {
 	log.Println("bestScore=", bestScore)
 	for i := 0; i < in.M; i++ {
 		if len(bestAns[i].Citys) > 2 && in.L >= len(bestAns[i].Citys) {
-			bestAns[i].Edges = query(bestAns[i].Citys)
+			bestAns[i].Edges = sendQuery(bestAns[i].Citys)
 		}
 	}
 
@@ -314,7 +320,7 @@ type Input struct {
 }
 
 // 固定入力はとばす
-func readInput() (in Input) {
+func parseInput() (in Input) {
 	fmt.Scan(&in.N, &in.M, &in.Q, &in.L, &in.W)
 	for i := 0; i < in.M; i++ {
 		fmt.Scan(&in.G[i])
@@ -382,7 +388,7 @@ func (e Edges) Less(i, j int) bool {
 func (e Edges) Swap(i, j int) {
 	e[i], e[j] = e[j], e[i]
 }
-func Kruskal(n int, edges Edges) (float64, []Edge) {
+func runKruskal(n int, edges Edges) (float64, []Edge) {
 	uf := NewUnionFind(n)
 	sort.Sort(edges)
 	var mst []Edge
@@ -413,7 +419,7 @@ func createMST(cities []City) [][2]int {
 			edges = append(edges, Edge{From: i, To: j, Weight: weight})
 		}
 	}
-	cost, mst := Kruskal(len(cities), edges)
+	cost, mst := runKruskal(len(cities), edges)
 	_ = cost
 	//log.Printf("cost=%d\n", cost)
 	newEdge := make([][2]int, len(mst))
@@ -502,7 +508,7 @@ func printTree(node *Node, depth int) {
 // query
 var queryCount int
 
-func query(cities []int) (edges [][2]int) {
+func sendQuery(cities []int) (edges [][2]int) {
 	if queryCount >= Q {
 		panic("query count over")
 	}
