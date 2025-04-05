@@ -17,6 +17,12 @@ func init() {
 var startTime time.Time
 var frand = rand.New(rand.NewSource(1333))
 
+func init() {
+	for i := 0; i < 800; i++ {
+		hashTable[i] = rand.Uint64()
+	}
+}
+
 func main() {
 	startTime = time.Now()
 	in := parseInput()
@@ -81,6 +87,7 @@ type CityState struct {
 	Variance    [2]float64
 	Ract        [4]float64
 	SumVariance float64 // 分散の合計
+	UpdateCount int     // 更新回数
 }
 
 func (cs CityState) toCity() City {
@@ -92,9 +99,36 @@ func (cs *CityState) UpdateSumVariance() {
 	cs.SumVariance = (cs.Variance[0] + cs.Variance[1]) / 2
 }
 
+type MSTCache struct {
+}
+
+type MSTResult struct {
+	Vertex []int
+	Edges  [][2]int
+	V2     BitSet
+	Hash   uint64
+}
+
+func NewMSTResult(v []int, e [][2]int) MSTResult {
+	var r MSTResult
+	r.Vertex = make([]int, len(v))
+	copy(r.Vertex, v)
+	r.Edges = make([][2]int, len(e))
+	copy(r.Edges, e)
+	r.V2 = *NewBitSet(800)
+	for _, v := range v {
+		r.V2.Set(v)
+	}
+	r.Hash = makeHash(v)
+	return r
+}
+
 // クエリをつかって、都市の座標を推定する
 // usableQは使えるクエリの数
 func estimatePhase(in Input, usableQ int) {
+
+	var queryResultMap = make(map[uint64]MSTResult)
+
 	cityStates := make([]CityState, in.N)
 	for i := 0; i < in.N; i++ {
 		cityStates[i].ID = i
@@ -132,7 +166,7 @@ func estimatePhase(in Input, usableQ int) {
 	usedAsCenters := make([]bool, in.N)
 
 	// クエリを使って位置推定を更新していく処理
-	for q := 0; q < usableQ; q++ {
+	for usableQ > 0 {
 		// SumVarianceが大きい都市をソートしたスライスを作成
 		sortedCities := make([]CityState, 0, in.N)
 
@@ -196,12 +230,32 @@ func estimatePhase(in Input, usableQ int) {
 		for i, cityID := range queryCities {
 			tmpCities[i] = cityStates[cityID].toCity()
 		}
+
+		hash := makeHash(queryCities)
+		hit, ok := queryResultMap[hash]
+		if ok {
+			// 重複したクエリはスキップ
+			log.Println("Duplicate query detected, skipping.", queryCities, hit.Vertex)
+			continue
+		}
+
+		// 推定座標でMSTを作成
 		estimateResult := createMST(tmpCities)
-		//log.Println("estimateResult:", estimateResult)
 
 		// クエリを実行
 		queryResult := sendQuery(queryCities)
+		usableQ--
 		//log.Println("Query result:", queryResult)
+
+		// クエリ結果をMSTに変換
+		mst := NewMSTResult(queryCities, queryResult)
+		dup, ok := queryResultMap[mst.Hash]
+		if !ok {
+			queryResultMap[mst.Hash] = mst
+		} else {
+			log.Println("Duplicate query result detected", dup.Vertex)
+			panic("Duplicate query result detected")
+		}
 
 		// エッジの比較分析（ソート済みリストを利用した効率的な方法）
 		common, onlyEstimated, onlyActual := compareEdges(estimateResult, queryResult)
@@ -241,7 +295,6 @@ func estimatePhase(in Input, usableQ int) {
 				panic("NaN detected")
 			}
 		}
-		log.Println("Sum of squared errors:", sumSqErr)
 		// 平均二乗誤差（Mean Squared Error）
 		mse := sumSqErr / float64(2*in.N) // 都市数×座標2次元分で割る
 
@@ -251,7 +304,23 @@ func estimatePhase(in Input, usableQ int) {
 		log.Printf("Estimate Phase Final RMSE: %f", rmse)
 
 		// 各クエリ後のRMSE推移を表示するための変数を追加してもよい
+
+		for i := 0; i < in.N; i++ {
+			// 都市の詳細情報と真の座標と推定位置の距離を表示
+			estX := cityStates[i].Mean[0]
+			estY := cityStates[i].Mean[1]
+			realX := in.trueXY[i][0]
+			realY := in.trueXY[i][1]
+			dx := estX - realX
+			dy := estY - realY
+			distance := math.Sqrt(dx*dx + dy*dy)
+			log.Printf("City %d: Estimated (%.0f, %.0f), Actual (%.0f, %.0f), Distance: %.0f, UpdateCount: %d",
+				cityStates[i].ID, estX, estY, realX, realY, distance, cityStates[i].UpdateCount)
+
+		}
 	}
+	log.Println("queryResults size=", len(queryResultMap))
+	log.Println("hash table size=", len(hashTable))
 }
 
 // クエリ結果からベイズ更新を行う関数
@@ -280,7 +349,7 @@ func updateCityPositions(cityStates []CityState, queriedCities []int, edges [][2
 		currentDist := math.Sqrt(currentDistSq)
 
 		// 調整後の長さ（10%伸ばす）
-		targetDist := currentDist * 1.10
+		targetDist := currentDist * 1.05
 
 		// エッジの方向ベクトル
 		dx := p2.X - p1.X
@@ -389,12 +458,16 @@ func updateCityPosition(city *CityState, moveX, moveY float64) {
 	city.Mean[0] += moveX
 	city.Mean[1] += moveY
 
+	// 更新カウントを増やす
+	city.UpdateCount++
+
 	// NaNチェック（更新後）
 	if math.IsNaN(city.Mean[0]) || math.IsNaN(city.Mean[1]) {
 		log.Printf("Warning: NaN detected in city %d after update", city.ID)
 		// 更新前の値に戻す
 		city.Mean[0] -= moveX
 		city.Mean[1] -= moveY
+		city.UpdateCount-- // 更新をロールバック
 		return
 	}
 
@@ -402,10 +475,10 @@ func updateCityPosition(city *CityState, moveX, moveY float64) {
 	city.Mean[0] = math.Max(city.Ract[0], math.Min(city.Ract[1], city.Mean[0]))
 	city.Mean[1] = math.Max(city.Ract[2], math.Min(city.Ract[3], city.Mean[1]))
 
-	// 分散を更新（0.99をかける）
-	minVariance := 0.1 // 最小分散（あまりに小さくしないために）
-	city.Variance[0] = math.Max(minVariance, city.Variance[0]*0.9)
-	city.Variance[1] = math.Max(minVariance, city.Variance[1]*0.9)
+	// 分散を更新（0.95をかける）
+	minVariance := 0.01 // 最小分散（あまりに小さくしないために）
+	city.Variance[0] = math.Max(minVariance, city.Variance[0]*0.95)
+	city.Variance[1] = math.Max(minVariance, city.Variance[1]*0.95)
 
 	// 分散の合計を更新
 	city.UpdateSumVariance()
@@ -846,4 +919,69 @@ func intMin(a, b int) int {
 		return a
 	}
 	return b
+}
+
+type BitSet struct {
+	bits []uint64
+	size int
+}
+
+func NewBitSet(size int) *BitSet {
+	// uint64 は 64bit なので必要な数を確保
+	numWords := (size + 63) / 64
+	return &BitSet{
+		bits: make([]uint64, numWords),
+		size: size,
+	}
+}
+
+var hashTable [800]uint64
+
+func makeHash(cities []int) uint64 {
+	hash := uint64(0)
+	for i := 0; i < len(cities); i++ {
+		hash ^= uint64(cities[i]) ^ hashTable[cities[i]]
+	}
+	return hash
+}
+
+// ビットを立てる
+func (bs *BitSet) Set(i int) {
+	if i > bs.size {
+		panic("index out of range")
+	}
+	if i >= 0 && i < bs.size {
+		word, bit := i/64, uint(i%64)
+		bs.bits[word] |= 1 << bit
+	}
+}
+
+// ビットを落とす
+func (bs *BitSet) Clear(i int) {
+	if i >= 0 && i < bs.size {
+		word, bit := i/64, uint(i%64)
+		bs.bits[word] &^= 1 << bit
+	}
+}
+
+// ビットをトグルする（反転）
+func (bs *BitSet) Toggle(i int) {
+	if i >= 0 && i < bs.size {
+		word, bit := i/64, uint(i%64)
+		bs.bits[word] ^= 1 << bit
+	}
+}
+
+// ビットを取得する
+func (bs *BitSet) Get(i int) bool {
+	if i >= 0 && i < bs.size {
+		word, bit := i/64, uint(i%64)
+		return bs.bits[word]&(1<<bit) != 0
+	}
+	return false
+}
+
+// サイズ取得
+func (bs *BitSet) Len() int {
+	return bs.size
 }
