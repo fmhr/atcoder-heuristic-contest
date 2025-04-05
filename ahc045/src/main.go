@@ -404,8 +404,8 @@ func updateCityPosition(city *CityState, moveX, moveY float64) {
 
 	// 分散を更新（0.99をかける）
 	minVariance := 0.1 // 最小分散（あまりに小さくしないために）
-	city.Variance[0] = math.Max(minVariance, city.Variance[0]*0.99)
-	city.Variance[1] = math.Max(minVariance, city.Variance[1]*0.99)
+	city.Variance[0] = math.Max(minVariance, city.Variance[0]*0.9)
+	city.Variance[1] = math.Max(minVariance, city.Variance[1]*0.9)
 
 	// 分散の合計を更新
 	city.UpdateSumVariance()
