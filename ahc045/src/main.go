@@ -45,8 +45,8 @@ func distance(a, b Point) int {
 }
 
 type City struct {
-	Point
 	ID int
+	Point
 }
 
 // answerの出力用
@@ -80,13 +80,207 @@ func (a AnsGroup) Output() (str string) {
 	return str
 }
 
+type CityState struct {
+	ID          int
+	Mean        [2]float64 // x, y
+	Variance    [2]float64
+	Ract        [4]float64
+	SumVariance float64 // 分散の合計
+}
+
+func (cs CityState) toCity() City {
+	return City{ID: cs.ID, Point: Point{Y: cs.Mean[1], X: cs.Mean[0]}}
+}
+
+// 分散の合計（算術平均）を更新する
+func (cs *CityState) UpdateSumVariance() {
+	cs.SumVariance = (cs.Variance[0] + cs.Variance[1]) / 2
+}
+
 // クエリをつかって、都市の座標を推定する
-// usenableQは使えるクエリの数
-func estimatePhase(in Input, usenableQ int) {
-	// TODO
+// usableQは使えるクエリの数
+func estimatePhase(in Input, usableQ int) {
+	cityStates := make([]CityState, in.N)
+	for i := 0; i < in.N; i++ {
+		cityStates[i].ID = i
+
+		// 矩形の座標を取得
+		rx := float64(in.lxrxlyry[i*4+1]) // 右
+		lx := float64(in.lxrxlyry[i*4+0]) // 左
+		ry := float64(in.lxrxlyry[i*4+3]) // 上
+		ly := float64(in.lxrxlyry[i*4+2]) // 下
+
+		// 平均値は矩形の中心
+		cityStates[i].Mean[0] = (rx + lx) / 2
+		cityStates[i].Mean[1] = (ry + ly) / 2
+
+		// 分散は一様分布の理論値 (b-a)²/12 を使用
+		cityStates[i].Variance[0] = math.Pow(rx-lx, 2) / 12.0
+		cityStates[i].Variance[1] = math.Pow(ry-ly, 2) / 12.0
+
+		// 最小分散を設定（数値安定性のため）
+		minVariance := 1.0
+		cityStates[i].Variance[0] = math.Max(minVariance, cityStates[i].Variance[0])
+		cityStates[i].Variance[1] = math.Max(minVariance, cityStates[i].Variance[1])
+
+		// 矩形情報も保存
+		cityStates[i].Ract[0] = lx
+		cityStates[i].Ract[1] = rx
+		cityStates[i].Ract[2] = ly
+		cityStates[i].Ract[3] = ry
+
+		// 分散の合計（算術平均）を計算
+		cityStates[i].UpdateSumVariance()
+	}
+
+	// 既に中心都市として使用したIDを記録する配列
+	usedAsCenters := make([]bool, in.N)
+
+	// クエリを使って位置推定を更新していく処理
+	for q := 0; q < usableQ; q++ {
+		// SumVarianceが大きい都市をソートしたスライスを作成
+		sortedCities := make([]CityState, 0, in.N)
+
+		// まだ中心として使用していない都市だけをソート対象にする
+		for i := 0; i < in.N; i++ {
+			if !usedAsCenters[i] {
+				sortedCities = append(sortedCities, cityStates[i])
+			}
+		}
+
+		// 分散の大きい順（不確かさが大きい順）にソート
+		sort.Slice(sortedCities, func(i, j int) bool {
+			return sortedCities[i].SumVariance > sortedCities[j].SumVariance
+		})
+
+		// 最も分散の大きい都市を中心として選択
+		centerCity := sortedCities[0]
+		log.Printf("Query %d: center city ID=%d, SumVariance=%.2f\n", q, centerCity.ID, centerCity.SumVariance)
+
+		// この都市を中心として使用済みとマーク
+		usedAsCenters[centerCity.ID] = true
+
+		// centerCityからの距離が近い順に他の都市をソート
+		cityDistances := make([]struct {
+			CityState
+			Distance float64
+		}, in.N)
+
+		for i, city := range cityStates {
+			dx := centerCity.Mean[0] - city.Mean[0]
+			dy := centerCity.Mean[1] - city.Mean[1]
+			distance := math.Sqrt(dx*dx + dy*dy)
+			cityDistances[i] = struct {
+				CityState
+				Distance float64
+			}{city, distance}
+		}
+
+		// 距離が近い順にソート
+		sort.Slice(cityDistances, func(i, j int) bool {
+			return cityDistances[i].Distance < cityDistances[j].Distance
+		})
+
+		// クエリに使用する都市リストを作成（最大 in.L 個）
+		querySize := intMin(in.L, in.N)
+		queryCities := make([]int, querySize)
+		queryCities[0] = centerCity.ID // 最初は中心都市
+
+		// 残りの都市を距離が近い順に追加
+		cityIndex := 1
+		for i := 0; i < len(cityDistances) && cityIndex < querySize; i++ {
+			cityID := cityDistances[i].ID
+			if cityID != centerCity.ID { // 中心都市は既に追加済み
+				queryCities[cityIndex] = cityID
+				cityIndex++
+			}
+		}
+		log.Println("Query cities:", queryCities)
+
+		tmpCities := make([]City, len(queryCities))
+		for i, cityID := range queryCities {
+			tmpCities[i] = cityStates[cityID].toCity()
+		}
+		estimateResult := createMST(tmpCities)
+		log.Println("estimateResult:", estimateResult)
+
+		// クエリを実行
+		queryResult := sendQuery(queryCities)
+		log.Println("Query result:", queryResult)
+
+		// エッジの比較分析（ソート済みリストを利用した効率的な方法）
+		common, onlyEstimated, onlyActual := compareEdges(estimateResult, queryResult)
+		log.Printf("Common edges: %v (%d)", common, len(common))
+		log.Printf("Only estimated: %v (%d)", onlyEstimated, len(onlyEstimated))
+		log.Printf("Only actual: %v (%d)", onlyActual, len(onlyActual))
+
+		// 一致率の計算
+		matchRate := float64(len(common)) / float64(len(estimateResult)) * 100.0
+		log.Printf("Match rate: %.2f%%", matchRate)
+
+		// クエリ結果を使って位置推定を更新
+		updateCityPositions(cityStates, queryCities, queryResult)
+	}
+}
+
+// クエリ結果からベイズ更新を行う関数（実装が必要）
+func updateCityPositions(cityStates []CityState, queriedCities []int, edges [][2]int) {
+	// 実装が必要
+	// 例：クエリ結果から得られた最小全域木のエッジ情報を使用して
+	// 各都市の位置推定（Mean）と不確かさ（Variance）を更新
+}
+
+// クエリ結果と推定結果のエッジ比較関数（ソート済み配列前提の効率的実装）
+func compareEdges(estimateResult, queryResult [][2]int) (common, onlyEstimated, onlyActual [][2]int) {
+	i, j := 0, 0
+
+	// 両方のエッジリストをソート順に比較
+	for i < len(estimateResult) && j < len(queryResult) {
+		// エッジの比較
+		compResult := compareEdge(estimateResult[i], queryResult[j])
+
+		if compResult == 0 {
+			// 両方に存在
+			common = append(common, estimateResult[i])
+			i++
+			j++
+		} else if compResult < 0 {
+			// 推定結果にのみ存在
+			onlyEstimated = append(onlyEstimated, estimateResult[i])
+			i++
+		} else {
+			// クエリ結果にのみ存在
+			onlyActual = append(onlyActual, queryResult[j])
+			j++
+		}
+	}
+
+	// 残りの推定結果エッジを処理
+	for i < len(estimateResult) {
+		onlyEstimated = append(onlyEstimated, estimateResult[i])
+		i++
+	}
+
+	// 残りのクエリ結果エッジを処理
+	for j < len(queryResult) {
+		onlyActual = append(onlyActual, queryResult[j])
+		j++
+	}
+
+	return
+}
+
+// エッジの比較関数（ソート順に基づく）
+func compareEdge(a, b [2]int) int {
+	if a[0] != b[0] {
+		return a[0] - b[0]
+	}
+	return a[1] - b[1]
 }
 
 func solve(in Input) {
+	estimatePhase(in, in.Q-100)
+
 	sortedGroup := make([]int, in.M)
 	for i := 0; i < in.M; i++ {
 		sortedGroup[i] = in.G[i]
@@ -277,6 +471,11 @@ func solve(in Input) {
 	//}
 	//}
 	//}
+	//}
+	//}
+	//}
+	//}
+	//}
 	//log.Println("request Size=", size, "root=", root, "size=", uf.size[root], "cost=", ansGroup[i].Cost, "cities=", ansGroup[i].Citys)
 	//}
 	//// 推定座標でスコアを計算
@@ -415,7 +614,7 @@ func createMST(cities []City) [][2]int {
 	edges := make(Edges, 0)
 	for i := 0; i < len(cities); i++ {
 		for j := i + 1; j < len(cities); j++ {
-			weight := (cities[i].X-cities[j].X)*(cities[i].X-cities[j].X) + (cities[i].Y-cities[j].Y)*(cities[i].Y-cities[j].Y)
+			weight := distSquared(cities[i].Point, cities[j].Point)
 			edges = append(edges, Edge{From: i, To: j, Weight: weight})
 		}
 	}
@@ -424,9 +623,23 @@ func createMST(cities []City) [][2]int {
 	//log.Printf("cost=%d\n", cost)
 	newEdge := make([][2]int, len(mst))
 	for i := 0; i < len(mst); i++ {
-		newEdge[i][0] = newIndex[mst[i].From]
-		newEdge[i][1] = newIndex[mst[i].To]
+		from := newIndex[mst[i].From]
+		to := newIndex[mst[i].To]
+
+		// 小さい方のIDを先に配置する（クエリと同じ順序に）
+		if from > to {
+			from, to = to, from
+		}
+
+		newEdge[i][0] = from
+		newEdge[i][1] = to
 	}
+	sort.Slice(newEdge, func(i, j int) bool {
+		if newEdge[i][0] == newEdge[j][0] {
+			return newEdge[i][1] < newEdge[j][1]
+		}
+		return newEdge[i][0] < newEdge[j][0]
+	})
 	return newEdge
 }
 
