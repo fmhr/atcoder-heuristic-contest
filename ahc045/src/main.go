@@ -150,18 +150,6 @@ func solver(in Input) {
 				tmpCity[j] = cities[city]
 			}
 			ansGrops[i].Edges = createMST(tmpCity)
-			if len(ansGrops[i].Citys) > 2 && false {
-				// query test
-				q := make([]int, 0, in.L)
-				for j := 0; j < in.L && j < len(ansGrops[i].Citys); j++ {
-					q = append(q, ansGrops[i].Citys[j])
-				}
-				edge := query(q)
-				//log.Println(in.L, len(ansGrops[i].Citys), q, edge)
-				if in.L >= len(ansGrops[i].Citys) {
-					ansGrops[i].Edges = edge
-				}
-			}
 		}
 		// 推定座標でcostの計算
 		allCost := 0
@@ -292,16 +280,12 @@ func solver(in Input) {
 	//}
 	//log.Printf("score=%d\n", score)
 	if os.Getenv("ATCODER") != "1" {
-		var xy [N][2]float64
-		for i := 0; i < N; i++ {
-			fmt.Scan(&xy[i][0], &xy[i][1])
-		}
 		sumSqErr := 0.0
 		for i := 0; i < N; i++ {
 			estX := float64(cities[i].X)
 			estY := float64(cities[i].Y)
-			realX := xy[i][0]
-			realY := xy[i][1]
+			realX := in.trueXY[i][0]
+			realY := in.trueXY[i][1]
 			sumSqErr += (estX - realX) * (estX - realX)
 			sumSqErr += (estY - realY) * (estY - realY)
 		}
@@ -319,23 +303,29 @@ const (
 )
 
 type Input struct {
-	M        int        // 都市のグループの数 1<= M <= 400
-	L        int        // クエリの都市の最大数 1<= L <= 15
-	W        int        //　二次元座標の最大値 500 <= W <= 2500
-	G        [400]int   // 各グループの都市の数 1<= G[i] <= N(800) i= 0..M-1
-	lxrxlyry [N * 4]int // 各都市の座標 0 <= lxrxlyry[i] <= W
-	// lxrxlyry[i] = (lx, rx, ly, ry) i=0..N-1
+	N        int
+	M        int // 都市のグループの数 1<= M <= 400
+	Q        int
+	L        int           // クエリの都市の最大数 1<= L <= 15
+	W        int           //　二次元座標の最大値 500 <= W <= 2500
+	G        [400]int      // 各グループの都市の数 1<= G[i] <= N(800) i= 0..M-1
+	lxrxlyry [N * 4]int    // 各都市の座標 0 <= lxrxlyry[i] <= W
+	trueXY   [N][2]float64 // 実際の座標
 }
 
 // 固定入力はとばす
 func readInput() (in Input) {
-	var n, q int
-	fmt.Scan(&n, &in.M, &q, &in.L, &in.W)
+	fmt.Scan(&in.N, &in.M, &in.Q, &in.L, &in.W)
 	for i := 0; i < in.M; i++ {
 		fmt.Scan(&in.G[i])
 	}
 	for i := 0; i < N*4; i++ {
 		fmt.Scan(&in.lxrxlyry[i])
+	}
+	if os.Getenv("ATCODER") != "1" {
+		for i := 0; i < N; i++ {
+			fmt.Scan(&in.trueXY[i][0], &in.trueXY[i][1])
+		}
 	}
 	return in
 }
