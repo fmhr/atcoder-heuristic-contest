@@ -16,13 +16,8 @@ func init() {
 
 var startTime time.Time
 var frand = rand.New(rand.NewSource(1333))
-var isAtcoder = "0" // 0:atcoder, 1:local
 
 func main() {
-	if os.Getenv("ATCODER") == "1" {
-		isAtcoder = "1"
-	}
-	log.Println("ATCODER=", isAtcoder)
 	startTime = time.Now()
 	in := parseInput()
 	log.Printf("M=%d L=%d W=%d\n", in.M, in.L, in.W)
@@ -155,7 +150,7 @@ func estimatePhase(in Input, usableQ int) {
 
 		// 最も分散の大きい都市を中心として選択
 		centerCity := sortedCities[0]
-		log.Printf("Query %d: center city ID=%d, SumVariance=%.2f\n", q, centerCity.ID, centerCity.SumVariance)
+		//log.Printf("Query %d: center city ID=%d, SumVariance=%.2f\n", q, centerCity.ID, centerCity.SumVariance)
 
 		// この都市を中心として使用済みとマーク
 		usedAsCenters[centerCity.ID] = true
@@ -195,39 +190,225 @@ func estimatePhase(in Input, usableQ int) {
 				cityIndex++
 			}
 		}
-		log.Println("Query cities:", queryCities)
+		//log.Println("Query cities:", queryCities)
 
 		tmpCities := make([]City, len(queryCities))
 		for i, cityID := range queryCities {
 			tmpCities[i] = cityStates[cityID].toCity()
 		}
 		estimateResult := createMST(tmpCities)
-		log.Println("estimateResult:", estimateResult)
+		//log.Println("estimateResult:", estimateResult)
 
 		// クエリを実行
 		queryResult := sendQuery(queryCities)
-		log.Println("Query result:", queryResult)
+		//log.Println("Query result:", queryResult)
 
 		// エッジの比較分析（ソート済みリストを利用した効率的な方法）
 		common, onlyEstimated, onlyActual := compareEdges(estimateResult, queryResult)
-		log.Printf("Common edges: %v (%d)", common, len(common))
-		log.Printf("Only estimated: %v (%d)", onlyEstimated, len(onlyEstimated))
-		log.Printf("Only actual: %v (%d)", onlyActual, len(onlyActual))
+		_ = common
+		_ = onlyEstimated
+		_ = onlyActual
+		//log.Printf("Common edges: %v (%d)", common, len(common))
+		//log.Printf("Only estimated: %v (%d)", onlyEstimated, len(onlyEstimated))
+		//log.Printf("Only actual: %v (%d)", onlyActual, len(onlyActual))
 
 		// 一致率の計算
-		matchRate := float64(len(common)) / float64(len(estimateResult)) * 100.0
-		log.Printf("Match rate: %.2f%%", matchRate)
+		//matchRate := float64(len(common)) / float64(len(estimateResult)) * 100.0
+		//log.Printf("Match rate: %.2f%%", matchRate)
 
 		// クエリ結果を使って位置推定を更新
 		updateCityPositions(cityStates, queryCities, queryResult)
 	}
+
+	// 最終的な推定精度を評価
+	if os.Getenv("ATCODER") != "1" {
+		sumSqErr := 0.0
+		for i := 0; i < in.N; i++ {
+			estX := cityStates[i].Mean[0]
+			estY := cityStates[i].Mean[1]
+			realX := in.trueXY[i][0]
+			realY := in.trueXY[i][1]
+
+			// X座標の二乗誤差
+			dx := estX - realX
+			sumSqErr += dx * dx
+
+			// Y座標の二乗誤差
+			dy := estY - realY
+			sumSqErr += dy * dy
+			if math.IsNaN(sumSqErr) {
+				log.Printf("%+v\n", cityStates[i])
+				panic("NaN detected")
+			}
+		}
+		log.Println("Sum of squared errors:", sumSqErr)
+		// 平均二乗誤差（Mean Squared Error）
+		mse := sumSqErr / float64(2*in.N) // 都市数×座標2次元分で割る
+
+		// 平均二乗誤差の平方根（Root Mean Squared Error）
+		rmse := math.Sqrt(mse)
+
+		log.Printf("Estimate Phase Final RMSE: %f", rmse)
+
+		// 各クエリ後のRMSE推移を表示するための変数を追加してもよい
+	}
 }
 
-// クエリ結果からベイズ更新を行う関数（実装が必要）
+// クエリ結果からベイズ更新を行う関数
 func updateCityPositions(cityStates []CityState, queriedCities []int, edges [][2]int) {
-	// 実装が必要
-	// 例：クエリ結果から得られた最小全域木のエッジ情報を使用して
-	// 各都市の位置推定（Mean）と不確かさ（Variance）を更新
+	// 現在の推定位置に基づくシティのマップを作成
+	tmpCities := make([]City, len(queriedCities))
+	for i, cityID := range queriedCities {
+		tmpCities[i] = cityStates[cityID].toCity()
+	}
+	estimateResult := createMST(tmpCities)
+
+	// エッジ比較
+	common, onlyEstimated, onlyActual := compareEdges(estimateResult, edges)
+	_ = common
+
+	// 推定結果にのみ存在するエッジに対して調整を行う (10%伸ばす)
+	for _, edge := range onlyEstimated {
+		// エッジの端点となる都市の状態を取得
+		city1 := cityStates[edge[0]]
+		city2 := cityStates[edge[1]]
+
+		// エッジの現在の長さを計算
+		p1 := Point{X: city1.Mean[0], Y: city1.Mean[1]}
+		p2 := Point{X: city2.Mean[0], Y: city2.Mean[1]}
+		currentDistSq := distSquared(p1, p2)
+		currentDist := math.Sqrt(currentDistSq)
+
+		// 調整後の長さ（10%伸ばす）
+		targetDist := currentDist * 1.10
+
+		// エッジの方向ベクトル
+		dx := p2.X - p1.X
+		dy := p2.Y - p1.Y
+
+		// 単位ベクトル
+		factor := 1.0
+		if currentDist > 0 {
+			factor = 1.0 / currentDist
+		}
+		ux := dx * factor
+		uy := dy * factor
+
+		// エッジを伸ばす量（片側5%ずつ）
+		stretchAmount := (targetDist - currentDist) / 2.0
+
+		// 都市1を逆方向に動かす（分散に応じて重み付け）
+		totalVariance1 := city1.Variance[0] + city1.Variance[1]
+		totalVariance2 := city2.Variance[0] + city2.Variance[1]
+		totalVariance := totalVariance1 + totalVariance2
+
+		// 分散が大きい方が多く動くよう重み付け
+		weight1 := totalVariance1 / totalVariance
+		weight2 := totalVariance2 / totalVariance
+
+		// 都市1の移動
+		moveX1 := -ux * stretchAmount * weight1
+		moveY1 := -uy * stretchAmount * weight1
+
+		// 都市2の移動
+		moveX2 := ux * stretchAmount * weight2
+		moveY2 := uy * stretchAmount * weight2
+
+		// 都市1の位置と分散の更新
+		updateCityPosition(&cityStates[edge[0]], moveX1, moveY1)
+
+		// 都市2の位置と分散の更新
+		updateCityPosition(&cityStates[edge[1]], moveX2, moveY2)
+	}
+
+	// 実際のエッジに合わせて、存在しない推定エッジは縮める処理
+	for _, edge := range onlyActual {
+		// エッジの端点となる都市の状態を取得
+		city1 := cityStates[edge[0]]
+		city2 := cityStates[edge[1]]
+
+		// エッジの現在の長さを計算
+		p1 := Point{X: city1.Mean[0], Y: city1.Mean[1]}
+		p2 := Point{X: city2.Mean[0], Y: city2.Mean[1]}
+		currentDistSq := distSquared(p1, p2)
+		currentDist := math.Sqrt(currentDistSq)
+
+		// 調整後の長さ（10%縮める）
+		targetDist := currentDist * 0.90
+
+		// エッジの方向ベクトル
+		dx := p2.X - p1.X
+		dy := p2.Y - p1.Y
+
+		// 単位ベクトル
+		factor := 1.0
+		if currentDist > 0 {
+			factor = 1.0 / currentDist
+		}
+		ux := dx * factor
+		uy := dy * factor
+
+		// エッジを縮める量（片側5%ずつ）
+		shrinkAmount := (currentDist - targetDist) / 2.0
+
+		// 分散に応じて重み付け
+		totalVariance1 := city1.Variance[0] + city1.Variance[1]
+		totalVariance2 := city2.Variance[0] + city2.Variance[1]
+		totalVariance := totalVariance1 + totalVariance2
+
+		// 分散が大きい方が多く動くよう重み付け
+		weight1 := totalVariance1 / totalVariance
+		weight2 := totalVariance2 / totalVariance
+
+		// 都市1の移動（都市2の方に近づける）
+		moveX1 := ux * shrinkAmount * weight1
+		moveY1 := uy * shrinkAmount * weight1
+
+		// 都市2の移動（都市1の方に近づける）
+		moveX2 := -ux * shrinkAmount * weight2
+		moveY2 := -uy * shrinkAmount * weight2
+
+		// 都市1の位置と分散の更新
+		updateCityPosition(&cityStates[edge[0]], moveX1, moveY1)
+
+		// 都市2の位置と分散の更新
+		updateCityPosition(&cityStates[edge[1]], moveX2, moveY2)
+	}
+}
+
+// 都市の位置を移動し、分散も更新する関数
+func updateCityPosition(city *CityState, moveX, moveY float64) {
+	// NaNチェック（入力）
+	if math.IsNaN(moveX) || math.IsNaN(moveY) {
+		log.Printf("Warning: NaN input detected for city %d: moveX=%.6f, moveY=%.6f",
+			city.ID, moveX, moveY)
+		return
+	}
+
+	// 位置の更新
+	city.Mean[0] += moveX
+	city.Mean[1] += moveY
+
+	// NaNチェック（更新後）
+	if math.IsNaN(city.Mean[0]) || math.IsNaN(city.Mean[1]) {
+		log.Printf("Warning: NaN detected in city %d after update", city.ID)
+		// 更新前の値に戻す
+		city.Mean[0] -= moveX
+		city.Mean[1] -= moveY
+		return
+	}
+
+	// 矩形の範囲内に収める
+	city.Mean[0] = math.Max(city.Ract[0], math.Min(city.Ract[1], city.Mean[0]))
+	city.Mean[1] = math.Max(city.Ract[2], math.Min(city.Ract[3], city.Mean[1]))
+
+	// 分散を更新（0.99をかける）
+	minVariance := 0.1 // 最小分散（あまりに小さくしないために）
+	city.Variance[0] = math.Max(minVariance, city.Variance[0]*0.99)
+	city.Variance[1] = math.Max(minVariance, city.Variance[1]*0.99)
+
+	// 分散の合計を更新
+	city.UpdateSumVariance()
 }
 
 // クエリ結果と推定結果のエッジ比較関数（ソート済み配列前提の効率的実装）
