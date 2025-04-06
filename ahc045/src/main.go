@@ -99,9 +99,6 @@ func (cs *CityState) UpdateSumVariance() {
 	cs.SumVariance = (cs.Variance[0] + cs.Variance[1]) / 2
 }
 
-type MSTCache struct {
-}
-
 type MSTResult struct {
 	Vertex []int
 	Edges  [][2]int
@@ -125,43 +122,7 @@ func NewMSTResult(v []int, e [][2]int) MSTResult {
 
 // クエリをつかって、都市の座標を推定する
 // usableQは使えるクエリの数
-func estimatePhase(in Input, usableQ int) {
-
-	var queryResultMap = make(map[uint64]MSTResult)
-
-	cityStates := make([]CityState, in.N)
-	for i := 0; i < in.N; i++ {
-		cityStates[i].ID = i
-
-		// 矩形の座標を取得
-		rx := float64(in.lxrxlyry[i*4+1]) // 右
-		lx := float64(in.lxrxlyry[i*4+0]) // 左
-		ry := float64(in.lxrxlyry[i*4+3]) // 上
-		ly := float64(in.lxrxlyry[i*4+2]) // 下
-
-		// 平均値は矩形の中心
-		cityStates[i].Mean[0] = (rx + lx) / 2
-		cityStates[i].Mean[1] = (ry + ly) / 2
-
-		// 分散は一様分布の理論値 (b-a)²/12 を使用
-		cityStates[i].Variance[0] = math.Pow(rx-lx, 2) / 12.0
-		cityStates[i].Variance[1] = math.Pow(ry-ly, 2) / 12.0
-
-		// 最小分散を設定（数値安定性のため）
-		minVariance := 1.0
-		cityStates[i].Variance[0] = math.Max(minVariance, cityStates[i].Variance[0])
-		cityStates[i].Variance[1] = math.Max(minVariance, cityStates[i].Variance[1])
-
-		// 矩形情報も保存
-		cityStates[i].Ract[0] = lx
-		cityStates[i].Ract[1] = rx
-		cityStates[i].Ract[2] = ly
-		cityStates[i].Ract[3] = ry
-
-		// 分散の合計（算術平均）を計算
-		cityStates[i].UpdateSumVariance()
-	}
-
+func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 	// 既に中心都市として使用したIDを記録する配列
 	usedAsCenters := make([]bool, in.N)
 
@@ -232,10 +193,10 @@ func estimatePhase(in Input, usableQ int) {
 		}
 
 		hash := makeHash(queryCities)
-		hit, ok := queryResultMap[hash]
+		_, ok := queryResultMap[hash]
 		if ok {
 			// 重複したクエリはスキップ
-			log.Println("Duplicate query detected, skipping.", queryCities, hit.Vertex)
+			//log.Println("Duplicate query detected, skipping.", queryCities, hit.Vertex)
 			continue
 		}
 
@@ -257,21 +218,8 @@ func estimatePhase(in Input, usableQ int) {
 			panic("Duplicate query result detected")
 		}
 
-		// エッジの比較分析（ソート済みリストを利用した効率的な方法）
-		common, onlyEstimated, onlyActual := compareEdges(estimateResult, queryResult)
-		_ = common
-		_ = onlyEstimated
-		_ = onlyActual
-		//log.Printf("Common edges: %v (%d)", common, len(common))
-		//log.Printf("Only estimated: %v (%d)", onlyEstimated, len(onlyEstimated))
-		//log.Printf("Only actual: %v (%d)", onlyActual, len(onlyActual))
-
-		// 一致率の計算
-		//matchRate := float64(len(common)) / float64(len(estimateResult)) * 100.0
-		//log.Printf("Match rate: %.2f%%", matchRate)
-
 		// クエリ結果を使って位置推定を更新
-		updateCityPositions(cityStates, queryCities, queryResult)
+		updateCityPositions(cityStates, queryCities, queryResult, estimateResult)
 	}
 
 	// 最終的な推定精度を評価
@@ -307,30 +255,26 @@ func estimatePhase(in Input, usableQ int) {
 
 		for i := 0; i < in.N; i++ {
 			// 都市の詳細情報と真の座標と推定位置の距離を表示
-			estX := cityStates[i].Mean[0]
-			estY := cityStates[i].Mean[1]
-			realX := in.trueXY[i][0]
-			realY := in.trueXY[i][1]
-			dx := estX - realX
-			dy := estY - realY
-			distance := math.Sqrt(dx*dx + dy*dy)
-			log.Printf("City %d: Estimated (%.0f, %.0f), Actual (%.0f, %.0f), Distance: %.0f, UpdateCount: %d",
-				cityStates[i].ID, estX, estY, realX, realY, distance, cityStates[i].UpdateCount)
-
+			//estX := cityStates[i].Mean[0]
+			//estY := cityStates[i].Mean[1]
+			//realX := in.trueXY[i][0]
+			//realY := in.trueXY[i][1]
+			//dx := estX - realX
+			//dy := estY - realY
+			//distance := math.Sqrt(dx*dx + dy*dy)
+			//log.Printf("City %d: Estimated (%.0f, %.0f), Actual (%.0f, %.0f), Distance: %.0f, UpdateCount: %d",
+			//cityStates[i].ID, estX, estY, realX, realY, distance, cityStates[i].UpdateCount)
 		}
 	}
-	log.Println("queryResults size=", len(queryResultMap))
-	log.Println("hash table size=", len(hashTable))
 }
 
 // クエリ結果からベイズ更新を行う関数
-func updateCityPositions(cityStates []CityState, queriedCities []int, edges [][2]int) {
+func updateCityPositions(cityStates []CityState, queriedCities []int, edges [][2]int, estimateResult [][2]int) {
 	// 現在の推定位置に基づくシティのマップを作成
 	tmpCities := make([]City, len(queriedCities))
 	for i, cityID := range queriedCities {
 		tmpCities[i] = cityStates[cityID].toCity()
 	}
-	estimateResult := createMST(tmpCities)
 
 	// エッジ比較
 	common, onlyEstimated, onlyActual := compareEdges(estimateResult, edges)
@@ -533,7 +477,41 @@ func compareEdge(a, b [2]int) int {
 }
 
 func solve(in Input) {
-	estimatePhase(in, in.Q-100)
+
+	cityStates := make([]CityState, in.N)
+	for i := 0; i < in.N; i++ {
+		cityStates[i].ID = i
+
+		// 矩形の座標を取得
+		rx := float64(in.lxrxlyry[i*4+1]) // 右
+		lx := float64(in.lxrxlyry[i*4+0]) // 左
+		ry := float64(in.lxrxlyry[i*4+3]) // 上
+		ly := float64(in.lxrxlyry[i*4+2]) // 下
+
+		// 平均値は矩形の中心
+		cityStates[i].Mean[0] = (rx + lx) / 2
+		cityStates[i].Mean[1] = (ry + ly) / 2
+
+		// 分散は一様分布の理論値 (b-a)²/12 を使用
+		cityStates[i].Variance[0] = math.Pow(rx-lx, 2) / 12.0
+		cityStates[i].Variance[1] = math.Pow(ry-ly, 2) / 12.0
+
+		// 最小分散を設定（数値安定性のため）
+		minVariance := 1.0
+		cityStates[i].Variance[0] = math.Max(minVariance, cityStates[i].Variance[0])
+		cityStates[i].Variance[1] = math.Max(minVariance, cityStates[i].Variance[1])
+
+		// 矩形情報も保存
+		cityStates[i].Ract[0] = lx
+		cityStates[i].Ract[1] = rx
+		cityStates[i].Ract[2] = ly
+		cityStates[i].Ract[3] = ry
+
+		// 分散の合計（算術平均）を計算
+		cityStates[i].UpdateSumVariance()
+	}
+
+	estimatePhase(in, in.Q-100, cityStates)
 
 	sortedGroup := make([]int, in.M)
 	for i := 0; i < in.M; i++ {
@@ -545,7 +523,7 @@ func solve(in Input) {
 	bestScore := 100000000
 	ansGroups := make([]AnsGroup, in.M)
 	mapping := make([]int, in.M)
-	var cities [N]City
+	var oldCities [N]City
 	loop := 20
 	if in.M == 1 {
 		loop = 1
@@ -558,19 +536,19 @@ func solve(in Input) {
 		mapping = makeMapping(in.G[:in.M], sortedGroup)
 		// 都市の初期値は範囲の中心とする
 		for i := 0; i < N; i++ {
-			cities[i].ID = i
-			cities[i].Y = float64((in.lxrxlyry[i*4+2] + in.lxrxlyry[i*4+3])) / 2
-			cities[i].X = float64((in.lxrxlyry[i*4+0] + in.lxrxlyry[i*4+1])) / 2
+			oldCities[i].ID = i
+			oldCities[i].Y = float64((in.lxrxlyry[i*4+2] + in.lxrxlyry[i*4+3])) / 2
+			oldCities[i].X = float64((in.lxrxlyry[i*4+0] + in.lxrxlyry[i*4+1])) / 2
 		}
 		center := Point{Y: 10000 / 2, X: 10000 / 2}
 		var used [N]bool
 		citiesSortedByCenter := make([]City, N)
-		copy(citiesSortedByCenter, cities[:])
+		copy(citiesSortedByCenter, oldCities[:])
 		sort.Slice(citiesSortedByCenter[:], func(i, j int) bool {
 			return distSquared(center, citiesSortedByCenter[i].Point) > distSquared(center, citiesSortedByCenter[j].Point)
 		})
 		tmp := make([]City, N)
-		copy(tmp, cities[:])
+		copy(tmp, oldCities[:])
 		ansGroups = make([]AnsGroup, in.M)
 		for i := 0; i < in.M; i++ {
 			// グループのrootを決める
@@ -585,7 +563,7 @@ func solve(in Input) {
 			}
 			// rootからの距離が近い順にソートする
 			sort.Slice(tmp[:], func(i, j int) bool {
-				return distSquared(cities[groupRoot].Point, tmp[i].Point) < distSquared(cities[groupRoot].Point, tmp[j].Point)
+				return distSquared(oldCities[groupRoot].Point, tmp[i].Point) < distSquared(oldCities[groupRoot].Point, tmp[j].Point)
 			})
 			// グループに都市を追加する
 			// Edgesは、グループのrootと都市を結ぶエッジ
@@ -601,7 +579,7 @@ func solve(in Input) {
 			//log.Println("i:", i, "groupRoot:", groupRoot, "requre:", sortedGroup[i], "cities:", len(ansGrops[i].Citys))
 			tmpCity := make([]City, len(ansGroups[i].Cities))
 			for j, city := range ansGroups[i].Cities {
-				tmpCity[j] = cities[city]
+				tmpCity[j] = oldCities[city]
 			}
 			ansGroups[i].Edges = createMST(tmpCity)
 		}
@@ -609,7 +587,7 @@ func solve(in Input) {
 		allCost := 0
 		for i := 0; i < in.M; i++ {
 			for j := 0; j < len(ansGroups[i].Edges); j++ {
-				allCost += distance(cities[ansGroups[i].Edges[j][0]].Point, cities[ansGroups[i].Edges[j][1]].Point)
+				allCost += distance(oldCities[ansGroups[i].Edges[j][0]].Point, oldCities[ansGroups[i].Edges[j][1]].Point)
 			}
 		}
 		//log.Printf("estCost=%d\n", allCost)
@@ -655,8 +633,8 @@ func solve(in Input) {
 	if os.Getenv("ATCODER") != "1" {
 		sumSqErr := 0.0
 		for i := 0; i < N; i++ {
-			estX := float64(cities[i].X)
-			estY := float64(cities[i].Y)
+			estX := float64(oldCities[i].X)
+			estY := float64(oldCities[i].Y)
 			realX := in.trueXY[i][0]
 			realY := in.trueXY[i][1]
 			sumSqErr += (estX - realX) * (estX - realX)
@@ -888,6 +866,7 @@ func printTree(node *Node, depth int) {
 
 // query
 var queryCount int
+var queryResultMap = make(map[uint64]MSTResult)
 
 func sendQuery(cities []int) (edges [][2]int) {
 	if queryCount >= Q {
