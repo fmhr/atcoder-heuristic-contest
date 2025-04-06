@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"math"
@@ -17,10 +18,27 @@ func init() {
 var startTime time.Time
 var frand = rand.New(rand.NewSource(1333))
 
+var (
+	pram1 *float64 // 伸ばすときの比率
+	pram2 *float64 // 縮めるときの比率
+	pram3 *float64 // エッジが一致したときの分散更新係数
+	pram4 *float64 // 分散更新係数
+)
+
 func init() {
 	for i := 0; i < 800; i++ {
 		hashTable[i] = rand.Uint64()
 	}
+	pram1 = flag.Float64("pram1", 1.20, "伸ばすときの比率")
+	pram2 = flag.Float64("pram2", 0.62, "縮めるときの比率")
+	pram3 = flag.Float64("pram3", 0.98, "エッジが一致したときの分散更新係数")
+	pram4 = flag.Float64("pram4", 0.93, "分散更新係数")
+
+	flag.Parse()
+
+	log.Println("pram_stretchFactor=", *pram1)
+	log.Println("pram_shrinkFactor=", *pram2)
+	log.Println("pram_commonFactor=", *pram3)
 }
 
 func main() {
@@ -44,31 +62,12 @@ func distanceSquared(a, b [2]float64) float64 {
 	return (a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1])
 }
 
-// 小数点以下切り捨て
-func distance(a, b Point) int {
-	return int(math.Floor(math.Sqrt(float64(distSquared(a, b)))))
-}
-
-//type City struct {
-//ID int
-//Point
-//}
-
 // answerの出力用
 type AnsGroup struct {
 	Cities []int
 	Edges  [][2]int
 	Cost   int
 }
-
-//func (a AnsGroup) calcScore(cities []City) int {
-// エッジの長さの合計
-//score := 0
-//for _, edge := range a.Edges {
-//score += distance(cities[edge[0]].Point, cities[edge[1]].Point)
-//}
-//return score
-//}
 
 // Output()は、回答形式に合わせてStringに変換する
 func (a AnsGroup) Output() (str string) {
@@ -94,10 +93,6 @@ type CityState struct {
 	SumVariance float64 // 分散の合計
 	UpdateCount int     // 更新回数
 }
-
-//func (cs CityState) toCity() City {
-//return City{ID: cs.ID, Point: Point{Y: cs.Mean[1], X: cs.Mean[0]}}
-//}
 
 // 分散の合計（算術平均）を更新する
 func (cs *CityState) UpdateSumVariance() {
@@ -220,57 +215,44 @@ func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 
 		// クエリ結果を使って位置推定を更新
 		updateCityPositions(cityStates, queryCities, queryResult, estimateResult)
+		//if os.Getenv("ATCODER") != "1" {
+		//rmse := calcRMSE(cityStates, in.trueXY)
+		//log.Printf("%d RMSE: %f", usableQ, rmse)
+		//}
 	}
 
 	// 最終的な推定精度を評価
 	if os.Getenv("ATCODER") != "1" {
-		sumSqErr := 0.0
-		for i := 0; i < in.N; i++ {
-			estX := cityStates[i].Mean[0]
-			estY := cityStates[i].Mean[1]
-			realX := in.trueXY[i][0]
-			realY := in.trueXY[i][1]
-
-			// X座標の二乗誤差
-			dx := estX - realX
-			sumSqErr += dx * dx
-
-			// Y座標の二乗誤差
-			dy := estY - realY
-			sumSqErr += dy * dy
-			if math.IsNaN(sumSqErr) {
-				log.Printf("%+v\n", cityStates[i])
-				panic("NaN detected")
-			}
-		}
-		// 平均二乗誤差（Mean Squared Error）
-		mse := sumSqErr / float64(2*in.N) // 都市数×座標2次元分で割る
-
-		// 平均二乗誤差の平方根（Root Mean Squared Error）
-		rmse := math.Sqrt(mse)
-
+		rmse := calcRMSE(cityStates, in.trueXY)
 		log.Printf("Estimate Phase Final RMSE: %f", rmse)
-
-		for i := 0; i < in.N; i++ {
-			// 都市の詳細情報と真の座標と推定位置の距離を表示
-			//estX := cityStates[i].Mean[0]
-			//estY := cityStates[i].Mean[1]
-			//realX := in.trueXY[i][0]
-			//realY := in.trueXY[i][1]
-			//dx := estX - realX
-			//dy := estY - realY
-			//distance := math.Sqrt(dx*dx + dy*dy)
-			//log.Printf("City %d: Estimated (%.0f, %.0f), Actual (%.0f, %.0f), Distance: %.0f, UpdateCount: %d",
-			//cityStates[i].ID, estX, estY, realX, realY, distance, cityStates[i].UpdateCount)
-		}
 	}
+	//for _, mst := range queryResultMap {
+	//log.Printf("Vertex: %v Edges: %d", mst.Vertex, len(mst.Edges))
+	//}
 }
 
 // クエリ結果からベイズ更新を行う関数
 func updateCityPositions(cityStates []CityState, queriedCities []int, edges [][2]int, estimateResult [][2]int) {
 	// エッジ比較
 	common, onlyEstimated, onlyActual := compareEdges(estimateResult, edges)
-	_ = common
+
+	for _, edge := range common {
+		city1 := cityStates[edge[0]]
+		city2 := cityStates[edge[1]]
+
+		// 分散を更新する
+		city1.Variance[0] *= (*pram3)
+		city1.Variance[1] *= (*pram3)
+		city2.Variance[0] *= (*pram3)
+		city2.Variance[1] *= (*pram3)
+
+		// 更新カウントを増やす
+		city1.UpdateCount++
+		city2.UpdateCount++
+		// 分散の合計を更新
+		city1.UpdateSumVariance()
+		city2.UpdateSumVariance()
+	}
 
 	// 推定結果にのみ存在するエッジに対して調整を行う (10%伸ばす)
 	for _, edge := range onlyEstimated {
@@ -285,7 +267,7 @@ func updateCityPositions(cityStates []CityState, queriedCities []int, edges [][2
 		currentDist := math.Sqrt(currentDistSq)
 
 		// 調整後の長さ（10%伸ばす）
-		targetDist := currentDist * 1.05
+		targetDist := currentDist * (*pram1)
 
 		// エッジの方向ベクトル
 		dx := p2.X - p1.X
@@ -339,7 +321,7 @@ func updateCityPositions(cityStates []CityState, queriedCities []int, edges [][2
 		currentDist := math.Sqrt(currentDistSq)
 
 		// 調整後の長さ（10%縮める）
-		targetDist := currentDist * 0.90
+		targetDist := currentDist * (*pram2)
 
 		// エッジの方向ベクトル
 		dx := p2.X - p1.X
@@ -413,8 +395,8 @@ func updateCityPosition(city *CityState, moveX, moveY float64) {
 
 	// 分散を更新（0.95をかける）
 	minVariance := 0.01 // 最小分散（あまりに小さくしないために）
-	city.Variance[0] = math.Max(minVariance, city.Variance[0]*0.95)
-	city.Variance[1] = math.Max(minVariance, city.Variance[1]*0.95)
+	city.Variance[0] = math.Max(minVariance, city.Variance[0]*(*pram4))
+	city.Variance[1] = math.Max(minVariance, city.Variance[1]*(*pram4))
 
 	// 分散の合計を更新
 	city.UpdateSumVariance()
@@ -601,7 +583,7 @@ func solve(in Input) {
 		}
 	}
 	// queryを使ったedgeの最適化
-	log.Println("bestScore=", bestScore)
+	log.Printf("localScore=%d\n", int(bestScore))
 	for i := 0; i < in.M; i++ {
 		if len(bestAns[i].Cities) > 2 && in.L >= len(bestAns[i].Cities) {
 			bestAns[i].Edges = sendQuery(bestAns[i].Cities)
@@ -628,9 +610,9 @@ func solve(in Input) {
 	// -------------------------------------------------------------------
 	if os.Getenv("ATCODER") != "1" {
 		// 初期のRMSEは W/4.24　程度
-		log.Printf("RMSE=%.2f W/4.24=%.2f\n", calcRMSE(cityStates, in.trueXY), float64(in.W)/4.24)
+		log.Printf("RMSE=%.2f W/4.24:%.2f\n", calcRMSE(cityStates, in.trueXY), float64(in.W)/4.24)
 	}
-	log.Printf("queryCount=%d\n", queryCount)
+	//log.Printf("queryCount=%d\n", queryCount)
 }
 
 const (
