@@ -29,22 +29,27 @@ func init() {
 	for i := 0; i < 800; i++ {
 		hashTable[i] = rand.Uint64()
 	}
-	pram1 = flag.Float64("pram1", 1.20, "伸ばすときの比率")
-	pram2 = flag.Float64("pram2", 0.62, "縮めるときの比率")
-	pram3 = flag.Float64("pram3", 0.98, "エッジが一致したときの分散更新係数")
-	pram4 = flag.Float64("pram4", 0.93, "分散更新係数")
+	pram1 = flag.Float64("pram1", 1.194, "伸ばすときの比率")
+	pram2 = flag.Float64("pram2", 0.724, "縮めるときの比率")
+	pram3 = flag.Float64("pram3", 0.976, "エッジが一致したときの分散更新係数")
+	pram4 = flag.Float64("pram4", 0.993, "分散更新係数")
 
 	flag.Parse()
 
-	log.Println("pram_stretchFactor=", *pram1)
-	log.Println("pram_shrinkFactor=", *pram2)
-	log.Println("pram_commonFactor=", *pram3)
+	log.Println("pram1=", *pram1)
+	log.Println("pram2=", *pram2)
+	log.Println("pram3=", *pram3)
+	log.Println("pram4=", *pram4)
 }
 
 func main() {
 	startTime = time.Now()
 	in := parseInput()
 	log.Printf("M=%d L=%d W=%d\n", in.M, in.L, in.W)
+	// クエリで一度に使える頂点の数は,L L*Q/Nが各頂点で使える数
+	// Q = 400 N = 800 なので L/2
+	// ただし１度のクエリで、複数の辺で使われる頂点はその分多く更新される
+	//log.Printf("NUM=%f\n", float64(in.L*in.Q)/float64(800))
 	solve(in)
 	log.Printf("elapsed=%.2f\n", float64(time.Since(startTime).Microseconds())/1000)
 }
@@ -219,6 +224,19 @@ func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 		//rmse := calcRMSE(cityStates, in.trueXY)
 		//log.Printf("%d RMSE: %f", usableQ, rmse)
 		//}
+	}
+
+	// クエリの履歴を使って、都市の位置を更新
+	for i := 0; i < 50; i++ {
+		for _, mst := range queryResultMap {
+			estiEdges := createMST(mst.Vertex, cityStates)
+			//log.Println("estiEdges:", estiEdges)
+			updateCityPositions(cityStates, mst.Vertex, mst.Edges, estiEdges)
+		}
+		if os.Getenv("ATCODER") != "1" {
+			rmse := calcRMSE(cityStates, in.trueXY)
+			log.Printf("update %d RMSE: %f", i, rmse)
+		}
 	}
 
 	// 最終的な推定精度を評価
@@ -451,7 +469,7 @@ func compareEdge(a, b [2]int) int {
 }
 
 func solve(in Input) {
-
+	time1 := time.Now()
 	cityStates := make([]CityState, in.N)
 	for i := 0; i < in.N; i++ {
 		cityStates[i].ID = i
@@ -498,6 +516,8 @@ func solve(in Input) {
 	}
 
 	estimatePhase(in, in.Q-reserveQuery, cityStates)
+	time2 := time.Now()
+	log.Println("estimatePhaseTime:", time2.Sub(time1).Seconds())
 
 	sortedGroup := make([]int, in.M)
 	for i := 0; i < in.M; i++ {
@@ -514,7 +534,6 @@ func solve(in Input) {
 		loop = 1
 	}
 	for k := 0; k < loop; k++ {
-		//sort.Sort(sort.Reverse(sort.IntSlice(sortedGroup)))
 		frand.Shuffle(len(sortedGroup), func(i, j int) {
 			sortedGroup[i], sortedGroup[j] = sortedGroup[j], sortedGroup[i]
 		})
@@ -525,7 +544,7 @@ func solve(in Input) {
 		citiesSortedByCenter := make([]CityState, N)
 		copy(citiesSortedByCenter, cityStates[:])
 		sort.Slice(citiesSortedByCenter[:], func(i, j int) bool {
-			return distanceSquared(citiesSortedByCenter[i].Mean, centerf) < distanceSquared(citiesSortedByCenter[j].Mean, centerf)
+			return distanceSquared(citiesSortedByCenter[i].Mean, centerf) > distanceSquared(citiesSortedByCenter[j].Mean, centerf)
 		})
 		tmp := make([]CityState, N)
 		copy(tmp, cityStates[:])
@@ -589,6 +608,9 @@ func solve(in Input) {
 			bestAns[i].Edges = sendQuery(bestAns[i].Cities)
 		}
 	}
+
+	time3 := time.Now()
+	log.Println("buildPhasetime:", time3.Sub(time2).Seconds())
 
 	//log.Println("mapping=", mapping)
 	//log.Println("ansGrops=", ansGrops)

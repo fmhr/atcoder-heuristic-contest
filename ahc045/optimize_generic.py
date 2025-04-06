@@ -16,7 +16,7 @@ CONFIG: Dict[str, Any] = {
     "n_trials": 100,         # 試行回数
 
     # --- Command Execution Settings ---
-    "command_template": 'fj test "{solver_command}" -n 10 -p 4', # 実行するコマンド全体。{solver_command} が置き換えられる
+    "command_template": 'fj test "{solver_command}" -n 50 -p 4', # 実行するコマンド全体。{solver_command} が置き換えられる
     "solver_executable": "./bin/a.out",  # 実行したいソルバー（Goプログラムなど）を起動するコマンド
     "param_prefix": "-",         # パラメータ名の前につける文字 (例: "-", "--")
     "param_separator": " ",      # パラメータ名と値の間の文字 (例: " ", "=")
@@ -34,28 +34,28 @@ CONFIG: Dict[str, Any] = {
             "type": "float",           # データ型
             "low": 1.00,               # 指定された最小値
             "high": 1.20,              # 指定された最大値
-            "step": 0.01,             # ステップ幅 (floatの場合)
+            "step": 0.001,             # ステップ幅 (floatの場合)
         },
         {
             "name": "pram2",   # Goのflag名に合わせる
             "type": "float",           # データ型
             "low": 0.60,               # 指定された最小値
             "high": 1.00,              # 指定された最大値
-            "step": 0.01,             # ステップ幅 (floatの場合)
+            "step": 0.001,             # ステップ幅 (floatの場合)
         },
         {
             "name": "pram3",   # Goのflag名に合わせる
             "type": "float",           # データ型
             "low": 0.90,               # 指定された最小値
             "high": 1.00,               # 指定された最大値
-            "step": 0.01,             # ステップ幅 (floatの場合)
+            "step": 0.001,             # ステップ幅 (floatの場合)
         },
         {
             "name": "pram4",   # Goのflag名に合わせる
             "type": "float",           # データ型
             "low": 0.90,               # 指定された最小値
             "high": 1.00,               # 指定された最大値
-            "step": 0.01,             # ステップ幅 (floatの場合)
+            "step": 0.001,             # ステップ幅 (floatの場合)
         }
     ]
 }
