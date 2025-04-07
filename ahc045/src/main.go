@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/bits"
 	"math/rand"
 	"os"
 	"sort"
@@ -23,16 +24,18 @@ var (
 	pram2 *float64 // 縮めるときの比率
 	pram3 *float64 // エッジが一致したときの分散更新係数
 	pram4 *float64 // 分散更新係数
+	pram5 *float64 // hit率の上限
 )
 
 func init() {
 	for i := 0; i < 800; i++ {
 		hashTable[i] = rand.Uint64()
 	}
-	pram1 = flag.Float64("pram1", 1.194, "伸ばすときの比率")
-	pram2 = flag.Float64("pram2", 0.724, "縮めるときの比率")
-	pram3 = flag.Float64("pram3", 0.976, "エッジが一致したときの分散更新係数")
-	pram4 = flag.Float64("pram4", 0.993, "分散更新係数")
+	pram1 = flag.Float64("pram1", 1.184, "伸ばすときの比率")
+	pram2 = flag.Float64("pram2", 0.786, "縮めるときの比率")
+	pram3 = flag.Float64("pram3", 0.91, "エッジが一致したときの分散更新係数")
+	pram4 = flag.Float64("pram4", 0.984, "分散更新係数")
+	pram5 = flag.Float64("pram5", 0.766, "hit率の上限")
 
 	flag.Parse()
 
@@ -90,8 +93,7 @@ func (a AnsGroup) Output() (str string) {
 }
 
 type CityState struct {
-	ID int
-	//Center      [2]float64 // x, y
+	ID          int
 	Mean        [2]float64 // x, y
 	Variance    [2]float64
 	Ract        [4]float64
@@ -128,8 +130,16 @@ func NewMSTResult(v []int, e [][2]int) MSTResult {
 // クエリをつかって、都市の座標を推定する
 // usableQは使えるクエリの数
 func estimatePhase(in Input, usableQ int, cityStates []CityState) {
+	initQ := usableQ
+	_ = initQ
 	// 既に中心都市として使用したIDを記録する配列
 	usedAsCenters := make([]bool, in.N)
+
+	// クエリリスト
+	queryBits := make([]BitSet, 0)
+	phase2 := false
+
+	log.Printf("phasechange=%d \n", 0)
 
 	// クエリを使って位置推定を更新していく処理
 	for usableQ > 0 {
@@ -138,9 +148,16 @@ func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 
 		// まだ中心として使用していない都市だけをソート対象にする
 		for i := 0; i < in.N; i++ {
-			if !usedAsCenters[i] {
+			if !usedAsCenters[i] || phase2 {
 				sortedCities = append(sortedCities, cityStates[i])
 			}
+		}
+
+		if len(sortedCities) == 0 && !phase2 {
+			phase2 = true
+			log.Printf("phasechangeQ=%d \n", usableQ)
+			continue
+			//break
 		}
 
 		// 分散の大きい順（不確かさが大きい順）にソート
@@ -150,7 +167,6 @@ func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 
 		// 最も分散の大きい都市を中心として選択
 		centerCity := sortedCities[0]
-		//log.Printf("Query %d: center city ID=%d, SumVariance=%.2f\n", q, centerCity.ID, centerCity.SumVariance)
 
 		// この都市を中心として使用済みとマーク
 		usedAsCenters[centerCity.ID] = true
@@ -172,9 +188,15 @@ func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 		}
 
 		// 距離が近い順にソート
-		sort.Slice(cityDistances, func(i, j int) bool {
-			return cityDistances[i].Distance < cityDistances[j].Distance
-		})
+		if !phase2 {
+			sort.Slice(cityDistances, func(i, j int) bool {
+				return cityDistances[i].Distance < cityDistances[j].Distance
+			})
+		} else {
+			rand.Shuffle(len(cityDistances), func(i, j int) {
+				cityDistances[i], cityDistances[j] = cityDistances[j], cityDistances[i]
+			})
+		}
 
 		// クエリに使用する都市リストを作成（最大 in.L 個）
 		querySize := intMin(in.L, in.N)
@@ -192,6 +214,19 @@ func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 		}
 		//log.Println("Query cities:", queryCities)
 
+		bits := makeBit(queryCities)
+		maxHit := 0
+		for i := 0; i < len(queryBits); i++ {
+			// 既にクエリで使用した都市のビットを取得
+			hit := bits.And(&queryBits[i])
+			if hit.Count() > maxHit {
+				maxHit = hit.Count()
+			}
+		}
+		if float64(maxHit) > float64(in.L)*(*pram5) {
+			continue
+		}
+
 		hash := makeHash(queryCities)
 		_, ok := queryResultMap[hash]
 		if ok {
@@ -206,6 +241,9 @@ func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 		// クエリを実行
 		queryResult := sendQuery(queryCities)
 		usableQ--
+
+		queryBits = append(queryBits, *bits)
+
 		//log.Println("Query result:", queryResult)
 
 		// クエリ結果をMSTに変換
@@ -619,6 +657,7 @@ func solve(in Input) {
 	for i := 0; i < in.M; i++ {
 		fmt.Print(bestAns[bestMapping[i]].Output())
 	}
+
 	// kd-treeを作成する
 	//kdt := NewKDTree(cities[:])
 	//printTree(kdt.Root, 0)
@@ -742,9 +781,8 @@ func runKruskal(n int, edges Edges) (float64, []Edge) {
 // edgesには、cityのIDに変換して返す
 
 func createMST(cities []int, cityStates []CityState) [][2]int {
-
 	// 頂点を0~len(cities)-1に振り直してMSTを作成
-	edges := make(Edges, 0)
+	edges := make(Edges, 0, len(cities)*(len(cities)-1)/2)
 	for i := 0; i < len(cities); i++ {
 		for j := i + 1; j < len(cities); j++ {
 			city1 := cities[i]
@@ -851,6 +889,14 @@ func makeHash(cities []int) uint64 {
 	return hash
 }
 
+func makeBit(cities []int) *BitSet {
+	bitSet := NewBitSet(800)
+	for i := 0; i < len(cities); i++ {
+		bitSet.Set(cities[i])
+	}
+	return bitSet
+}
+
 // ビットを立てる
 func (bs *BitSet) Set(i int) {
 	if i > bs.size {
@@ -890,6 +936,36 @@ func (bs *BitSet) Get(i int) bool {
 // サイズ取得
 func (bs *BitSet) Len() int {
 	return bs.size
+}
+
+func (bs *BitSet) Count() int {
+	count := 0
+	for _, word := range bs.bits {
+		count += bits.OnesCount64(word)
+	}
+	return count
+}
+
+func (bs *BitSet) XOR(other *BitSet) *BitSet {
+	if bs.size != other.size {
+		panic("BitSet sizes do not match")
+	}
+	result := NewBitSet(bs.size)
+	for i := 0; i < len(bs.bits); i++ {
+		result.bits[i] = bs.bits[i] ^ other.bits[i]
+	}
+	return result
+}
+
+func (bs *BitSet) And(other *BitSet) *BitSet {
+	if bs.size != other.size {
+		panic("BitSet sizes do not match")
+	}
+	result := NewBitSet(bs.size)
+	for i := 0; i < len(bs.bits); i++ {
+		result.bits[i] = bs.bits[i] & other.bits[i]
+	}
+	return result
 }
 
 func calcRMSE(cityStates []CityState, trueXY [800][2]float64) float64 {
