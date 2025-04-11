@@ -130,6 +130,8 @@ func NewMSTResult(v []int, e [][2]int) MSTResult {
 // クエリをつかって、都市の座標を推定する
 // usableQは使えるクエリの数
 func estimatePhase(in Input, usableQ int, cityStates []CityState) {
+	log.Printf("phasechangeQ=%d \n", 0) // seed=0で出力しないとテーブルにデータがでないので、だす　上書きされる
+
 	initQ := usableQ
 	_ = initQ
 	// 既に中心都市として使用したIDを記録する配列
@@ -138,8 +140,6 @@ func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 	// クエリリスト
 	queryBits := make([]BitSet, 0)
 	phase2 := false
-
-	log.Printf("phasechange=%d \n", 0)
 
 	// クエリを使って位置推定を更新していく処理
 	for usableQ > 0 {
@@ -157,7 +157,6 @@ func estimatePhase(in Input, usableQ int, cityStates []CityState) {
 			phase2 = true
 			log.Printf("phasechangeQ=%d \n", usableQ)
 			continue
-			//break
 		}
 
 		// 分散の大きい順（不確かさが大きい順）にソート
@@ -557,6 +556,14 @@ func solve(in Input) {
 	time2 := time.Now()
 	log.Println("estimatePhaseTime:", time2.Sub(time1).Seconds())
 
+	// 全ての都市間の座標を計算
+	var allDistance [N][N]float64
+	for i := 0; i < in.N; i++ {
+		for j := 0; j < in.N; j++ {
+			allDistance[i][j] = math.Sqrt(distanceSquared(cityStates[i].Mean, cityStates[j].Mean))
+		}
+	}
+
 	sortedGroup := make([]int, in.M)
 	for i := 0; i < in.M; i++ {
 		sortedGroup[i] = in.G[i]
@@ -567,7 +574,7 @@ func solve(in Input) {
 	bestScore := 100000000.0
 	ansGroups := make([]AnsGroup, in.M)
 	mapping := make([]int, in.M)
-	loop := 20
+	loop := 2
 	if in.M == 1 {
 		loop = 1
 	}
@@ -621,7 +628,8 @@ func solve(in Input) {
 		allCost := 0.0
 		for i := 0; i < in.M; i++ {
 			for j := 0; j < len(ansGroups[i].Edges); j++ {
-				allCost += math.Sqrt(distanceSquared(cityStates[ansGroups[i].Edges[j][0]].Mean, cityStates[ansGroups[i].Edges[j][1]].Mean))
+				//allCost += math.Sqrt(distanceSquared(cityStates[ansGroups[i].Edges[j][0]].Mean, cityStates[ansGroups[i].Edges[j][1]].Mean))
+				allCost += allDistance[ansGroups[i].Edges[j][0]][ansGroups[i].Edges[j][1]]
 			}
 		}
 		//log.Printf("estCost=%d\n", allCost)
@@ -650,6 +658,130 @@ func solve(in Input) {
 	time3 := time.Now()
 	log.Println("buildPhasetime:", time3.Sub(time2).Seconds())
 
+	log.Printf("UP=%d\n", 0)
+	// G[]になりえるedgeだけを選ぶ
+	edges := make([]Edge, 0, in.N*(N-1)/2)
+	for i := 0; i < in.N; i++ {
+		for j := i + 1; j < in.N; j++ {
+			edges = append(edges, Edge{From: i, To: j, Weight: allDistance[i][j]})
+		}
+	}
+	// Kruskal法でMSTを作成
+	sort.Slice(edges, func(i, j int) bool {
+		return edges[i].Weight < edges[j].Weight
+	})
+	uf := NewUnionFind(in.N)
+	sortedG := make([]int, in.M)
+	copy(sortedG, in.G[:in.M])
+	sort.Slice(sortedG, func(i, j int) bool {
+		return sortedG[i] > sortedG[j]
+	})
+	mstEdge := make([][2]int, 0, in.N-1)
+	sortedSize := make([]int, in.N)
+	for _, edge := range edges {
+		if !uf.Same(edge.From, edge.To) {
+			copy(sortedSize, uf.size[:])
+			a := uf.size[uf.Find(edge.From)]
+			b := uf.size[uf.Find(edge.To)]
+			removeInt(sortedSize, a)
+			removeInt(sortedSize, b)
+			sortedSize[len(sortedSize)-1] = a + b
+			sort.Slice(sortedSize, func(i, j int) bool {
+				return sortedSize[i] > sortedSize[j]
+			})
+			canUnion := true
+			for i := 0; i < in.M; i++ {
+				if sortedG[i] < sortedSize[i] {
+					canUnion = false
+					//log.Println(i, "sortedG[i]:", sortedG[i], "sortedSize[i]:", sortedSize[i])
+					break
+				}
+			}
+			if canUnion {
+				uf.Union(edge.From, edge.To)
+				mstEdge = append(mstEdge, [2]int{edge.From, edge.To})
+				//log.Println("union:", edge.From, edge.To)
+				//log.Println("requred G :", sortedG[0:in.M])
+				//log.Println("sortedSize:", sortedSize[:in.M+10])
+				//log.Println(a + b)
+			}
+		}
+	}
+	copy(sortedSize, uf.size[:])
+	sort.Sort(sort.Reverse(sort.IntSlice(sortedSize)))
+	//log.Println(sortedSize[:in.M])
+	//log.Println(uf.size[:in.M])
+	ok := true
+	for i := 0; i < in.M; i++ {
+		if sortedG[i] != sortedSize[i] {
+			ok = false
+			log.Println("sortedG[i]:", sortedG[i], "uf.size[i]:", uf.size[i])
+			break
+		}
+	}
+	if ok {
+		groupRe := make([]int, in.N) // cityがどこのグループに属しているか
+		sumEdgeWeight := 0.0
+		for _, edge := range mstEdge {
+			sumEdgeWeight += allDistance[edge[0]][edge[1]]
+		}
+		log.Println("MST:", int(sumEdgeWeight))
+		group := uf.Group()                // サイズ０のグループがはいってる
+		newGroup := make([][]int, 0, in.M) // サイズ０のグループを除外
+		groupIndex := 0
+		for _, g := range group {
+			if len(g) > 0 {
+				//log.Println(len(g), g)
+				newGroup = append(newGroup, g)
+				for _, city := range g {
+					groupRe[city] = groupIndex
+				}
+				groupIndex++
+			}
+		}
+		//log.Println(in.G[:in.M])
+		//log.Println(newGroup)
+		newEdges := make([][][2]int, in.M)
+		for _, edge := range mstEdge {
+			//log.Println(edge[0], edge[1])
+			newEdges[groupRe[edge[0]]] = append(newEdges[groupRe[edge[0]]], [2]int{edge[0], edge[1]})
+		}
+		//for i := 0; i < in.M; i++ {
+		//log.Println("cities:", newGroup[i])
+		//log.Println("edges:", newEdges[i])
+		//}
+		ansGroups = make([]AnsGroup, in.M)
+		for i := 0; i < in.M; i++ {
+			ansGroups[i].Cities = newGroup[i]
+			ansGroups[i].Edges = newEdges[i]
+			//copy(ansGroups[i].Cities, newGroup[i])
+			//copy(ansGroups[i].Edges, newEdges[i])
+			//sort.Ints(ansGroups[i].Cities)
+		}
+		sizeList := make([]int, in.M)
+		for i := 0; i < in.M; i++ {
+			sizeList[i] = len(ansGroups[i].Cities)
+		}
+		mapping = makeMapping(in.G[:in.M], sizeList)
+		//log.Println(mapping)
+		if bestScore > sumEdgeWeight {
+			bestScore = sumEdgeWeight
+			//bestAns = make([]AnsGroup, in.M)
+			for i := 0; i < in.M; i++ {
+				bestAns[i].Cities = make([]int, len(ansGroups[i].Cities))
+				bestAns[i].Edges = make([][2]int, len(ansGroups[i].Edges))
+				//bestAns[i].Cost = ansGroups[i].Cost
+				//log.Println(bestAns[i].Cities)
+				//log.Println(ansGroups[i].Cities)
+				copy(bestAns[i].Cities, ansGroups[i].Cities)
+				copy(bestAns[i].Edges, ansGroups[i].Edges)
+			}
+			copy(bestMapping, mapping[:])
+			log.Println("LAST UPDATE")
+			log.Printf("UP=%d\n", 1)
+		}
+	}
+
 	//log.Println("mapping=", mapping)
 	//log.Println("ansGrops=", ansGrops)
 	// クエリの終了
@@ -657,6 +789,7 @@ func solve(in Input) {
 	for i := 0; i < in.M; i++ {
 		fmt.Print(bestAns[bestMapping[i]].Output())
 	}
+	log.Println(in.G)
 
 	// kd-treeを作成する
 	//kdt := NewKDTree(cities[:])
@@ -744,6 +877,16 @@ func (uf *UnionFind) Union(x, y int) {
 }
 func (uf *UnionFind) Same(x, y int) bool {
 	return uf.Find(x) == uf.Find(y)
+}
+
+// ufのグループ分けを返す
+func (uf *UnionFind) Group() [][]int {
+	groups := make([][]int, N)
+	for i := 0; i < N; i++ {
+		root := uf.Find(i)
+		groups[root] = append(groups[root], i)
+	}
+	return groups
 }
 
 type Edge struct {
@@ -987,4 +1130,14 @@ func calcRMSE(cityStates []CityState, trueXY [800][2]float64) float64 {
 	// 平均二乗誤差の平方根（Root Mean Squared Error）
 	rmse := math.Sqrt(mse)
 	return rmse
+}
+
+// []intのなかから a　を探して、0にする
+func removeInt(slice []int, a int) {
+	for i, v := range slice {
+		if v == a {
+			slice[i] = 0
+			return
+		}
+	}
 }
