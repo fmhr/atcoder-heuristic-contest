@@ -1,0 +1,417 @@
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>AtCoder Heuristic Contest 044</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Language" content="en">
+	<meta name="viewport" content="width=device-width,initial-scale=1.0">
+	<meta name="format-detection" content="telephone=no">
+	<meta name="google-site-verification" content="nXGC_JxO0yoP1qBzMnYD_xgufO6leSLw1kyNo2HZltM" />
+
+	
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-RC512FD18N"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag('js', new Date());
+		gtag('set', 'user_properties', {
+			
+				'login_status': 'logged_in',
+			
+		});
+		gtag('config', 'G-RC512FD18N');
+	</script>
+
+	
+	<meta name="description" content="AtCoder is a programming contest site for anyone from beginners to experts. We hold weekly programming contests online.">
+	<meta name="author" content="AtCoder Inc.">
+
+	<meta property="og:site_name" content="AtCoder">
+	
+	<meta property="og:title" content="AtCoder Heuristic Contest 044" />
+	<meta property="og:description" content="AtCoder is a programming contest site for anyone from beginners to experts. We hold weekly programming contests online." />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://atcoder.jp/contests/ahc044/tasks_print" />
+	<meta property="og:image" content="https://img.atcoder.jp/assets/atcoder.png" />
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:site" content="@atcoder" />
+	
+	<meta property="twitter:title" content="AtCoder Heuristic Contest 044" />
+
+	<link href="//fonts.googleapis.com/css?family=Lato:400,700" rel="stylesheet" type="text/css">
+	<link rel="stylesheet" type="text/css" href="//img.atcoder.jp/public/5138448/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="//img.atcoder.jp/public/5138448/css/base.css">
+	<link rel="shortcut icon" type="image/png" href="//img.atcoder.jp/assets/favicon.png">
+	<link rel="apple-touch-icon" href="//img.atcoder.jp/assets/atcoder.png">
+	<script src="//img.atcoder.jp/public/5138448/js/lib/jquery-1.9.1.min.js"></script>
+	<script src="//img.atcoder.jp/public/5138448/js/lib/bootstrap.min.js"></script>
+	<script src="//img.atcoder.jp/public/5138448/js/cdn/js.cookie.min.js"></script>
+	<script src="//img.atcoder.jp/public/5138448/js/cdn/moment.min.js"></script>
+	<script src="//img.atcoder.jp/public/5138448/js/cdn/moment_js-ja.js"></script>
+	<script>
+		var LANG = "en";
+		var userScreenName = "fmhr";
+		var csrfToken = "6love2pQ0ieDGT9l/nbY57W2+v+1/c9svbc+ScmujMo="
+	</script>
+	<script src="//img.atcoder.jp/public/5138448/js/utils.js"></script>
+	
+	
+		<script src="//img.atcoder.jp/public/5138448/js/contest.js"></script>
+		<link href="//img.atcoder.jp/public/5138448/css/contest.css" rel="stylesheet" />
+		<script>
+			var contestScreenName = "ahc044";
+			var remainingText = "Remaining Time";
+			var countDownText = "Contest begins in";
+			var startTime = moment("2025-03-16T19:00:00+09:00");
+			var endTime = moment("2025-03-16T23:00:00+09:00");
+		</script>
+		<style></style>
+	
+	
+	
+	
+		<script src="//img.atcoder.jp/public/5138448/js/cdn/run_prettify.js"></script>
+	
+	
+		<link rel="stylesheet" href="//img.atcoder.jp/public/5138448/css/cdn/katex.min.css">
+		<script defer src="//img.atcoder.jp/public/5138448/js/cdn/katex.min.js"></script>
+		<script defer src="//img.atcoder.jp/public/5138448/js/cdn/auto-render.min.js"></script>
+		<script>$(function(){$('var').each(function(){var html=$(this).html().replace(/<sub>/g,'_{').replace(/<\/sub>/g,'}');$(this).html('\\('+html+'\\)');});});</script>
+		<script>
+			var katexOptions = {
+				delimiters: [
+					{left: "$$", right: "$$", display: true},
+					
+					{left: "\\(", right: "\\)", display: false},
+					{left: "\\[", right: "\\]", display: true}
+				],
+      	ignoredTags: ["script", "noscript", "style", "textarea", "code", "option"],
+				ignoredClasses: ["prettyprint", "source-code-for-copy"],
+				throwOnError: false
+			};
+			document.addEventListener("DOMContentLoaded", function() { renderMathInElement(document.body, katexOptions);});
+		</script>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<script src="//img.atcoder.jp/public/5138448/js/base.js"></script>
+</head>
+
+<body>
+
+<script type="text/javascript">
+	var __pParams = __pParams || [];
+	__pParams.push({client_id: '468', c_1: 'atcodercontest', c_2: 'ClientSite'});
+</script>
+<script type="text/javascript" src="https://cdn.d2-apps.net/js/tr.js" async></script>
+
+
+
+<div id="main-div" >
+
+
+	<nav class="navbar navbar-inverse navbar-fixed-top">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse" aria-expanded="false">
+					<span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="/home"></a>
+			</div>
+			<div class="collapse navbar-collapse" id="navbar-collapse">
+				<ul class="nav navbar-nav">
+				
+					<li><a class="contest-title" href="/contests/ahc044">AtCoder Heuristic Contest 044</a></li>
+				
+				</ul>
+				<ul class="nav navbar-nav navbar-right">
+					
+					<li class="dropdown">
+						<a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+							<img src='//img.atcoder.jp/assets/top/img/flag-lang/en.png'> English <span class="caret"></span>
+						</a>
+						<ul class="dropdown-menu">
+							<li><a href="/contests/ahc044/tasks_print?lang=ja"><img src='//img.atcoder.jp/assets/top/img/flag-lang/ja.png'> 日本語</a></li>
+							<li><a href="/contests/ahc044/tasks_print?lang=en"><img src='//img.atcoder.jp/assets/top/img/flag-lang/en.png'> English</a></li>
+						</ul>
+					</li>
+					
+					
+						<li class="dropdown">
+							<a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+								<span class="glyphicon glyphicon-cog" aria-hidden="true"></span> fmhr (Contestant) <span class="caret"></span>
+							</a>
+							<ul class="dropdown-menu">
+								<li><a href="/users/fmhr"><span class="glyphicon glyphicon-user" aria-hidden="true"></span> My Profile</a></li>
+								<li class="divider"></li>
+								<li><a href="/settings"><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> General Settings</a></li>
+								<li><a href="/settings/icon"><span class="glyphicon glyphicon-picture" aria-hidden="true"></span> Change Photo</a></li>
+								<li><a href="/settings/password"><span class="glyphicon glyphicon-lock" aria-hidden="true"></span> Change Password</a></li>
+								<li><a href="/settings/fav"><span class="glyphicon glyphicon-star" aria-hidden="true"></span> Manage Fav</a></li>
+								
+								
+								
+								<li class="divider"></li>
+								<li><a href="javascript:void(form_logout.submit())"><span class="glyphicon glyphicon-log-out" aria-hidden="true"></span> Sign Out</a></li>
+							</ul>
+						</li>
+					
+				</ul>
+			</div>
+		</div>
+	</nav>
+
+	<form method="POST" name="form_logout" action="/logout?continue=https%3A%2F%2Fatcoder.jp%2Fcontests%2Fahc044%2Ftasks_print">
+		<input type="hidden" name="csrf_token" value="6love2pQ0ieDGT9l/nbY57W2&#43;v&#43;1/c9svbc&#43;ScmujMo=" />
+	</form>
+	<div id="main-container" class="container"
+		 	style="">
+		
+
+
+<script>var PRINT = true;</script>
+<style>
+	@media print {
+		#main-container { padding: 0;}
+	}
+	pre {
+		white-space: pre-wrap;
+	}
+	.next-page {
+		margin-top: 50px;
+		page-break-after: always;
+	}
+	div.part { page-break-inside: avoid;}
+</style>
+<div class="row">
+	
+
+
+	
+	
+
+	
+		
+		<div class="col-sm-12">
+			<span class="h2">A - Cleaning Up</span>
+			<hr />
+			<p>Time Limit: 2 sec / Memory Limit: 1024 MB</p>
+
+			<div id="task-statement">
+				<span class="lang">
+<span class="lang-ja">
+
+<div class="part">
+<section>
+<h3>ストーリー</h3><p>ある会社では、現在働きやすい環境づくりを目指している。そこで新入社員が入社する 4 月から、社内の掃除を毎週行うことにした。
+しかしながら、掃除当番は簡単に決められるものではない。
+たとえば 1 人に負担をかけすぎてはならないことや、まだ仕事に慣れていない新入社員の負担は特に少なくしなければならないことなど、様々な制約がある。
+また、掃除当番の決め方は「X さんの次は Y さんか Z さん」のように覚えやすいものでなければならない。
+できるだけ制約通りになるように、掃除当番の決め方を最適化せよ。</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>問題文</h3><p>ある会社には <var>N</var> 人の社員がおり、それぞれ <var>0</var> から <var>N-1</var> までの番号が付けられている。
+あなたは、各社員 <var>i</var> <var>(0 \leq i \leq N-1)</var> について整数 <var>a_i</var> と <var>b_i</var> を決め (<var>a_i=b_i</var> でも構わない)、以下の規則で各週の掃除当番を割り当てることにした。</p>
+<ul>
+<li>最初の週は、社員 <var>0</var> が掃除当番となる。</li>
+<li>それ以降の週については、前週の掃除当番を社員 <var>x</var> とし、前週が終わった時点で社員 <var>x</var> が掃除当番に <var>t</var> 回割り当てられたとして、今週の掃除当番は次のように決まる。<ul>
+<li><var>t</var> が奇数の場合: 社員 <var>a_x</var></li>
+<li><var>t</var> が偶数の場合: 社員 <var>b_x</var></li>
+</ul>
+</li>
+</ul>
+<p>各 <var>i</var> <var>(0 \leq i \leq N-1)</var> について、今後 <var>L = 500\,000</var> 週間に社員 <var>i</var> に掃除当番を割り当てる回数の目標値 <var>T_i</var> が与えられる。
+実際に社員 <var>i</var> に割り当てられる掃除当番の回数を <var>t_i</var> とするとき、誤差 <var>\left|t_0 - T_0\right| + \left|t_1 - T_1\right| + \cdots + \left|t_{N-1} - T_{N-1}\right|</var> をできるだけ小さくせよ。</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>得点</h3><p>出力した掃除当番の決め方における誤差を <var>E</var> とするとき、<var>10^6-E</var> 点が得られる。
+ここで、得点が負の値にならないことが保証される。</p>
+<p>合計で 150 個のテストケースがあり、各テストケースの得点の合計が提出の得点となる。
+一つ以上のケースで不正な出力や制限時間超過をした場合、提出全体の判定が <span class='label label-warning' data-toggle='tooltip' data-placement='top' title="不正解">WA</span> や <span class='label label-warning' data-toggle='tooltip' data-placement='top' title="実行時間制限超過">TLE</span> となる。
+コンテスト時間中に得た最高得点で最終順位が決定され、コンテスト終了後のシステムテストは行われない。
+同じ得点を複数の参加者が得た場合、提出時刻に関わらず同じ順位となる。</p>
+</section>
+</div>
+
+<hr />
+<div class="io-style">
+<div class="part">
+<section>
+<h3>入力</h3><p>入力は以下の形式で標準入力から与えられる。</p>
+<pre><var>N</var> <var>L</var>
+<var>T_0</var> <var>T_1</var> <var>\cdots</var> <var>T_{N-1}</var>
+</pre>
+<ul>
+<li>全てのテストケースで、社員の数 <var>N</var> は <var>100</var> で固定である。</li>
+<li>全てのテストケースで、週数 <var>L</var> は <var>500\,000</var> で固定である。</li>
+<li><var>0 \leq T_i \leq 10\,000</var> を満たす。</li>
+<li><var>T_0 + T_1 + \cdots + T_{N-1} = L</var> を満たす。</li>
+<li>入力はすべて整数である。</li>
+</ul>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>出力</h3><p>以下の形式で標準出力に出力せよ。</p>
+<pre><var>a_0</var> <var>b_0</var>
+<var>a_1</var> <var>b_1</var>
+<var>\vdots</var>
+<var>a_{N-1}</var> <var>b_{N-1}</var>
+</pre>
+<p>ここで <var>0 \leq a_i \leq N-1</var> および <var>0 \leq b_i \leq N-1</var> を満たさない <var>i</var> <var>(0 \leq i \leq N-1)</var> が存在する場合、<span class='label label-warning' data-toggle='tooltip' data-placement='top' title="不正解">WA</span> と判定される。</p>
+<p><a href="https://img.atcoder.jp/ahc044/PnJFT8lu.html?lang=ja&seed=0&output=sample">例を見る</a></p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>入力生成方法</h3><p><var>L</var> 以上 <var>U</var> 以下の整数値を一様ランダムに生成する関数を <var>\mathrm{rand}(L, U)</var> と表すとき、入力生成方法は次のようになる。</p>
+<ol>
+<li>各 <var>0 \leq i \leq N-2</var> について、<var>T_i</var> の値を <var>T_i = \mathrm{rand}(0, 10000)</var> により生成する。</li>
+<li>総和 <var>S=T_0+\cdots+T_{N-2}</var> が <var>0\leq L-S\leq 10000</var> を満たすならば <var>T_{N-1}=L-S</var> として入力を確定させる。そうでなければ、1. に戻って生成をやり直す。</li>
+</ol>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>ツール(入力ジェネレータ・ビジュアライザ)</h3><ul>
+<li><a href="https://img.atcoder.jp/ahc044/PnJFT8lu.html?lang=ja">Web版</a>: ローカル版より高性能でアニメーション表示が可能です。</li>
+<li><a href="https://img.atcoder.jp/ahc044/PnJFT8lu.zip">ローカル版</a>: 使用するには<a href="https://www.rust-lang.org/ja">Rust言語</a>のコンパイル環境をご用意下さい。<ul>
+<li><a href="https://img.atcoder.jp/ahc044/PnJFT8lu_windows.zip">Windows用のコンパイル済みバイナリ</a>: Rust言語の環境構築が面倒な方は代わりにこちらをご利用下さい。</li>
+</ul>
+</li>
+</ul>
+<p>コンテスト期間中に、ビジュアライズ結果の共有や、解法・考察に関する言及は禁止されています。ご注意下さい。</p></section>
+</div>
+</div>
+</span>
+<span class="lang-en">
+
+<div class="part">
+<section>
+<h3>Story</h3><p>A company is currently aiming to create a comfortable working environment. It has decided to clean the office every week starting this April, when new employees join the company.
+However, assigning cleaning duties is not easy. There are various constraints, for example, the duty should not be concentrated on one person, and the burden on new employees, who are not yet accustomed to the work, should be especially low.
+Also, the assignment should be easy to remember, like "after employee X, the next must be employee Y or Z."
+Create a cleaning plan that follows the constraints as closely as possible.</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Problem Statement</h3><p>There are <var>N</var> employees in a company, numbered from <var>0</var> to <var>N-1</var>.
+For each employee <var>i</var> <var>(0 \leq i \leq N-1)</var>, you must determine two integers <var>a_i</var> and <var>b_i</var> (<var>a_i</var> and <var>b_i</var> may be equal).
+Then, the cleaning plan for each week is created in the following way:</p>
+<ul>
+<li>In the first week, employee <var>0</var> will do the cleaning.</li>
+<li>From the second week onward, let employee <var>x</var> be the one who did the cleaning last week, and let <var>t</var> be the number of weeks in which employee <var>x</var> had been assigned as the cleaner by the end of last week. Then, this week's cleaning duty is determined as follows:<ul>
+<li>When <var>t</var> is odd: employee <var>a_x</var></li>
+<li>When <var>t</var> is even: employee <var>b_x</var></li>
+</ul>
+</li>
+</ul>
+<p>For each <var>i</var> <var>(0 \leq i \leq N-1)</var>, a target number of times <var>T_i</var> is given as the number of times employee <var>i</var> should be assigned cleaning duty in the next <var>L = 500\,000</var> weeks.
+Let <var>t_i</var> be the actual number of times employee <var>i</var> is assigned cleaning duty.
+Create a cleaning plan that makes the error defined by <var>\left|t_0 - T_0\right| + \left|t_1 - T_1\right| + \cdots + \left|t_{N-1} - T_{N-1}\right|</var> as small as possible.</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Scoring</h3><p>Let <var>E</var> be the error in the output cleaning plan. You will obtain the score of <var>10^6 - E</var>, which is guaranteed to be non-negative.</p>
+<p>There are 150 testcases, and the score of a submission is the total score for each testcase. If your submission produces an illegal output or exceeds the time limit for some testcases, the submission itself will be judged as <span class='label label-warning' data-toggle='tooltip' data-placement='top' title="Wrong Answer">WA</span> or <span class='label label-warning' data-toggle='tooltip' data-placement='top' title="Time Limit Exceeded">TLE</span>, and the score of the submission will be zero. The highest score obtained during the contest will determine the final ranking, and there will be no system test after the contest. If more than one participant gets the same score, they will be ranked in the same place regardless of the submission time.</p>
+</section>
+</div>
+
+<hr />
+<div class="io-style">
+<div class="part">
+<section>
+<h3>Input</h3><p>Input is given from Standard Input in the following format:</p>
+<pre><var>N</var> <var>L</var>
+<var>T_0</var> <var>T_1</var> <var>\cdots</var> <var>T_{N-1}</var>
+</pre>
+<ul>
+<li>The number of employees <var>N</var> is fixed to <var>100</var> across all testcases.</li>
+<li>The number of weeks <var>L</var> is fixed to <var>500\,000</var> across all testcases.</li>
+<li><var>0 \leq T_i \leq 10\,000</var>.</li>
+<li><var>T_0 + T_1 + \cdots + T_{N-1} = L</var>.</li>
+<li>Given values are all integers.</li>
+</ul>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Output</h3><p>Output to Standard Output in the following format:</p>
+<pre><var>a_0</var> <var>b_0</var>
+<var>a_1</var> <var>b_1</var>
+<var>\vdots</var>
+<var>a_{N-1}</var> <var>b_{N-1}</var>
+</pre>
+<p>Here, if there exists an <var>i</var> <var>(0 \leq i \leq N-1)</var> that does not satisfy <var>0 \leq a_i \leq N-1</var> or <var>0 \leq b_i \leq N-1</var>, the output will be judged as <span class='label label-warning' data-toggle='tooltip' data-placement='top' title="Wrong Answer">WA</span>.</p>
+<p><a href="https://img.atcoder.jp/ahc044/PnJFT8lu.html?lang=en&seed=0&output=sample">Show example</a></p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Input Generation</h3><p>Let <var>\mathrm{rand}(L, U)</var> be the function that generates a uniform random integer between <var>L</var> and <var>U</var>, inclusive. The input will be generated in the following algorithm:</p>
+<ol>
+<li>For each <var>i</var> <var>(0 \leq i \leq N-2)</var>, generate <var>T_i</var> with <var>\mathrm{rand}(0, 10000)</var>.</li>
+<li>If the sum <var>S = T_0 + \cdots + T_{N-2}</var> satisfies <var>0 \leq L - S \leq 10000</var>, set <var>T_{N-1} = L - S</var> and finalize the input. Otherwise, retry step 1.</li>
+</ol>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Tools (Input generator and visualizer)</h3><ul>
+<li><a href="https://img.atcoder.jp/ahc044/PnJFT8lu.html?lang=en">Web version</a>: This is more powerful than the local version providing animations.</li>
+<li><a href="https://img.atcoder.jp/ahc044/PnJFT8lu.zip">Local version</a>: You need a compilation environment of <a href="https://www.rust-lang.org/">Rust language</a>.<ul>
+<li><a href="https://img.atcoder.jp/ahc044/PnJFT8lu_windows.zip">Pre-compiled binary for Windows</a>: If you are not familiar with the Rust language environment, please use this instead.</li>
+</ul>
+</li>
+</ul>
+<p>Please be aware that sharing visualization results or discussing solutions/ideas during the contest is prohibited.</p></section>
+</div>
+</div>
+</span>
+</span>
+
+			</div>
+
+			
+		</div>
+	
+</div>
+
+
+
+
+	</div> 
+</div> 
+</body>
+</html>
+
