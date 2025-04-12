@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ore Rolling Visualizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(20, 30px);
+            grid-template-rows: repeat(20, 30px);
+            gap: 1px;
+            border: 2px solid #333;
+        }
+        
+        .cell {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ccc;
+            position: relative;
+            background-color: #f9f9f9;
+            font-weight: bold;
+        }
+        
+        .player {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background-color: red;
+            border-radius: 50%;
+            z-index: 10;
+        }
+        
+        .rock {
+            background-color: #777;
+            border-radius: 50%;
+            color: white;
+            font-size: 16px;
+        }
+        
+        .ore {
+            border-radius: 4px;
+            color: white;
+            font-size: 16px;
+        }
+        
+        .hole {
+            background-color: #333;
+            border-radius: 50%;
+            color: white;
+            font-size: 16px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 100px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .execution-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            margin-top: 10px;
+        }
+        
+        .info-panel {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .info-panel h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        
+        .history {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+        
+        #executionSpeed {
+            width: 100px;
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ore Rolling Visualizer</h1>
+    
+    <div class="game-container">
+        <div class="board" id="board"></div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: red;"></div>
+                <span>Player</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #777;"></div>
+                <span>Rock (@)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4285F4;"></div>
+                <span>Ore (a-z)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #333;"></div>
+                <span>Hole (A-Z)</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-panel">
+        <h3>Game Stats</h3>
+        <div>
+            <div>Action Count: <span id="actionCount">0</span> / 10000</div>
+            <div>Ores Correctly Placed: <span id="oresPlaced">0</span> / <span id="totalOres">0</span></div>
+            <div>Current Score: <span id="currentScore">0</span></div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <div class="input-section">
+            <h3>Input (initial board state)</h3>
+            <textarea id="boardInput" placeholder="Enter board state here...
+Example:
+20 3
+....................
+....................
+....................
+...@.................
+....................
+...........A........
+....................
+....................
+....................
+........a...........
+....................
+....................
+.....B..............
+....................
+...........b........
+....................
+....................
+.......C............
+....................
+...................."></textarea>
+            <button id="initializeButton">Initialize Board</button>
+        </div>
+        
+        <div class="input-section">
+            <h3>Actions</h3>
+            <textarea id="actionsInput" placeholder="Enter actions here...
+Format: action direction
+Example:
+1 D
+1 R
+3 L
+2 U"></textarea>
+        </div>
+        
+        <div class="execution-controls">
+            <button id="executeButton">Execute All</button>
+            <button id="stepButton">Step-by-Step</button>
+            <button id="pauseButton" disabled>Pause</button>
+            <label for="executionSpeed">Speed:</label>
+            <input type="range" id="executionSpeed" min="1" max="10" value="5">
+        </div>
+        
+        <div class="action-buttons">
+            <h3>Manual Control</h3>
+            <div>
+                <button id="moveUp">Move Up (1 U)</button>
+                <button id="moveDown">Move Down (1 D)</button>
+                <button id="moveLeft">Move Left (1 L)</button>
+                <button id="moveRight">Move Right (1 R)</button>
+            </div>
+            <div>
+                <button id="carryUp">Carry Up (2 U)</button>
+                <button id="carryDown">Carry Down (2 D)</button>
+                <button id="carryLeft">Carry Left (2 L)</button>
+                <button id="carryRight">Carry Right (2 R)</button>
+            </div>
+            <div>
+                <button id="rollUp">Roll Up (3 U)</button>
+                <button id="rollDown">Roll Down (3 D)</button>
+                <button id="rollLeft">Roll Left (3 L)</button>
+                <button id="rollRight">Roll Right (3 R)</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-panel">
+        <h3>Action History</h3>
+        <div id="history" class="history"></div>
+    </div>
+    
+    <script>
+        // Game state
+        let boardSize = 20;
+        let oreTypes = 0;
+        let board = [];
+        let initialBoard = [];
+        let playerPosition = { row: 0, col: 0 };
+        let totalOres = 0;
+        let correctlyPlacedOres = 0;
+        let actionCount = 0;
+        let actionHistory = [];
+        let execution = null;
+        let currentActionIndex = 0;
+        let actions = [];
+        
+        const colorMap = {};
+        const generateColor = (char) => {
+            const colors = [
+                '#4285F4', '#EA4335', '#FBBC05', '#34A853', 
+                '#FF9800', '#9C27B0', '#3F51B5', '#03A9F4',
+                '#009688', '#8BC34A', '#FFEB3B', '#FF5722',
+                '#795548', '#9E9E9E', '#607D8B', '#E91E63',
+                '#2196F3', '#00BCD4', '#CDDC39', '#FFC107',
+                '#F44336', '#673AB7', '#4CAF50', '#00796B',
+                '#3F51B5', '#FF4081'
+            ];
+            
+            // Map lowercase letters to colors
+            if (char >= 'a' && char <= 'z') {
+                const index = char.charCodeAt(0) - 'a'.charCodeAt(0);
+                return colors[index % colors.length];
+            }
+            
+            return null;
+        };
+        
+        // Initialize the board
+        function initializeBoard() {
+            const boardInput = document.getElementById('boardInput').value.trim();
+            const lines = boardInput.split('\n');
+            
+            if (lines.length < 2) {
+                alert('Invalid input format. Please check your input.');
+                return;
+            }
+            
+            const [N, M] = lines[0].split(' ').map(Number);
+            
+            if (N !== 20) {
+                alert('Board size must be 20x20.');
+                return;
+            }
+            
+            oreTypes = M;
+            board = [];
+            initialBoard = [];
+            
+            // Initialize board from input
+            for (let i = 0; i < N; i++) {
+                const row = lines[i + 1] || '.'.repeat(N);
+                const boardRow = [];
+                const initialBoardRow = [];
+                
+                for (let j = 0; j < N; j++) {
+                    const cell = row[j] || '.';
+                    boardRow.push(cell);
+                    initialBoardRow.push(cell);
+                    
+                    // Count total ores
+                    if (cell >= 'a' && cell <= 'z') {
+                        totalOres++;
+                        
+                        // Generate and store color for ore type
+                        const oreType = cell;
+                        if (!colorMap[oreType]) {
+                            colorMap[oreType] = generateColor(oreType);
+                        }
+                    }
+                    
+                    // Find player's starting position (at hole 'A')
+                    if (cell === 'A') {
+                        playerPosition = { row: i, col: j };
+                    }
+                }
+                
+                board.push(boardRow);
+                initialBoard.push([...boardRow]);
+            }
+            
+            document.getElementById('totalOres').textContent = totalOres;
+            renderBoard();
+            resetStats();
+        }
+        
+        function renderBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (let i = 0; i < boardSize; i++) {
+                for (let j = 0; j < boardSize; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    const cellContent = board[i]?.[j] || '.';
+                    
+                    if (cellContent === '@') {
+                        cell.classList.add('rock');
+                        cell.textContent = '@';
+                    } else if (cellContent >= 'a' && cellContent <= 'z') {
+                        cell.classList.add('ore');
+                        cell.textContent = cellContent;
+                        cell.style.backgroundColor = colorMap[cellContent] || '#4285F4';
+                    } else if (cellContent >= 'A' && cellContent <= 'Z') {
+                        cell.classList.add('hole');
+                        cell.textContent = cellContent;
+                    }
+                    
+                    // Add player
+                    if (i === playerPosition.row && j === playerPosition.col) {
+                        const player = document.createElement('div');
+                        player.className = 'player';
+                        cell.appendChild(player);
+                    }
+                    
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+        
+        function resetStats() {
+            actionCount = 0;
+            correctlyPlacedOres = 0;
+            actionHistory = [];
+            document.getElementById('actionCount').textContent = '0';
+            document.getElementById('oresPlaced').textContent = '0';
+            document.getElementById('currentScore').textContent = '0';
+            document.getElementById('history').innerHTML = '';
+            updateScore();
+        }
+        
+        function updateScore() {
+            let score = 0;
+            if (correctlyPlacedOres === totalOres) {
+                score = Math.round(1000000 * (1 + Math.log2(10000 / Math.max(1, actionCount))));
+            } else {
+                score = Math.round(1000000 * (correctlyPlacedOres / totalOres));
+            }
+            document.getElementById('currentScore').textContent = score.toLocaleString();
+        }
+        
+        function addToHistory(action, result) {
+            const historyElement = document.getElementById('history');
+            const entry = document.createElement('div');
+            entry.textContent = `${actionCount}: ${action} - ${result || 'Executed'}`;
+            historyElement.appendChild(entry);
+            historyElement.scrollTop = historyElement.scrollHeight;
+        }
+        
+        // Game actions
+        function move(direction) {
+            const { row, col } = playerPosition;
+            let newRow = row;
+            let newCol = col;
+            
+            switch (direction) {
+                case 'U': newRow--; break;
+                case 'D': newRow++; break;
+                case 'L': newCol--; break;
+                case 'R': newCol++; break;
+            }
+            
+            // Check if new position is valid (within board bounds)
+            if (newRow >= 0 && newRow < boardSize && newCol >= 0 && newCol < boardSize) {
+                playerPosition.row = newRow;
+                playerPosition.col = newCol;
+                actionCount++;
+                document.getElementById('actionCount').textContent = actionCount;
+                addToHistory(`1 ${direction}`, `Moved to (${newRow}, ${newCol})`);
+                return true;
+            }
+            
+            addToHistory(`1 ${direction}`, `Invalid move - out of bounds`);
+            return false;
+        }
+        
+        function carry(direction) {
+            const { row, col } = playerPosition;
+            const cellContent = board[row][col];
+            
+            // Check if there's a rock or ore at the current position
+            if (cellContent !== '@' && !(cellContent >= 'a' && cellContent <= 'z')) {
+                addToHistory(`2 ${direction}`, `No rock or ore to carry`);
+                return false;
+            }
+            
+            let newRow = row;
+            let newCol = col;
+            
+            switch (direction) {
+                case 'U': newRow--; break;
+                case 'D': newRow++; break;
+                case 'L': newCol--; break;
+                case 'R': newCol++; break;
+            }
+            
+            // Check if new position is valid (within board bounds)
+            if (newRow < 0 || newRow >= boardSize || newCol < 0 || newCol >= boardSize) {
+                addToHistory(`2 ${direction}`, `Cannot carry outside the board`);
+                return false;
+            }
+            
+            const targetContent = board[newRow][newCol];
+            
+            // Check if target has another rock or ore
+            if (targetContent === '@' || (targetContent >= 'a' && targetContent <= 'z')) {
+                addToHistory(`2 ${direction}`, `Cannot carry to a cell with another rock or ore`);
+                return false;
+            }
+            
+            // Move the player and rock/ore
+            playerPosition.row = newRow;
+            playerPosition.col = newCol;
+            
+            // If target is a hole
+            if (targetContent >= 'A' && targetContent <= 'Z') {
+                // Check if we're dropping an ore into its corresponding hole
+                if (cellContent >= 'a' && cellContent <= 'z') {
+                    const oreType = cellContent;
+                    const holeType = targetContent;
+                    
+                    if (oreType.toLowerCase() === holeType.toLowerCase()) {
+                        correctlyPlacedOres++;
+                        document.getElementById('oresPlaced').textContent = correctlyPlacedOres;
+                        addToHistory(`2 ${direction}`, `Correctly placed ${oreType} into ${holeType}`);
+                    } else {
+                        addToHistory(`2 ${direction}`, `Placed ${oreType} into wrong hole ${holeType}`);
+                    }
+                } else {
+                    addToHistory(`2 ${direction}`, `Dropped rock into hole ${targetContent}`);
+                }
+                
+                // The rock/ore is removed when it falls into a hole
+                board[row][col] = '.';
+            } else {
+                // Move the rock/ore to the new position
+                board[newRow][newCol] = cellContent;
+                board[row][col] = '.';
+                addToHistory(`2 ${direction}`, `Carried ${cellContent} to (${newRow}, ${newCol})`);
+            }
+            
+            actionCount++;
+            document.getElementById('actionCount').textContent = actionCount;
+            updateScore();
+            return true;
+        }
+        
+        function roll(direction) {
+            const { row, col } = playerPosition;
+            const cellContent = board[row][col];
+            
+            // Check if there's a rock or ore at the current position
+            if (cellContent !== '@' && !(cellContent >= 'a' && cellContent <= 'z')) {
+                addToHistory(`3 ${direction}`, `No rock or ore to roll`);
+                return false;
+            }
+            
+            let currentRow = row;
+            let currentCol = col;
+            let nextRow = row;
+            let nextCol = col;
+            let rollResult = '';
+            
+            // Direction vectors
+            const dr = direction === 'U' ? -1 : (direction === 'D' ? 1 : 0);
+            const dc = direction === 'L' ? -1 : (direction === 'R' ? 1 : 0);
+            
+            // Remove rock/ore from current position
+            board[currentRow][currentCol] = '.';
+            
+            while (true) {
+                nextRow = currentRow + dr;
+                nextCol = currentCol + dc;
+                
+                // Check if next position is out of bounds
+                if (nextRow < 0 || nextRow >= boardSize || nextCol < 0 || nextCol >= boardSize) {
+                    // Stop at current position
+                    board[currentRow][currentCol] = cellContent;
+                    rollResult = `Stopped at boundary (${currentRow}, ${currentCol})`;
+                    break;
+                }
+                
+                const nextContent = board[nextRow][nextCol];
+                
+                // Check if next position has a hole
+                if (nextContent >= 'A' && nextContent <= 'Z') {
+                    // Check if ore matches hole
+                    if (cellContent >= 'a' && cellContent <= 'z') {
+                        const oreType = cellContent;
+                        const holeType = nextContent;
+                        
+                        if (oreType.toLowerCase() === holeType.toLowerCase()) {
+                            correctlyPlacedOres++;
+                            document.getElementById('oresPlaced').textContent = correctlyPlacedOres;
+                            rollResult = `Correctly placed ${oreType} into ${holeType} at (${nextRow}, ${nextCol})`;
+                        } else {
+                            rollResult = `Placed ${oreType} into wrong hole ${holeType} at (${nextRow}, ${nextCol})`;
+                        }
+                    } else {
+                        rollResult = `Rock fell into hole ${nextContent} at (${nextRow}, ${nextCol})`;
+                    }
+                    // The rock/ore is removed when it falls into a hole
+                    break;
+                }
+                
+                // Check if next position has another rock/ore or is a wall
+                if (nextContent === '@' || (nextContent >= 'a' && nextContent <= 'z')) {
+                    // Stop at current position
+                    board[currentRow][currentCol] = cellContent;
+                    rollResult = `Stopped by ${nextContent} at (${currentRow}, ${currentCol})`;
+                    break;
+                }
+                
+                // Move to next position
+                currentRow = nextRow;
+                currentCol = nextCol;
+            }
+            
+            actionCount++;
+            document.getElementById('actionCount').textContent = actionCount;
+            addToHistory(`3 ${direction}`, rollResult);
+            updateScore();
+            return true;
+        }
+        
+        function executeAction(actionCode, direction) {
+            switch (actionCode) {
+                case 1: return move(direction);
+                case 2: return carry(direction);
+                case 3: return roll(direction);
+                default: return false;
+            }
+        }
+        
+        function executeStep() {
+            if (currentActionIndex >= actions.length) {
+                clearInterval(execution);
+                execution = null;
+                document.getElementById('executeButton').disabled = false;
+                document.getElementById('stepButton').disabled = false;
+                document.getElementById('pauseButton').disabled = true;
+                return false;
+            }
+            
+            const action = actions[currentActionIndex];
+            currentActionIndex++;
+            
+            const [actionCode, direction] = action.split(' ');
+            executeAction(parseInt(actionCode), direction);
+            renderBoard();
+            
+            return true;
+        }
+        
+        function executeAllActions() {
+            const actionsInput = document.getElementById('actionsInput').value.trim();
+            if (!actionsInput) {
+                alert('Please enter actions to execute.');
+                return;
+            }
+            
+            actions = actionsInput.split('\n');
+            currentActionIndex = 0;
+            
+            document.getElementById('executeButton').disabled = true;
+            document.getElementById('stepButton').disabled = true;
+            document.getElementById('pauseButton').disabled = false;
+            
+            const speed = 11 - parseInt(document.getElementById('executionSpeed').value);
+            execution = setInterval(() => {
+                if (!executeStep()) {
+                    clearInterval(execution);
+                }
+            }, speed * 100);
+        }
+        
+        function pauseExecution() {
+            if (execution) {
+                clearInterval(execution);
+                execution = null;
+                document.getElementById('executeButton').disabled = false;
+                document.getElementById('stepButton').disabled = false;
+                document.getElementById('pauseButton').disabled = true;
+            }
+        }
+        
+        function executeOneStep() {
+            const actionsInput = document.getElementById('actionsInput').value.trim();
+            if (!actionsInput) {
+                alert('Please enter actions to execute.');
+                return;
+            }
+            
+            if (currentActionIndex === 0) {
+                actions = actionsInput.split('\n');
+            }
+            
+            executeStep();
+        }
+        
+        // Event listeners
+        document.getElementById('initializeButton').addEventListener('click', initializeBoard);
+        document.getElementById('executeButton').addEventListener('click', executeAllActions);
+        document.getElementById('stepButton').addEventListener('click', executeOneStep);
+        document.getElementById('pauseButton').addEventListener('click', pauseExecution);
+        
+        // Manual control buttons
+        document.getElementById('moveUp').addEventListener('click', () => { executeAction(1, 'U'); renderBoard(); });
+        document.getElementById('moveDown').addEventListener('click', () => { executeAction(1, 'D'); renderBoard(); });
+        document.getElementById('moveLeft').addEventListener('click', () => { executeAction(1, 'L'); renderBoard(); });
+        document.getElementById('moveRight').addEventListener('click', () => { executeAction(1, 'R'); renderBoard(); });
+        
+        document.getElementById('carryUp').addEventListener('click', () => { executeAction(2, 'U'); renderBoard(); });
+        document.getElementById('carryDown').addEventListener('click', () => { executeAction(2, 'D'); renderBoard(); });
+        document.getElementById('carryLeft').addEventListener('click', () => { executeAction(2, 'L'); renderBoard(); });
+        document.getElementById('carryRight').addEventListener('click', () => { executeAction(2, 'R'); renderBoard(); });
+        
+        document.getElementById('rollUp').addEventListener('click', () => { executeAction(3, 'U'); renderBoard(); });
+        document.getElementById('rollDown').addEventListener('click', () => { executeAction(3, 'D'); renderBoard(); });
+        document.getElementById('rollLeft').addEventListener('click', () => { executeAction(3, 'L'); renderBoard(); });
+        document.getElementById('rollRight').addEventListener('click', () => { executeAction(3, 'R'); renderBoard(); });
+    </script>
+</body>
+</html>

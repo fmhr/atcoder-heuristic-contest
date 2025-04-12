@@ -1,0 +1,921 @@
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>第二回マスターズ選手権-予選-</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Language" content="ja">
+	<meta name="viewport" content="width=device-width,initial-scale=1.0">
+	<meta name="format-detection" content="telephone=no">
+	<meta name="google-site-verification" content="nXGC_JxO0yoP1qBzMnYD_xgufO6leSLw1kyNo2HZltM" />
+
+	
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-RC512FD18N"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag('js', new Date());
+		gtag('set', 'user_properties', {
+			
+				'login_status': 'logged_in',
+			
+		});
+		gtag('config', 'G-RC512FD18N');
+	</script>
+
+	
+	<meta name="description" content="プログラミング初級者から上級者まで楽しめる、競技プログラミングコンテストサイト「AtCoder」。オンラインで毎週開催プログラミングコンテストを開催しています。競技プログラミングを用いて、客観的に自分のスキルを計ることのできるサービスです。">
+	<meta name="author" content="AtCoder Inc.">
+
+	<meta property="og:site_name" content="AtCoder">
+	
+	<meta property="og:title" content="第二回マスターズ選手権-予選-" />
+	<meta property="og:description" content="プログラミング初級者から上級者まで楽しめる、競技プログラミングコンテストサイト「AtCoder」。オンラインで毎週開催プログラミングコンテストを開催しています。競技プログラミングを用いて、客観的に自分のスキルを計ることのできるサービスです。" />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://atcoder.jp/contests/masters2025-qual/tasks_print" />
+	<meta property="og:image" content="https://img.atcoder.jp/assets/atcoder.png" />
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:site" content="@atcoder" />
+	
+	<meta property="twitter:title" content="第二回マスターズ選手権-予選-" />
+
+	<link href="//fonts.googleapis.com/css?family=Lato:400,700" rel="stylesheet" type="text/css">
+	<link rel="stylesheet" type="text/css" href="//img.atcoder.jp/public/2918466/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="//img.atcoder.jp/public/2918466/css/base.css">
+	<link rel="shortcut icon" type="image/png" href="//img.atcoder.jp/assets/favicon.png">
+	<link rel="apple-touch-icon" href="//img.atcoder.jp/assets/atcoder.png">
+	<script src="//img.atcoder.jp/public/2918466/js/lib/jquery-1.9.1.min.js"></script>
+	<script src="//img.atcoder.jp/public/2918466/js/lib/bootstrap.min.js"></script>
+	<script src="//img.atcoder.jp/public/2918466/js/cdn/js.cookie.min.js"></script>
+	<script src="//img.atcoder.jp/public/2918466/js/cdn/moment.min.js"></script>
+	<script src="//img.atcoder.jp/public/2918466/js/cdn/moment_js-ja.js"></script>
+	<script>
+		var LANG = "ja";
+		var userScreenName = "fmhr";
+		var csrfToken = "6love2pQ0ieDGT9l/nbY57W2+v+1/c9svbc+ScmujMo="
+	</script>
+	<script src="//img.atcoder.jp/public/2918466/js/utils.js"></script>
+	
+	
+		<script src="//img.atcoder.jp/public/2918466/js/contest.js"></script>
+		<link href="//img.atcoder.jp/public/2918466/css/contest.css" rel="stylesheet" />
+		<script>
+			var contestScreenName = "masters2025-qual";
+			var remainingText = "残り時間";
+			var countDownText = "開始まであと";
+			var startTime = moment("2025-03-02T13:00:00+09:00");
+			var endTime = moment("2025-03-02T19:00:00+09:00");
+		</script>
+		<style></style>
+	
+	
+	
+	
+		<script src="//img.atcoder.jp/public/2918466/js/cdn/run_prettify.js"></script>
+	
+	
+		<link rel="stylesheet" href="//img.atcoder.jp/public/2918466/css/cdn/katex.min.css">
+		<script defer src="//img.atcoder.jp/public/2918466/js/cdn/katex.min.js"></script>
+		<script defer src="//img.atcoder.jp/public/2918466/js/cdn/auto-render.min.js"></script>
+		<script>$(function(){$('var').each(function(){var html=$(this).html().replace(/<sub>/g,'_{').replace(/<\/sub>/g,'}');$(this).html('\\('+html+'\\)');});});</script>
+		<script>
+			var katexOptions = {
+				delimiters: [
+					{left: "$$", right: "$$", display: true},
+					
+					{left: "\\(", right: "\\)", display: false},
+					{left: "\\[", right: "\\]", display: true}
+				],
+      	ignoredTags: ["script", "noscript", "style", "textarea", "code", "option"],
+				ignoredClasses: ["prettyprint", "source-code-for-copy"],
+				throwOnError: false
+			};
+			document.addEventListener("DOMContentLoaded", function() { renderMathInElement(document.body, katexOptions);});
+		</script>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<script src="//img.atcoder.jp/public/2918466/js/base.js"></script>
+</head>
+
+<body>
+
+<script type="text/javascript">
+	var __pParams = __pParams || [];
+	__pParams.push({client_id: '468', c_1: 'atcodercontest', c_2: 'ClientSite'});
+</script>
+<script type="text/javascript" src="https://cdn.d2-apps.net/js/tr.js" async></script>
+
+
+
+<div id="main-div" >
+
+
+	<nav class="navbar navbar-inverse navbar-fixed-top">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse" aria-expanded="false">
+					<span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="/home"></a>
+			</div>
+			<div class="collapse navbar-collapse" id="navbar-collapse">
+				<ul class="nav navbar-nav">
+				
+					<li><a class="contest-title" href="/contests/masters2025-qual">第二回マスターズ選手権-予選-</a></li>
+				
+				</ul>
+				<ul class="nav navbar-nav navbar-right">
+					
+					<li class="dropdown">
+						<a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+							<img src='//img.atcoder.jp/assets/top/img/flag-lang/ja.png'> 日本語 <span class="caret"></span>
+						</a>
+						<ul class="dropdown-menu">
+							<li><a href="/contests/masters2025-qual/tasks_print?lang=ja"><img src='//img.atcoder.jp/assets/top/img/flag-lang/ja.png'> 日本語</a></li>
+							<li><a href="/contests/masters2025-qual/tasks_print?lang=en"><img src='//img.atcoder.jp/assets/top/img/flag-lang/en.png'> English</a></li>
+						</ul>
+					</li>
+					
+					
+						<li class="dropdown">
+							<a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+								<span class="glyphicon glyphicon-cog" aria-hidden="true"></span> fmhr (Contestant) <span class="caret"></span>
+							</a>
+							<ul class="dropdown-menu">
+								<li><a href="/users/fmhr"><span class="glyphicon glyphicon-user" aria-hidden="true"></span> マイプロフィール</a></li>
+								<li class="divider"></li>
+								<li><a href="/settings"><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> 基本設定</a></li>
+								<li><a href="/settings/icon"><span class="glyphicon glyphicon-picture" aria-hidden="true"></span> アイコン設定</a></li>
+								<li><a href="/settings/password"><span class="glyphicon glyphicon-lock" aria-hidden="true"></span> パスワードの変更</a></li>
+								<li><a href="/settings/fav"><span class="glyphicon glyphicon-star" aria-hidden="true"></span> お気に入り管理</a></li>
+								
+								
+								
+								<li class="divider"></li>
+								<li><a href="javascript:void(form_logout.submit())"><span class="glyphicon glyphicon-log-out" aria-hidden="true"></span> ログアウト</a></li>
+							</ul>
+						</li>
+					
+				</ul>
+			</div>
+		</div>
+	</nav>
+
+	<form method="POST" name="form_logout" action="/logout?continue=https%3A%2F%2Fatcoder.jp%2Fcontests%2Fmasters2025-qual%2Ftasks_print">
+		<input type="hidden" name="csrf_token" value="6love2pQ0ieDGT9l/nbY57W2&#43;v&#43;1/c9svbc&#43;ScmujMo=" />
+	</form>
+	<div id="main-container" class="container"
+		 	style="">
+		
+
+
+<script>var PRINT = true;</script>
+<style>
+	@media print {
+		#main-container { padding: 0;}
+	}
+	pre {
+		white-space: pre-wrap;
+	}
+	.next-page {
+		margin-top: 50px;
+		page-break-after: always;
+	}
+	div.part { page-break-inside: avoid;}
+</style>
+<div class="row">
+	
+
+
+	
+	
+
+	
+		
+		<div class="col-sm-12">
+			<span class="h2">A - Ore Rolling (A)</span>
+			<hr />
+			<p>実行時間制限: 2 sec / メモリ制限: 1024 MB</p>
+
+			<div id="task-statement">
+				<span class="lang">
+<span class="lang-ja">
+
+<div class="part">
+<section>
+<h3>問題文</h3><p><var>N \times N</var> のマス目で表される洞窟がある。
+一番左上のマスの座標を <var>(0,0)</var> とし、そこから下方向に <var>i</var> マス、右方向に <var>j</var> マス進んだ先のマスの座標を <var>(i,j)</var> とする。
+洞窟の周囲は壁で囲まれており、外に出ることはできない。</p>
+<p>洞窟内には岩と <var>M</var> 種類の鉱石が散らばっている。
+また、洞窟内の異なる <var>M</var> 個のマスには穴があり、<var>i</var> 種類目の鉱石を全て <var>i</var> 番目の穴に落としたい。
+<strong>岩については、どの穴に落としてもよく、また洞窟内に放置してもよい。</strong>
+あなたは以下の操作を 最大で <var>10000</var> 回 行うことができる。</p>
+<ol>
+<li>上下左右に隣接するマスへ移動する。<strong>移動先に穴・岩・鉱石があっても移動できる。</strong></li>
+<li>現在位置にある岩・鉱石を上下左右に隣接するマスへ運ぶ。<strong>運ぶ先にすでに別の岩・鉱石があってはならない。運ぶ先は穴でもよい。</strong> 運んだ先が穴であった場合、岩・鉱石は穴に落ちて取り除かれる。あなたの現在位置は運んだ先のマスになる。</li>
+<li>現在位置にある岩・鉱石を、上下左右のいずれかの方向に転がす。転がした岩・鉱石は、岩・鉱石・壁にぶつかって止まるか、穴に落ちるまで一直線に転がる。あなたの現在位置は変化しない。</li>
+</ol>
+<p>転がす操作は、より詳細には以下の繰り返しによって処理される。</p>
+<ol>
+<li>転がっている方向に隣接するマスが穴である場合、岩・鉱石は穴に落ちて取り除かれる。</li>
+<li>転がっている方向に隣接するマスに岩・鉱石がある、または <var>N \times N</var> の外に出る場合、現在のマスで停止する。</li>
+<li>上記のどちらにも該当しない場合、隣接するマスへ移動し、処理を繰り返す。</li>
+</ol>
+<p>転がる速度は非常に速いため、あなたの次の行動の前に必ず停止するか、穴に落ちて取り除かれる。</p>
+<p>できるだけ少ない行動回数ですべての鉱石を対応する穴に落としてほしい。</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>得点</h3><p>出力した行動列の長さを <var>T (\leq 10000)</var>、初期盤面における鉱石の総数を <var>K</var>、正しい穴に落とすことができた鉱石の総数を <var>A</var> としたとき、以下の得点が得られる。</p>
+<ul>
+<li><var>A=K</var> の場合、<var>\mathrm{round}(10^6\times(1+\log_2{\frac{10000}{T}}))</var></li>
+<li><var>A&lt;K</var> の場合、<var>\mathrm{round}(10^6\times\frac{A}{K})</var></li>
+</ul>
+<p>入力生成方法の違いにより、問題は A・B・C の 3 問 に分かれている。
+それぞれの問題には 150 個のテストケース があり、各テストケースの得点の合計がその問題に対する提出の得点となる。
+一つ以上のテストケースで不正な出力や制限時間超過をした場合、提出全体の判定が<span class='label label-warning' data-toggle='tooltip' data-placement='top' title="不正解">WA</span>や<span class='label label-warning' data-toggle='tooltip' data-placement='top' title="実行時間制限超過">TLE</span>となる。
+各問題に対して獲得した最高得点の総和で最終順位が決定され、コンテスト終了後のシステムテストは行われない。 同じ得点を複数のチームが得た場合、提出時刻に関わらず同じ順位となる。</p>
+</section>
+</div>
+
+<hr />
+<div class="io-style">
+<div class="part">
+<section>
+<h3>入力</h3><p>入力は以下の形式で標準入力から与えられる。</p>
+<pre><var>N</var> <var>M</var>
+<var>C_0</var>
+<var>\vdots</var>
+<var>C_{N-1}</var>
+</pre>
+<ul>
+<li>盤面の大きさ <var>N</var> は、すべてのテストケースにおいて <var>N = 20</var> で固定されている。</li>
+<li>鉱石の種類数 <var>M</var> は、問題ごとに固定されている。詳しくは 「入力生成方法」 の項目を参照せよ。</li>
+<li>各 <var>i = 0, 1, \dots, N-1</var> に対し、<var>C_i</var> は長さ <var>N</var> の文字列であり、その <var>j</var> 文字目は以下のようにマス <var>(i, j)</var> の初期状態を表す。<ul>
+<li><code>@</code>: 岩が存在する。</li>
+<li><code>a</code>-<code>z</code>: 鉱石が存在する。</li>
+<li><code>A</code>-<code>Z</code>: 穴が存在する。</li>
+<li><code>.</code>: 何も存在しない。</li>
+</ul>
+</li>
+</ul>
+<p>鉱石と穴はアルファベットの大文字・小文字が対応している。
+たとえば、文字 <code>a</code> で表される鉱石を落とすべき穴は、文字 <code>A</code> で表される。
+最初の <var>M</var> 個のアルファベットが使用され、同じ種類の鉱石は複数存在する可能性があるが、同じ種類の穴は必ず 1 つだけである。</p>
+<p>あなたは初期状態で穴 <code>A</code> のマスにいる。</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>出力</h3><p><var>t</var> 手目の操作は、行動の種類番号 <var>a_t \in \{1,2,3\}</var> (1:移動、2:運ぶ、3:転がす) と上下左右の方向を表す文字 <var>d_t \in \{U,D,L,R\}</var> のペア <var>(a_t, d_t)</var> で表される。
+例えば、<var>(3, R)</var> は現在位置にある岩・鉱石を右方向に転がす操作である。</p>
+<p>このとき、以下の形式で標準出力に出力せよ。</p>
+<pre><var>a_0</var> <var>d_0</var>
+<var>\vdots</var>
+<var>a_{T-1}</var> <var>d_{T-1}</var>
+</pre>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>サンプルプログラム</h3><details>
+Python での解答例を示す。
+このプログラムでは、初期位置の右にある岩・鉱石を穴に運び、初期位置の下にある岩・鉱石を穴に転がしている。
+それ以外の岩・鉱石は手を付けずに放置する。
+
+<pre class="prettyprint linenums">
+N, M = map(int, input().split())
+grid = [list(input()) for _ in range(N)]
+
+# 現在位置の取得
+pi = 0
+pj = 0
+for i in range(N):
+    for j in range(N):
+        if grid[i][j] == 'A':
+            pi = i
+            pj = j
+
+# 右方向に移動して岩・鉱石を見つけたら穴に運ぶ
+for j in range(pj + 1, N):
+    if grid[pi][j] == '@' or 'a' <= grid[pi][j] and grid[pi][j] <= 'z':
+        print('1 R\n' * (j - pj), end='')
+        print('2 L\n' * (j - pj), end='')
+    elif 'A' <= grid[pi][j] and grid[pi][j] <= 'Z':
+        break
+
+# 下方向に移動して岩・鉱石を見つけたら穴に転がす
+for i in range(pi + 1, N):
+    if grid[i][pj] == '@' or 'a' <= grid[i][pj] and grid[i][pj] <= 'z':
+        print('1 D\n' * (i - pi), end='')
+        print('3 U\n', end='')
+        pi = i
+    elif 'A' <= grid[i][pj] and grid[i][pj] <= 'Z':
+        break
+</pre>
+
+</details>
+
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>入力生成方法</h3><p>入力生成方法は問題ごとに異なる。
+大まかには、以下の表のような入力が生成される。</p>
+<table class="table table-bordered" style="width: auto;">
+<thead>
+<tr>
+<th>問題</th>
+<th>M</th>
+<th>岩</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>1</td>
+<td>少ない</td>
+</tr>
+<tr>
+<td>B</td>
+<td>3</td>
+<td>存在しない</td>
+</tr>
+<tr>
+<td>C</td>
+<td>1</td>
+<td>大量</td>
+</tr>
+</tbody>
+</table>
+
+<h4>A 問題</h4>
+<p><var>M = 1</var> で固定されている。</p>
+<ul>
+<li>穴 <code>A</code> の配置: <var>N^2</var> マスの中からランダムに 1 マス選択する。</li>
+<li>鉱石 <code>a</code> の配置: 残りの <var>N^2 - 1</var> マスの中からランダムに <var>2N</var> マス選択する。</li>
+<li>岩 <code>@</code> の配置: 残りの <var>N^2 - 1 - 2N</var> マスの中からランダムに <var>2N</var> マス選択する。</li>
+</ul>
+<h4>B 問題</h4>
+<p><var>M = 3</var> で固定されている。</p>
+<ul>
+<li>穴 <code>A</code>、<code>B</code>、<code>C</code> の配置: <var>N^2</var> マスの中から異なる 3 マスをランダムに選択する。</li>
+<li>鉱石 <code>a</code> の配置: 残りの <var>N^2 - 3</var> マスの中からランダムに <var>N</var> マス選択する。</li>
+<li>鉱石 <code>b</code> の配置: 残りの <var>N^2 - 3 - N</var> マスの中からランダムに <var>N</var> マス選択する。</li>
+<li>鉱石 <code>c</code> の配置: 残りの <var>N^2 - 3 - 2N</var> マスの中からランダムに <var>N</var> マス選択する。</li>
+</ul>
+<p>最後に、<strong>各穴から空きマスまたは対応する鉱石が存在するマスのみを通って、すべての対応する鉱石に到達可能である</strong>ことを確認する。
+到達不可能な鉱石がある場合、生成をやり直す。</p>
+<h4>C 問題</h4>
+<p><var>M = 1</var> で固定されている。</p>
+<ul>
+<li>岩 <code>@</code> の配置: 各マス <var>(i, j)</var> に対し、<var>h_{i,j} = \mathrm{noise}(i/10, j/10)</var> を生成する。ここで、<var>\mathrm{noise}(y, x)</var> は二次元の<a href="https://ja.wikipedia.org/wiki/%E3%83%91%E3%83%BC%E3%83%AA%E3%83%B3%E3%83%8E%E3%82%A4%E3%82%BA">Perlin noise</a>を生成する関数である。<var>h_{i,j}</var> の値が大きい順に上位 <var>N^2/2</var> マスに岩を配置する。</li>
+<li>穴 <code>A</code> の配置: 残りの <var>N^2/2</var> マスの中からランダムに 1 マス選択する。</li>
+<li>鉱石 <code>a</code> の配置: 残りの <var>N^2/2 - 1</var> マスの中からランダムに <var>2N</var> マス選択する。</li>
+</ul>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>ツール(入力ジェネレータ・スコア計算)</h3><ul>
+<li><a href="https://img.atcoder.jp/masters2025-qual/ioV2Ybuy.zip">ローカル版</a>: 使用するには<a href="https://www.rust-lang.org/ja">Rust言語</a>のコンパイル環境をご用意下さい。<ul>
+<li><a href="https://img.atcoder.jp/masters2025-qual/ioV2Ybuy_windows.zip">Windows用のコンパイル済みバイナリ</a>: Rust言語の環境構築が面倒な方は代わりにこちらをご利用下さい。</li>
+</ul>
+</li>
+</ul>
+<p>コンテスト期間中に、チーム外とのビジュアライズ結果の共有や解法・考察に関する言及は禁止されています。ご注意下さい。</p>
+</section>
+</div>
+</div>
+
+<hr />
+<div class="part">
+<section>
+<h3>入力例 1</h3><pre style="max-height:200px;overflow-y:scroll">20 1
+..a.@....a.....a....
+..@........@..a.@a@.
+..aa...a..@.....a...
+.............a.....@
+.....@.a.....a@@....
+..a..a@..a......@...
+.@a.@aa...........a@
+...............@.a..
+.a......@@@.a.......
+........@.@..a.....a
+.a.A..a....@....a..@
+......@..@@.........
+..@@....a..@@.a.....
+......a.....@..a....
+...................a
+@@.....@....a.a.a...
+.....@.......a...@..
+...@......@...a....a
+............a..@....
+.......a.@..........
+</pre>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>出力例 1</h3><pre style="max-height:200px;overflow-y:scroll">1 R
+1 R
+1 R
+2 L
+2 L
+2 L
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+1 D
+1 D
+3 U
+1 D
+1 D
+1 D
+1 D
+1 D
+3 U
+</pre></section>
+</div>
+</span>
+<span class="lang-en">
+
+<div class="part">
+<section>
+<h3>Problem Statement</h3><p>There is a cave represented by an <var>N \times N</var> grid.
+Let <var>(0,0)</var> be the coordinates of the top-left square, and <var>(i,j)</var> be the coordinates of the square located <var>i</var> squares down and <var>j</var> squares to the right from there.
+The cave is surrounded by walls, and it is not possible to move outside.</p>
+<p>Inside the cave, there are rocks and <var>M</var> types of ores scattered across the grid.
+Additionally, there are <var>M</var> distinct squares that contain holes, and you need to drop all ores of type <var>i</var> into the <var>i</var>-th hole.
+<strong>Rocks may be dropped into any hole or left inside the cave.</strong>
+You can perform the following operations at most <var>10000</var> times.</p>
+<ol>
+<li>Move to an adjacent square in any of the four directions (up, down, left, or right). <strong>You can move even if the destination square contains a hole, rock, or ore.</strong></li>
+<li>Carry a rock or ore at your current position to an adjacent square in any of the four directions. <strong>The destination must not already contain another rock or ore. The destination may be a hole.</strong> If the destination is a hole, the rock or ore falls into it and is removed. Your position moves to the destination square.</li>
+<li>Roll the rock or ore at your current position in one of the four directions. The rolled rock or ore continues moving in a straight line until it either collides with a rock, ore, or wall, or falls into a hole. Your position does not change.</li>
+</ol>
+<p>The rolling operation is processed in more detail through the following repeated steps:</p>
+<ol>
+<li>If the adjacent square in the rolling direction is a hole, the rock or ore falls into it and is removed.</li>
+<li>If the adjacent square in the rolling direction contains a rock or ore, or if it is outside the <var>N \times N</var> grid, the rock or ore stops in the current square.</li>
+<li>Otherwise, it moves to the adjacent square and repeats the process.</li>
+</ol>
+<p>The rolling speed is very fast, so the rock or ore will always stop or fall into a hole before your next action.</p>
+<p>Your goal is to drop all ores into their corresponding holes using as few actions as possible.</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Scoring</h3><p>Let <var>T (\leq 10000)</var> be the length of the output action sequence, <var>K</var> be the total number of ores in the initial grid, and <var>A</var> be the total number of ores successfully dropped into the correct holes. The score is calculated as follows:</p>
+<ul>
+<li>If <var>A = K</var>, then the score is <var>\mathrm{round}(10^6 \times (1+\log_2{\frac{10000}{T}}))</var>.</li>
+<li>If <var>A &lt; K</var>, then the score is <var>\mathrm{round}(10^6 \times \frac{A}{K})</var>.</li>
+</ul>
+<p>The problem is divided into three subproblems: A, B, and C, based on different input generation methods.
+Each subproblem contains 150 test cases, and the total score for a submission to that subproblem is the sum of the scores from all test cases in it.
+If your submission produces an illegal output or exceeds the time limit for some test cases, the submission itself will be judged as <span class='label label-warning' data-toggle='tooltip' data-placement='top' title="Wrong Answer">WA</span> or <span class='label label-warning' data-toggle='tooltip' data-placement='top' title="Time Limit Exceeded">TLE</span> , and the score of the submission will be zero.</p>
+<p>The final ranking is determined by the sum of the highest scores obtained for each subproblem, and there will be no system test after the contest.
+If more than one team gets the same score, they will be ranked in the same place regardless of the submission time.</p>
+</section>
+</div>
+
+<hr />
+<div class="io-style">
+<div class="part">
+<section>
+<h3>Input</h3><p>Input is given from Standard Input in the following format:</p>
+<pre><var>N</var> <var>M</var>
+<var>C_0</var>
+<var>\vdots</var>
+<var>C_{N-1}</var>
+</pre>
+<ul>
+<li>The grid size <var>N</var> is fixed at <var>N = 20</var> for all test cases.</li>
+<li>The number of ore types <var>M</var> is fixed for each subproblem. See the <strong>"Input Generation"</strong> section for details.</li>
+<li>For each <var>i = 0, 1, \dots, N-1</var>, <var>C_i</var> is a string of length <var>N</var>, where the <var>j</var>-th character represents the initial state of square <var>(i, j)</var> as follows:<ul>
+<li><code>@</code>: A rock is present.</li>
+<li><code>a</code>-<code>z</code>: An ore is present.</li>
+<li><code>A</code>-<code>Z</code>: A hole is present.</li>
+<li><code>.</code>: The square is empty.</li>
+</ul>
+</li>
+</ul>
+<p>Ores and holes correspond based on uppercase and lowercase letters.
+For example, an ore represented by the character <code>a</code> corresponds to the hole represented by the character <code>A</code>.
+The first <var>M</var> letters of the alphabet are used. There may be multiple ores of the same type, but there is exactly one hole for each type.</p>
+<p>You start at the square containing hole <code>A</code> in the initial state.</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Output</h3><p>The operation at step <var>t</var> is represented by a pair <var>(a_t, d_t)</var>, where <var>a_t \in \{1,2,3\}</var> denotes the action type (1:Move, 2:Carry, 3:Roll), and <var>d_t \in \{U,D,L,R\}</var> represents the direction (Up, Down, Left, Right).</p>
+<p>For example, <var>(3, R)</var> denotes the action of rolling the rock or ore at the current position to the right.</p>
+<p>Then, output to Standard Output in the following format.</p>
+<pre><var>a_0</var> <var>d_0</var>
+<var>\vdots</var>
+<var>a_{T-1}</var> <var>d_{T-1}</var>
+</pre>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Sample Solution</h3><details>
+A sample solution in Python is provided.
+This program carries rocks or ores located to the right of the initial position into the hole and rolls rocks or ores located below the initial position into the hole.
+All other rocks and ores are left untouched.
+
+<pre class="prettyprint linenums">
+N, M = map(int, input().split())
+grid = [list(input()) for _ in range(N)]
+
+# Retrieve the current position
+pi = 0
+pj = 0
+for i in range(N):
+    for j in range(N):
+        if grid[i][j] == 'A':
+            pi = i
+            pj = j
+
+# Move to the right and carry any rock or ore found into the hole
+for j in range(pj + 1, N):
+    if grid[pi][j] == '@' or 'a' <= grid[pi][j] and grid[pi][j] <= 'z':
+        print('1 R\n' * (j - pj), end='')
+        print('2 L\n' * (j - pj), end='')
+    elif 'A' <= grid[pi][j] and grid[pi][j] <= 'Z':
+        break
+
+# Move downward and roll any rock or ore found into the hole
+for i in range(pi + 1, N):
+    if grid[i][pj] == '@' or 'a' <= grid[i][pj] and grid[i][pj] <= 'z':
+        print('1 D\n' * (i - pi), end='')
+        print('3 U\n', end='')
+        pi = i
+    elif 'A' <= grid[i][pj] and grid[i][pj] <= 'Z':
+        break
+</pre>
+
+</details>
+
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Input Generation</h3><p>The input generation method differs for each subproblem.
+The inputs are roughly generated as shown in the table below.</p>
+<table class="table table-bordered" style="width: auto;">
+<thead>
+<tr>
+<th>Subproblem</th>
+<th>M</th>
+<th>Rocks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>1</td>
+<td>Few</td>
+</tr>
+<tr>
+<td>B</td>
+<td>3</td>
+<td>None</td>
+</tr>
+<tr>
+<td>C</td>
+<td>1</td>
+<td>Many</td>
+</tr>
+</tbody>
+</table>
+
+<h4>Subproblem A</h4>
+<p><var>M = 1</var> is fixed.</p>
+<ul>
+<li>Placement of hole <code>A</code>: Randomly select one square from the <var>N^2</var> squares.</li>
+<li>Placement of ore <code>a</code>: Randomly select <var>2N</var> squares from the remaining <var>N^2 - 1</var> squares.</li>
+<li>Placement of rocks <code>@</code>: Randomly select <var>2N</var> squares from the remaining <var>N^2 - 1 - 2N</var> squares.</li>
+</ul>
+<hr />
+<h4>Subproblem B</h4>
+<p><var>M = 3</var> is fixed.</p>
+<ul>
+<li>Placement of holes <code>A</code>, <code>B</code>, and <code>C</code>: Randomly select three distinct squares from the <var>N^2</var> squares.</li>
+<li>Placement of ore <code>a</code>: Randomly select <var>N</var> squares from the remaining <var>N^2 - 3</var> squares.</li>
+<li>Placement of ore <code>b</code>: Randomly select <var>N</var> squares from the remaining <var>N^2 - 3 - N</var> squares.</li>
+<li>Placement of ore <code>c</code>: Randomly select <var>N</var> squares from the remaining <var>N^2 - 3 - 2N</var> squares.</li>
+</ul>
+<p>Finally, ensure that <strong>from each hole, it is possible to reach all corresponding ores by passing only through empty squares or squares containing that ore.</strong>
+If there exists an ore that is unreachable, the generation process is repeated.</p>
+<hr />
+<h4>Subproblem C</h4>
+<p><var>M = 1</var> is fixed.</p>
+<ul>
+<li>
+<p>Placement of rocks <code>@</code>: For each square <var>(i, j)</var>, generate <var>h_{i,j} = \mathrm{noise}(i/10, j/10)</var>. Here, <var>\mathrm{noise}(y, x)</var> is a function that generates two-dimensional <a href="https://en.wikipedia.org/wiki/Perlin_noise">Perlin noise</a>. The top <var>N^2/2</var> squares with the highest <var>h_{i,j}</var> values are assigned rocks.</p>
+</li>
+<li>
+<p>Placement of hole <code>A</code>: Randomly select one square from the remaining <var>N^2/2</var> squares.</p>
+</li>
+<li>Placement of ore <code>a</code>: Randomly select <var>2N</var> squares from the remaining <var>N^2/2 - 1</var> squares.</li>
+</ul>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Tools (Input generator and score calculation)</h3><ul>
+<li><a href="https://img.atcoder.jp/masters2025-qual/ioV2Ybuy.zip">Local version</a>: You need a compilation environment of <a href="https://www.rust-lang.org/">Rust language</a>.<ul>
+<li><a href="https://img.atcoder.jp/masters2025-qual/ioV2Ybuy_windows.zip">Pre-compiled binary for Windows</a>: If you are not familiar with the Rust language environment, please use this instead.</li>
+</ul>
+</li>
+</ul>
+<p>Please be aware that sharing visualization results or discussing solutions/ideas outside of the team during the contest is prohibited.</p>
+</section>
+</div>
+</div>
+
+<hr />
+<div class="part">
+<section>
+<h3>Sample Input 1</h3><pre style="max-height:200px;overflow-y:scroll">20 1
+..a.@....a.....a....
+..@........@..a.@a@.
+..aa...a..@.....a...
+.............a.....@
+.....@.a.....a@@....
+..a..a@..a......@...
+.@a.@aa...........a@
+...............@.a..
+.a......@@@.a.......
+........@.@..a.....a
+.a.A..a....@....a..@
+......@..@@.........
+..@@....a..@@.a.....
+......a.....@..a....
+...................a
+@@.....@....a.a.a...
+.....@.......a...@..
+...@......@...a....a
+............a..@....
+.......a.@..........
+</pre>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Sample Output 1</h3><pre style="max-height:200px;overflow-y:scroll">1 R
+1 R
+1 R
+2 L
+2 L
+2 L
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+1 R
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+2 L
+1 D
+1 D
+3 U
+1 D
+1 D
+1 D
+1 D
+1 D
+3 U
+</pre></section>
+</div>
+</span>
+</span>
+
+			</div>
+
+			
+		</div>
+	
+		<div class="next-page col-sm-12"></div>
+		<div class="col-sm-12">
+			<span class="h2">B - Ore Rolling (B)</span>
+			<hr />
+			<p>実行時間制限: 2 sec / メモリ制限: 1024 MB</p>
+
+			<div id="task-statement">
+				<span class="lang">
+    <span class="lang-ja">
+        <div class="part">
+            この問題はA問題と同じで入力のみ異なります。 詳細はA問題を参照下さい。
+        </div>
+    </span>
+    <span class="lang-en">
+        <div class="part">
+            This problem is the same as Problem A, differing only in input. See Problem A for details.
+        </div>
+    </span>
+</span>
+			</div>
+
+			
+		</div>
+	
+		<div class="next-page col-sm-12"></div>
+		<div class="col-sm-12">
+			<span class="h2">C - Ore Rolling (C)</span>
+			<hr />
+			<p>実行時間制限: 2 sec / メモリ制限: 1024 MB</p>
+
+			<div id="task-statement">
+				<span class="lang">
+    <span class="lang-ja">
+        <div class="part">
+            この問題はA問題と同じで入力のみ異なります。 詳細はA問題を参照下さい。
+        </div>
+    </span>
+    <span class="lang-en">
+        <div class="part">
+            This problem is the same as Problem A, differing only in input. See Problem A for details.
+        </div>
+    </span>
+</span>
+			</div>
+
+			
+		</div>
+	
+</div>
+
+
+
+
+	</div> 
+</div> 
+</body>
+</html>
+
